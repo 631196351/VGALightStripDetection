@@ -47,3 +47,5 @@ void resetColor(int count, BYTE r, BYTE g, BYTE b);
 #endif
 
 void createPPIDFolder(const char* ppid);
+
+void createFakePPID(char* ppid, unsigned int len);

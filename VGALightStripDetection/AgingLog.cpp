@@ -5,6 +5,7 @@
 #include <time.h>
 #include <io.h>
 #include <cmath>
+#include "SpdMultipleSinks.h"
 
 #define color_num (AllColor )
 
@@ -30,6 +31,8 @@ AgingLog::AgingLog(int led_count, bool randomLightDown, bool retest)
 		this->retest = retest;
 		lpRetest = new int[led_count * color_num]{ 0 };
 	}
+
+	SPDLOG_SINKS_DEBUG("AgingLog Init led_count:{}, randomLightDown:{}, retest:{}", led_count, randomLightDown, retest);
 	
 	aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
 	if (aging_file.is_open())
@@ -62,10 +65,13 @@ AgingLog::AgingLog(int led_count, bool randomLightDown, bool retest)
 
 	if (PPID[0] == 0)	// 获取不到PPID时， 用time() 来替代
 	{
-		sprintf_s(PPID, VGA_PPID_LENGTH, "x%d%02d%02d%02d%02d%02d", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+		//sprintf_s(PPID, VGA_PPID_LENGTH, "x%d%02d%02d%02d%02d%02d", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+		createFakePPID(PPID, VGA_PPID_LENGTH);
+		SPDLOG_SINKS_DEBUG("AgingLog Create Fake PPID:{}", PPID);
 	}
 
 	sprintf_s(lpTargetFolder, _MAX_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, PPID);
+	SPDLOG_SINKS_DEBUG("AgingLog Create Target Folder:{}", lpTargetFolder);
 }
 
 
@@ -101,6 +107,7 @@ void AgingLog::setSingleLedResult(int index, int color, int result)
 	if (i < lpLedCount * color_num)
 	{
 		lpLed[i] = result;
+		SPDLOG_SINKS_DEBUG("AgingLog SetSingleLedResult i:{}, index:{}, color:{}, result:{}", i, index, color, result);
 	}
 }
 
@@ -111,6 +118,7 @@ void AgingLog::setSingleLedRetestResult(int index, int color, int result)
 		if (i < lpLedCount * color_num)
 		{
 			lpRetest[i] = result;
+			SPDLOG_SINKS_DEBUG("AgingLog SetSingleLedRetestResult i:{}, index:{}, color:{}, result:{}", i, index, color, result);
 		}
 	}
 }
@@ -122,6 +130,7 @@ void AgingLog::setSingleLedRandomShutDownResult(int index, int color, int result
 		if (i < lpLedCount * color_num)
 		{
 			lpRandomShutDownLedCache[i] = result;
+			SPDLOG_SINKS_DEBUG("AgingLog SetSingleLedRandomShutDownResult i:{}, index:{}, color:{}, result:{}", i, index, color, result);
 		}
 	}
 }
@@ -131,8 +140,45 @@ void AgingLog::setSingleLedRandomShutDownResult(int index, int color, int result
 /// 复测时若将灯由 Faile  判 Pass, 则第二遍将不测此灯
 void AgingLog::syncSingLedResult2RetestResult()
 {
+	std::string t, t2;
+	for (int color = 0; color < color_num - 1; color++)
+	{
+		for (int index = 0; index < lpLedCount; index++)
+		{
+			char buf[10] = { 0 };
+			int i = index + lpLedCount * (color);
+			sprintf_s(buf, 10, "%d,", lpLed[i]);
+			t += buf;
+
+			sprintf_s(buf, 10, "%d,", lpRetest[i]);
+			t2 += buf;
+		}
+		SPDLOG_SINKS_DEBUG("AgingLog SyncSingLedResult2RetestResult Normal color:{} - {}", color, t);
+		SPDLOG_SINKS_DEBUG("AgingLog SyncSingLedResult2RetestResult Retest color:{} - {}", color, t2);
+		t = t2 = "";
+	}
+
 	if (retest) {
-		memcpy_s(lpRetest, lpLedCount * color_num, lpLed, lpLedCount * color_num);
+		int len = (lpLedCount * color_num) * sizeof(int);
+		memcpy_s(lpRetest, len, lpLed, len);
+	}
+	SPDLOG_SINKS_DEBUG("-------- AgingLog SyncSingLedResult2RetestResult --------");
+
+	for (int color = 0; color < color_num - 1; color++)
+	{
+		for (int index = 0; index < lpLedCount; index++)
+		{
+			char buf[10] = { 0 };
+			int i = index + lpLedCount * (color);
+			sprintf_s(buf, 10, "%d,", lpLed[i]);
+			t += buf;
+
+			sprintf_s(buf, 10, "%d,", lpRetest[i]);
+			t2 += buf;
+		}
+		SPDLOG_SINKS_DEBUG("AgingLog SyncSingLedResult2RetestResult Normal color:{} - {}", color, t);
+		SPDLOG_SINKS_DEBUG("AgingLog SyncSingLedResult2RetestResult Retest color:{} - {}", color, t2);
+		t = t2 = "";
 	}
 }
 
@@ -165,6 +211,8 @@ void AgingLog::saveAgingLog()
 			{
 				aging_file << "Pass" << std::endl;
 			}
+
+			SPDLOG_SINKS_DEBUG("AgingLog Save random PPID:{}, t:{}, r:{}", PPID, t, r);
 		}
 		////////////////////////////////////////////////////////////////////////////
 		r = 0;
@@ -184,6 +232,8 @@ void AgingLog::saveAgingLog()
 		{
 			aging_file << "Pass" << std::endl;
 		}
+
+		SPDLOG_SINKS_DEBUG("AgingLog Save normal PPID:{}, t:{}, r:{}", PPID, t, r);
 
 		////////////////////////////////////////////////////////////////////////////
 		if (retest)
@@ -205,10 +255,10 @@ void AgingLog::saveAgingLog()
 			{
 				aging_file << "Pass" << std::endl;
 			}
+			SPDLOG_SINKS_DEBUG("AgingLog Save reset PPID:{}, t:{}, r:{}", PPID, t, r);
 		}
 	}
 }
-
 
 int AgingLog::thisLedIsOK(int color)
 {
@@ -243,6 +293,7 @@ int AgingLog::thisLedIsOK(int color)
 
 	if (retest)
 	{
+		SPDLOG_SINKS_DEBUG("Aginglog ThisLedIsOK retest:{}, r3:{}", retest, r3);
 		if (r3 > 0)
 			return Fail;
 		else
@@ -250,6 +301,7 @@ int AgingLog::thisLedIsOK(int color)
 }
 	else
 	{
+		SPDLOG_SINKS_DEBUG("Aginglog ThisLedIsOK retest:{}, r1:{}", retest, r1);
 		if (r1 > 0)
 			return Fail;
 		else
@@ -290,6 +342,7 @@ int AgingLog::allLedIsOK()
 	// r3 > 0 说明复测有Faile 灯	
 	if (retest)
 	{
+		SPDLOG_SINKS_DEBUG("Aginglog AllLedIsOK retest:{}, r3:{}", retest, r3);
 		if (r3 > 0)
 			return Fail;
 		else
@@ -297,6 +350,7 @@ int AgingLog::allLedIsOK()
 	}
 	else
 	{
+		SPDLOG_SINKS_DEBUG("Aginglog AllLedIsOK retest:{}, r1:{}", retest, r1);
 		if (r1 > 0)
 			return Fail;
 		else
@@ -308,6 +362,7 @@ int AgingLog::allLedIsOK()
 int AgingLog::getSingleLedResult(int index, int color)
 {
 	int i = index + lpLedCount * (color);
+	SPDLOG_SINKS_DEBUG("AgingLog GetSingleLedResult i:{}, index:{}, color:{}, result:{}", i, index, color, lpLed[i]);
 	if (lpLed[i] > 0)
 		return Fail;
 	else
@@ -317,6 +372,7 @@ int AgingLog::getSingleLedResult(int index, int color)
 int AgingLog::getSingleLedRetestResult(int index, int color)
 {
 	int i = index + lpLedCount * (color);
+	SPDLOG_SINKS_DEBUG("AgingLog GetSingleLedRetestResult i:{}, index:{}, color:{}, result:{}", i, index, color, lpRetest[i]);
 	if (lpRetest[i] > 0)
 		return Fail;
 	else
@@ -325,6 +381,7 @@ int AgingLog::getSingleLedRetestResult(int index, int color)
 
 void AgingLog::flushData()
 {
+	SPDLOG_SINKS_DEBUG("......AgingLog Flush Data......");
 	saveAgingLog();
 
 	memset(lpLed, 0, lpLedCount*color_num);
@@ -340,5 +397,6 @@ void AgingLog::flushData()
     time(&aging_time);
 	struct tm *p = localtime(&aging_time);
 
-	sprintf_s(lpTargetFolder, _MAX_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, PPID);
+	sprintf_s(lpTargetFolder, _MAX_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, PPID);	
+	SPDLOG_SINKS_DEBUG("AgingLog Create Target Folder:{}", lpTargetFolder);
 }

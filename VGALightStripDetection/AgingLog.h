@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
 
-#define VGA_PPID_LENGTH 20
+#define VGA_PPID_LENGTH 64
 
 enum { Pass = 0, Fail = 1, RandomShutDownLed = -1 };
 

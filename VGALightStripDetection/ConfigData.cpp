@@ -22,10 +22,12 @@ void ConfigData::saveConfigData()
 	//[Camera]
 	SPRINTF(cameraIndex); WritePrivateProfileString(L"Camera", L"Index", d, lpPath);
 	SPRINTF(exposure); WritePrivateProfileString(L"Camera", L"Exposure", d, lpPath);
+	SPRINTF(saturation); WritePrivateProfileString(L"Camera", L"Saturation", d, lpPath);
 
 	//[Frame]
 	SPRINTF(frame.width); WritePrivateProfileString(L"Frame", L"Width", d, lpPath);
 	SPRINTF(frame.height); WritePrivateProfileString(L"Frame", L"Hight", d, lpPath);
+	SPRINTF(jumpFrame); WritePrivateProfileString(L"Frame", L"JumpFrame", d, lpPath);
 
 	//[RectFrame]
 	SPRINTF(rect.x);	WritePrivateProfileString(L"RectFrame", L"X", d, lpPath);
@@ -111,16 +113,20 @@ void ConfigData::readConfigFile()
 	//[Camera]
 	cameraIndex = GetPrivateProfileInt(L"Camera", L"Index", cameraIndex, lpPath);
 	exposure = GetPrivateProfileInt(L"Camera", L"Exposure", exposure, lpPath);
+	saturation = GetPrivateProfileInt(L"Camera", L"Saturation", saturation, lpPath);
 
 	//[Frame]
 	frame.width = GetPrivateProfileInt(L"Frame", L"Width", frame.width, lpPath);
 	frame.height = GetPrivateProfileInt(L"Frame", L"Hight", frame.height, lpPath);
+	jumpFrame = GetPrivateProfileInt(L"Frame", L"JumpFrame", jumpFrame, lpPath);
 
 	//[RectFrame]
-	rect.x = GetPrivateProfileInt(L"RectFrame", L"X", rect.x, lpPath);
-	rect.y = GetPrivateProfileInt(L"RectFrame", L"Y", rect.y, lpPath);
-	rect.width = GetPrivateProfileInt(L"RectFrame", L"Width", rect.width, lpPath);
-	rect.height = GetPrivateProfileInt(L"RectFrame", L"Hight", rect.height, lpPath);
+	cv::Rect r;
+	r.x = GetPrivateProfileInt(L"RectFrame", L"X", rect.x, lpPath);
+	r.y = GetPrivateProfileInt(L"RectFrame", L"Y", rect.y, lpPath);
+	r.width = GetPrivateProfileInt(L"RectFrame", L"Width", rect.width, lpPath);
+	r.height = GetPrivateProfileInt(L"RectFrame", L"Hight", rect.height, lpPath);
+	setROIRect(r);
 
 	//[AgingSetting]
 	debugMode = GetPrivateProfileInt(L"AgingSetting", L"DebugMode ", debugMode, lpPath);
@@ -194,4 +200,14 @@ void ConfigData::readConfigFile()
 	hsvColor[GREEN] = { 0, 180, g_Lh, g_Hh, 0, 255, g_Ls, g_Hs, 0, 255, g_Lv, g_Hv };
 	hsvColor[BLUE] = { 0, 180, b_Lh, b_Hh, 0, 255, b_Ls, b_Hs, 0, 255, b_Lv, b_Hv };
 	hsvColor[WHITE] = { 0, 180, w_Lh, w_Hh, 0,  255, w_Ls, w_Hs, 0, 255, w_Lv, w_Hv };
+}
+
+void ConfigData::setROIRect(cv::Rect& r)
+{
+	/// 检查ROI区域是否超出画面宽高
+	rect = r;
+	int w = r.x + r.width;
+	int h = r.y + r.height;
+	rect.width = w > frame.width ? frame.width - r.x : r.width;
+	rect.height = h > frame.height ? frame.height - r.y : r.height;
 }

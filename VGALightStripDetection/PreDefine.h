@@ -33,3 +33,5 @@ enum
 	eNotPowerOff = -1,
 	eReStart = -2
 };
+
+//#define _SPDLOG_MULTIPLE_SINKS

@@ -6,6 +6,7 @@
 #include <io.h>
 #include <direct.h>
 #include "PreDefine.h"
+#include "SpdMultipleSinks.h"
 
 int getVGAInfo(char* ppid, size_t size)
 {
@@ -49,6 +50,7 @@ int getVGAInfo(char* ppid, size_t size)
 		//sscanf_s(buf, "%u", &ppid);		
 	}
 	file.close();
+	SPDLOG_SINKS_DEBUG("================PPID:{}================", ppid);
 	return exitCode;
 }
 
@@ -73,6 +75,9 @@ void initVGA()
 	LOAD_VENDOR_DLL = (lpLoadVenderDLL)GetProcAddress(hDLL, "LoadVenderDLL");
 	VGA_READ_IC_I2C = (lpVGA_Read_IC_I2C)GetProcAddress(hDLL, "VGA_Read_IC_I2C");
 	VGA_WRITE_IC_I2C = (lpVGA_Write_IC_I2C)GetProcAddress(hDLL, "VGA_Write_IC_I2C");
+	SPDLOG_SINKS_DEBUG("LOAD_VENDOR_DLL:{}", LOAD_VENDOR_DLL == NULL? "NULL" : "NOT NULL");
+	SPDLOG_SINKS_DEBUG("VGA_READ_IC_I2C:{}", VGA_READ_IC_I2C == NULL ? "NULL" : "NOT NULL");
+	SPDLOG_SINKS_DEBUG("VGA_WRITE_IC_I2C:{}", VGA_WRITE_IC_I2C == NULL ? "NULL" : "NOT NULL");
 	// 载入dll
 	LOAD_VENDOR_DLL();
 }
@@ -83,7 +88,8 @@ void setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 	//Set Start Address
 	uOffset[0] = 0x81;
 	uOffset[1] = REG[led];
-	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address	
+	result == false ? SPDLOG_SINKS_ERROR("VGA_WRITE_IC_I2C_01:{}", result) : "";
 
 	uOffset[0] = 3;	//rgb size
 	uOffset[1] = r;
@@ -91,20 +97,25 @@ void setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 	uOffset[3] = g;
 	//(UCHAR ucAddress, UCHAR reg_address, UCHAR *rData, UINT iCardNumber, Ul32 ulDDCPort, UCHAR regSize, UCHAR DataSize, Ul32 flags)
 	result = VGA_WRITE_IC_I2C((BYTE)0xCE, (BYTE)0x03, (BYTE*)uOffset, 0, 1, 1, 4, 1);
+	result == false ? SPDLOG_SINKS_ERROR("VGA_WRITE_IC_I2C_02:{}", result) : "";
 
 	uOffset[0] = 0x80;
 	uOffset[1] = 0x21;
 	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result == false ? SPDLOG_SINKS_ERROR("VGA_WRITE_IC_I2C_03:{}", result) : "";
 
 	uOffset[0] = 0x01;
 	result = VGA_WRITE_IC_I2C(0xCE, 0x1, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
+	result == false ? SPDLOG_SINKS_ERROR("VGA_WRITE_IC_I2C_04:{}", result) : "";
 
 	uOffset[0] = 0x80;
 	uOffset[1] = 0x2F;
 	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result == false ? SPDLOG_SINKS_ERROR("VGA_WRITE_IC_I2C_05:{}", result) : "";
 
 	uOffset[0] = 0x01;
 	result = VGA_WRITE_IC_I2C(0xCE, 0x01, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
+	result == false ? SPDLOG_SINKS_ERROR("VGA_WRITE_IC_I2C_06:{}", result) : "";
 }
 
 void resetColor(int count, BYTE r, BYTE g, BYTE b)
@@ -126,12 +137,26 @@ void createPPIDFolder(const char* ppid)
 			printf("\ncreate %s dir fail-%ld\n", AgingFolder, GetLastError());
 		}
 	}
-	char path[128] = { 0 };
-	sprintf_s(path, 128, "%s/%s", AgingFolder, ppid);
+	char path[MAX_PATH] = { 0 };
+	sprintf_s(path, MAX_PATH, "%s/%s", AgingFolder, ppid);
 	ret = _mkdir(path);
 	if (ret != 0)
 	{
 		printf("\ncreate %s dir fail-%ld\n", path, GetLastError());
 
 	}
+}
+
+void createFakePPID(char* ppid, unsigned int len)
+{
+	GUID guid;
+	CoCreateGuid(&guid);
+
+	snprintf(ppid, len, "%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X", 
+		guid.Data1, guid.Data2, guid.Data3,
+		guid.Data4[0], guid.Data4[1],
+		guid.Data4[2], guid.Data4[3],
+		guid.Data4[4], guid.Data4[5],
+		guid.Data4[6], guid.Data4[7]);
+	return;
 }

@@ -36,6 +36,9 @@
     <ClCompile Include="AgingLog.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="SpdMultipleSinks.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nvapi.h">
@@ -57,6 +60,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="AgingLog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SpdMultipleSinks.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,31 +6,32 @@
 #include <thread>
 #include <mutex>
 #include <fstream>
-#include <spdlog/spdlog.h>
 
 #include "ConfigData.h"
-//#include "main.h"
 #include "nvbase.h"
-//#include "ene_program.h"
 #include "utility.h"
 #include  "AgingLog.h"
+#include "SpdMultipleSinks.h"
 
 using namespace cv;
 using namespace std;
-using namespace spdlog;
 
 #define DebugMode(oper) if(g_Config.debugMode == true){oper;};
 #define IfDebugMode if(g_Config.debugMode == true)
 #define MainThreadIsExit if (g_main_thread_exit >= eExit) { break; }
 
-Mat g_frame;
+//Mat g_frame;
 Mat g_current_frame;
 Mat g_background_frame;
+VideoCapture capture;
 
 std::mutex g_get_frame_mutex;
 std::mutex g_set_led_mutex;
 
 ConfigData g_Config;
+
+//std::fstream aging_hander;
+bool aging_hander_switch = false;
 
 int g_Led = BLUE;
 int g_Index = 0;
@@ -38,8 +39,6 @@ bool g_wait = false;
 int g_main_thread_exit = eNotExit;
 int g_randomShutDownLed = 0;
 int g_recheckFaileLedTime = 0;
-spdlog::logger g_logger("multi_sink");
-
 
 int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
@@ -89,10 +88,9 @@ int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 
 void saveDebugROIImg(Mat& f, AgingLog& aging, int currentColor, int currentIndex, const char* lpSuffix)
 {
-	char name[_MAX_PATH] = { 0 };
-
-	sprintf_s(name, _MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, aging.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
-
+	char name[MAX_PATH] = { 0 };
+	sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, aging.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
+	SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}", name);
 	cv::imwrite(name, f);
 }
 
@@ -205,28 +203,49 @@ void renderTrackbarThread()
 
 void getFrame(Mat& f)
 {
-	for (int i = 0; i < 4; i++) 
+	//aging_hander_switch = true;
+	//clock_t t = clock();
+	for (int i = 0; i < g_Config.jumpFrame; i++) 
 	{
+		//Sleep(33);
+		//g_get_frame_mutex.lock();
+		//f = g_frame.clone();
+		capture.read(f);
 		cv::waitKey(33);
-		g_get_frame_mutex.lock();
-		f = g_frame.clone();
-		g_get_frame_mutex.unlock();
-		f = f(g_Config.rect);
+
+		//aging_hander << (double(clock() - t) / CLOCKS_PER_SEC)<< ",";
+		//t = clock();
+		//g_get_frame_mutex.unlock();
+		//f = f(g_Config.rect);
 	}
+	//aging_hander_switch = false;	
+	//aging_hander << endl;
+	//aging_hander.flush();
+
+	f = f(g_Config.rect);
 }
 
 void autoGetCaptureFrame(VideoCapture& capture)
 {
+	//Mat g_frame;
 	Mat camera;
+	clock_t t = clock();
+	unsigned int i = 0;
 	while (true)
 	{
 		MainThreadIsExit;
+		//g_get_frame_mutex.lock();
+		capture.read(camera);
+		//if (aging_hander_switch)
+		//{
+		//	aging_hander << "-" << (double(clock() - t) / CLOCKS_PER_SEC) << ",";
+		//}
+		//t = clock();
 
-		g_get_frame_mutex.lock();
-		capture.read(g_frame);
-		g_get_frame_mutex.unlock();
+		//g_get_frame_mutex.unlock();
 
-		camera = g_frame.clone();
+		//camera = g_frame.clone();
+		//camera = g_frame;
 		rectangle(camera, g_Config.rect, Scalar(0, 255, 255), 5);
 		imshow("camera", camera);
 		
@@ -234,24 +253,93 @@ void autoGetCaptureFrame(VideoCapture& capture)
 		{
 			g_main_thread_exit = eExitWithKey;
 		}
+
 	}
 }
 
 void getSelectROI(VideoCapture& capture)
 {
+	SPDLOG_SINKS_DEBUG("Select ROI Start");
+	capture.set(CAP_PROP_FRAME_WIDTH, g_Config.frame.width);
+	capture.set(CAP_PROP_FRAME_HEIGHT, g_Config.frame.height);
+	capture.set(CAP_PROP_EXPOSURE, 0);
+	capture.set(CAP_PROP_SATURATION, 65);
+
 	Mat roi;
-	capture.read(roi);
-	Rect r = selectROI(roi);
-	printf("\nselectROI = (%d, %d, %d, %d)\n", r.x, r.y, r.width, r.height);
-	g_Config.rect = r;
-	g_Config.resetRect = false;
-	cv::destroyWindow("ROI selector");
-	g_Config.saveConfigData();
+	struct ROIData { Point p; Rect r; bool startROI = false; };
+
+	ROIData data;
+	data.r = g_Config.rect;
+	SPDLOG_SINKS_DEBUG("Before ROI:({},{}), width:{}, height:{}", data.r.x, data.r.y, data.r.width, data.r.height);
+
+	auto onMouseEvent = [](int event, int x, int y, int flags, void* userdata) -> void
+	{
+		ROIData* d = ((ROIData*)userdata);
+		if (event == EVENT_LBUTTONDOWN)
+		{
+			d->p = Point(x, y);
+			d->startROI = true;
+			d->r = Rect();
+			SPDLOG_SINKS_DEBUG("EVENT_LBUTTONDOWN:({},{})", d->p.x, d->p.y);
+
+		}
+		else if (event == EVENT_MOUSEMOVE && flags == EVENT_FLAG_LBUTTON)
+		{
+			if (d->startROI)
+			{
+				d->r = Rect(d->p, Point(x, y));
+				SPDLOG_SINKS_DEBUG("EVENT_MOUSEMOVE:({},{}), width:{}, height:{}", d->r.x, d->r.y, d->r.width, d->r.height);
+			}
+		}
+		else if (event == EVENT_LBUTTONUP)
+		{
+			d->startROI = false;
+			SPDLOG_SINKS_DEBUG("EVENT_LBUTTONUP");
+
+		}
+	};
+
+	cv::namedWindow("frame");
+	setMouseCallback("frame", onMouseEvent, &data);
+
+	int key = 0;
+	while (true)
+	{
+		capture.read(roi);
+
+		rectangle(roi, data.r, Scalar(0, 255, 255), 5);
+
+		imshow("frame", roi);
+
+		key = cv::waitKey(33);
+		if (key == 0x1b)	// Esc 键
+		{
+			// 放弃重置RIO, 使用旧的ROI设定区域
+			SPDLOG_SINKS_DEBUG("Give up reset ROI");
+			cv::destroyWindow("frame");
+			break;
+		}
+		else if (key == 0x0d)	// 回车键
+		{
+			//std::cout << "rectangle :" << data.r << std::endl;
+			//g_Config.rect = data.r;
+			g_Config.setROIRect(data.r);
+			SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", g_Config.rect.x, g_Config.rect.y, g_Config.rect.width, g_Config.rect.height);
+			g_Config.resetRect = false;
+			g_Config.saveConfigData();
+			cv::destroyWindow("frame");
+			break;
+		}
+
+	}
+
+	SPDLOG_SINKS_DEBUG("Select ROI End");
 }
 
 void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vector<vector<Point> >& contours, vector<Rect>& boundRect)
 {
-	//std::vector<double> b_means, g_means, r_means;
+	SPDLOG_SINKS_DEBUG("MinContoursArea:{}, CurrentColor:{}", g_Config.minContoursArea, currentColor);
+
 	for (int index = 0; index < contours.size(); index++)
 	{
 		// 生成最小包围矩形
@@ -262,6 +350,8 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 		// 轮廓面积校验
 		if (rect.area() < g_Config.minContoursArea)
 			continue;
+		
+		//SPDLOG_SINKS_DEBUG("Contours {}th x:{} y:{} width:{} height:{} area:{}", index, rect.x, rect.y, rect.width, rect.height, rect.area());
 
 		// 校验轮廓颜色
 		Mat mask_cell = mask(rect).clone();
@@ -275,47 +365,38 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 		double b = means[0];
 		double g = means[1];
 		double r = means[2];
+		double p = 0.0;
 
 		if (currentColor == BLUE)
 		{
-			double d = b / (b + g + r);
+			p = b / (b + g + r);
 			// 亮bule时，b通道要占多数，其他情况一律抹掉该轮廓
-			if (b > g_Config.bgrColorThres[BLUE] && b > g && b > r && d > g_Config.bgrColorPercentage[BLUE]) {
+			if (b > g_Config.bgrColorThres[BLUE] && b > g && b > r && p > g_Config.bgrColorPercentage[BLUE]) {
 				colorCorrect = true;
 			}
-			else if ((1.0 - d) < 0.02) {
+			else if ((1.0 - p) < 0.02) {
 				// b 通道独占80%，即便是亮度很低的情况下也近乎纯蓝色
 				colorCorrect = true;
-			}
-			else {
-				rect = Rect();
 			}
 		}
 		else if (currentColor == GREEN)
 		{
-			double d = g / (b + g + r);
-
-			if (g > g_Config.bgrColorThres[GREEN] && g > b && g > r && d > g_Config.bgrColorPercentage[GREEN]) {
+			p = g / (b + g + r);
+			if (g > g_Config.bgrColorThres[GREEN] && g > b && g > r && p > g_Config.bgrColorPercentage[GREEN]) {
 				colorCorrect = true;
 			}
-			else if ((1.0 - d) < 0.02) {
+			else if ((1.0 - p) < 0.02) {
 				colorCorrect = true;
-			}
-			else {
-				rect = Rect();
 			}
 		}
 		else if (currentColor == RED)
 		{
-			double d = r / (b + g + r);
-			if (r > g_Config.bgrColorThres[RED] && r > b && r > g && d > g_Config.bgrColorPercentage[RED]) {
+			p = r / (b + g + r);
+			if (r > g_Config.bgrColorThres[RED] && r > b && r > g && p > g_Config.bgrColorPercentage[RED]) {
 				colorCorrect = true;
 			}
-			else if ((1.0 - d) < 0.02) {
+			else if ((1.0 - p) < 0.02) {
 				colorCorrect = true;
-			}
-			else {
-				rect = Rect();
 			}
 		}
 
@@ -323,15 +404,21 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 		{
 			boundRect.push_back(rect);
 			// 绘制各自小轮廓
-			Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
+			Scalar color = Scalar(0, 255, 255);
 			drawContours(result, contours, index, color, 1);
+
+			SPDLOG_SINKS_DEBUG("Contour {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> yes", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
+		}
+		else
+		{
+			SPDLOG_SINKS_DEBUG("Contour {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> no", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
+			rect = Rect();
 		}
 	}
 }
 
 void findFrameContours(AgingLog& aging)
-{	
-	clock_t startTime = clock();
+{
 	while (true)
 	{
 		MainThreadIsExit;
@@ -339,13 +426,14 @@ void findFrameContours(AgingLog& aging)
 		g_set_led_mutex.lock();
 		if(g_wait)
 		{
-			startTime = clock();
-
+			SPDLOG_SINKS_DEBUG("********FindFrameContours********");
 			int currentColor = g_Led;
 			int currentIndex = g_Index;
-			printf("\ncurrentColor = %d, currentIndex = %d\n", currentColor, currentIndex);
+			SPDLOG_SINKS_DEBUG("CurrentColor = {}, CurrentIndex = {}", currentColor, currentIndex);
+
 			if (currentColor == g_Config.startColor && currentIndex == 0)
 			{
+				SPDLOG_SINKS_DEBUG("Create PPID Folder {}", aging.targetFolder());
 				createPPIDFolder(aging.targetFolder());
 			}
 
@@ -358,18 +446,18 @@ void findFrameContours(AgingLog& aging)
 
 				if (original_frame.empty())
 				{
-					printf("current frame empty !\n");
-					return;
+					SPDLOG_SINKS_ERROR("Current Frame empty!");
+					continue;
 				}
 
-				DebugMode(imshow("original_frame", frame));
-				DebugMode(imshow("background", back));
+				DebugMode(cv::imshow("original_frame", frame));
+				DebugMode(cv::imshow("background", back));
 				{
 					saveDebugROIImg(original_frame, aging, currentColor, currentIndex, "original");
 
 					saveDebugROIImg(back, aging, currentColor, currentIndex, "background");
 				}
-
+				SPDLOG_SINKS_DEBUG("Frame difference algorithm starts.");
 				std::vector<Mat> frame_bgrs, back_bgrs;
 				Mat frame_gray, back_gray, temp;
 				if (currentColor == WHITE) {
@@ -383,20 +471,25 @@ void findFrameContours(AgingLog& aging)
 					frame_gray = frame_bgrs[currentColor];
 					back_gray = back_bgrs[currentColor];
 				}
+
+				SPDLOG_SINKS_DEBUG("Convert back and frame to gray.");
 				subtract(frame_gray, back_gray, mask);
+				SPDLOG_SINKS_DEBUG("frame_gray - back_gray = mask");
 
 				//cv::threshold(mask, mask, 0, 255, THRESH_BINARY | THRESH_OTSU);
 				cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, g_Config.thresoldBlockSize, g_Config.thresoldC);
-
+				SPDLOG_SINKS_DEBUG("AdaptiveThreshold BlockSize = {} C = {}", g_Config.thresoldBlockSize, g_Config.thresoldC);
 				//GaussianBlur(mask, mask, Size(5, 5), 0);
 
 				//形态学处理
 				Mat kernel = getStructuringElement(MORPH_CROSS, Size(3, 3));
 				morphologyEx(mask, mask, MORPH_OPEN, kernel);
+				SPDLOG_SINKS_DEBUG("Morphology open operation processing mask");
 
 				cv::medianBlur(mask, mask, 3);
+				SPDLOG_SINKS_DEBUG("Blur mask");
 
-				DebugMode(imshow("mask", mask));
+				DebugMode(cv::imshow("mask", mask));
 				{
 					saveDebugROIImg(mask, aging, currentColor, currentIndex, "mask");
 				}
@@ -407,14 +500,16 @@ void findFrameContours(AgingLog& aging)
 				vector<Vec4i> hierarchy;
 				Mat result = Mat::zeros(frame.size(), frame.type());
 				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
+				SPDLOG_SINKS_DEBUG("Find {} Contours", contours.size());
 
 				checkContoursColor(frame, mask, result, currentColor, contours, boundRect);
 
-				DebugMode(imshow("contours", result));
+				DebugMode(cv::imshow("contours", result));
 				{
 					saveDebugROIImg(result, aging, currentColor, currentIndex, "contours");
 				}
 
+				SPDLOG_SINKS_DEBUG("{} more Rect before the Rect are merged", boundRect.size());
 				for (int i = 0; i < boundRect.size(); i++)
 				{
 					Rect& rect = boundRect[i];
@@ -462,6 +557,7 @@ void findFrameContours(AgingLog& aging)
 					else { it++; }
 				}
 
+				SPDLOG_SINKS_DEBUG("{} more Rect after the Rect are merged", boundRect.size());
 				//得到灯的轮廓
 				size_t unqualified_rect = 0;
 				for (int index = 0; index < boundRect.size(); index++)
@@ -469,7 +565,6 @@ void findFrameContours(AgingLog& aging)
 					const Rect& r = boundRect[index];
 					if (r.area() == 0)
 						continue;
-					//printf("\ncontours4-[x:%d, y:%d, w:%d, h:%d, area:%d]\n", r.x, r.y, r.width, r.height, r.area());
 
 					// 合并轮廓时会将被合并轮廓抹掉
 					if (r.area() > g_Config.minContoursArea)
@@ -480,6 +575,9 @@ void findFrameContours(AgingLog& aging)
 							aging.setSingleLedResult(currentIndex, currentColor, Pass);
 						else
 							aging.setSingleLedRetestResult(currentIndex, currentColor, Pass);
+
+						SPDLOG_SINKS_DEBUG("Contours {}th - x:{} y:{} width:{} height:{} area:{}, RecheckFaileLedTime:{}", index, r.x, r.y, r.width, r.height, r.area(), g_recheckFaileLedTime);
+
 					}
 					else
 					{
@@ -489,40 +587,39 @@ void findFrameContours(AgingLog& aging)
 
 				if (unqualified_rect == boundRect.size())
 				{
-					putText(original_frame, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
+					cv::putText(original_frame, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
 					// 第一遍测试结果和复测结果分开
 					if (g_recheckFaileLedTime == 0)
 						aging.setSingleLedResult(currentIndex, currentColor, Fail);
 					else
 						aging.setSingleLedRetestResult(currentIndex, currentColor, Fail);
+
+					SPDLOG_SINKS_ERROR("The {}th {} light failed. RecheckFaileLedTime:{}", currentIndex, currentColor, g_recheckFaileLedTime);
 				}
 
-				if (g_randomShutDownLed >= g_Config.randomShutDownLed)
+				// 首次侦测且开启随机灭灯情况进入
+				if (g_Config.randomShutDownLed > 0 && g_recheckFaileLedTime == 0)
 				{
-					aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
-				}
-				else 
-				{
-					aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, RandomShutDownLed);
+					if (g_randomShutDownLed >= g_Config.randomShutDownLed)
+						aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
+					else
+						aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, RandomShutDownLed);
 				}
 
 				saveDebugROIImg(original_frame, aging, currentColor, currentIndex, "result");
-
-
-				imshow("result", original_frame);
-				waitKey(1);
-
-				printf("findFrameContours--------------%d\n", clock() - startTime);
+				cv::imshow("result", original_frame);
+				cv::waitKey(1);
 			}
 			g_wait = false;
 		}
 		g_set_led_mutex.unlock();
+		Sleep(1);// 完成工作，等待时，释放CPU时间，避免CPU在此空转
 	}
 }
 
-void mainLightingControl()
+void mainLightingControl(AgingLog& aging)
 {
-	clock_t startTime = clock(), startTime1 = clock();
+	SPDLOG_SINKS_DEBUG("--------MainLightingControl--------");
 	Mat internal_back;	// 暂存back
 	RNG rng(time(NULL));
 	std::vector<u8> colorNum(g_Config.ledCount);
@@ -543,14 +640,16 @@ void mainLightingControl()
 		for (size_t index = 0; index < g_Config.ledCount; index++)
 		{
 			MainThreadIsExit;
-			startTime1 = clock();
 
 			setSignleColor(colorNum[index], 0, 0, 0);
+			SPDLOG_SINKS_DEBUG("Turn of the {}th Led", colorNum[index]);
 			Sleep(g_Config.intervalTime);
-			printf("\nget_background_frame--------------\n");
+			SPDLOG_SINKS_DEBUG("Sleep {} millisecond", g_Config.intervalTime);
 			getFrame(internal_back);
+			SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 
 			int r = rng.uniform(0, 255);
+			SPDLOG_SINKS_DEBUG("The random number generated is {} ,RandomShutDownLedNum is {}", r, g_Config.randomShutDownLed);
 			if (r >= g_Config.randomShutDownLed)
 			{
 				if (color == RED)
@@ -569,23 +668,25 @@ void mainLightingControl()
 				{
 					setSignleColor(index, 255, 255, 255);
 				}
+				SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
 			}
 			//else
 			//{
 			//	// 亮随机灯
 			//	setSignleColor(index, rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 			//}
-			printf("\nsetSignleColor--------------\n");
 
 			Sleep(g_Config.intervalTime);
+			SPDLOG_SINKS_DEBUG("Sleep {} millisecond", g_Config.intervalTime);
 
 			g_set_led_mutex.lock();
 			g_Index = index;
 			g_wait = true;
 			getFrame(g_current_frame);
+			SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 			g_background_frame = internal_back.clone();
 			g_randomShutDownLed = r;
-			printf("\nindex = %d, g_Led = %d, time =%d\n", index, g_Led, clock() - startTime1);
+			SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 			g_set_led_mutex.unlock();
 			Sleep(10); // 让出CPU时间
 
@@ -596,12 +697,16 @@ void mainLightingControl()
 	}
 
 	resetColor(g_Config.ledCount, 0, 0, 0);
+	SPDLOG_SINKS_DEBUG("Turn off {} Led", g_Config.ledCount);
 }
 
 void checkTheFailLedAgain(AgingLog& aging)
 {
 	if (g_Config.recheckFaileLedTime <= 0)
 		return;
+
+	SPDLOG_SINKS_DEBUG(">>>>>>>>>>>>>>>>Check the Failed Led Again>>>>>>>>>>>>>>>>");
+
 	//int g_recheckFaileLedTime = g_Config.recheckFaileLedTime;
 	Mat internal_back;	// 暂存back
 	//RNG rng(time(NULL));
@@ -613,11 +718,12 @@ void checkTheFailLedAgain(AgingLog& aging)
 	colorNum[0] = g_Config.ledCount - 1;
 	aging.syncSingLedResult2RetestResult();
 
-	while (g_recheckFaileLedTime <= g_Config.recheckFaileLedTime)
-	{		
+	while (g_recheckFaileLedTime < g_Config.recheckFaileLedTime)
+	{
 		g_set_led_mutex.lock();
 		g_recheckFaileLedTime++;
 		g_set_led_mutex.unlock();
+		SPDLOG_SINKS_DEBUG("Need to retest {} times, now is the {}th time", g_Config.recheckFaileLedTime, g_recheckFaileLedTime);
 
 		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
 		{
@@ -632,10 +738,13 @@ void checkTheFailLedAgain(AgingLog& aging)
 				{
 					// 关闭所有灯
 					resetColor(g_Config.ledCount, 0, 0, 0);
-					Sleep(g_Config.intervalTime);
-					printf("\nget_background_frame--------------\n");
-					getFrame(internal_back);
+					SPDLOG_SINKS_DEBUG("Turn off {} Led", g_Config.ledCount);
 
+					Sleep(g_Config.intervalTime);
+					SPDLOG_SINKS_DEBUG("Sleep {} millisecond", g_Config.intervalTime);
+
+					getFrame(internal_back); 
+					SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 					//int r = rng.uniform(0, 255);
 					//if (r >= g_Config.randomShutDownLed)
 					{
@@ -655,17 +764,21 @@ void checkTheFailLedAgain(AgingLog& aging)
 						{
 							setSignleColor(index, 255, 255, 255);
 						}
+						SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
 					}
-					printf("\nsetSignleColor--------------\n");
-
+					
 					Sleep(g_Config.intervalTime);
+					SPDLOG_SINKS_DEBUG("Sleep {} millisecond", g_Config.intervalTime);
 
 					g_set_led_mutex.lock();
 					g_Index = index;
 					g_wait = true;
 					getFrame(g_current_frame);
+					SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
+
 					g_background_frame = internal_back.clone();
 					g_randomShutDownLed = 0;
+					SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 					g_set_led_mutex.unlock();
 					Sleep(10); // 让出CPU时间
 
@@ -677,15 +790,21 @@ void checkTheFailLedAgain(AgingLog& aging)
 	}
 
 	resetColor(g_Config.ledCount, 0, 0, 0);
+	SPDLOG_SINKS_DEBUG("Turn off {} Led", g_Config.ledCount);
 	// 等最后一颗灯复测完再++, 复测完毕后还原数据，准备下一轮测试
 	g_set_led_mutex.lock();
 	g_recheckFaileLedTime = 0;
 	g_set_led_mutex.unlock();
+	SPDLOG_SINKS_DEBUG("Reset RecheckFaileLedTime to {}", g_recheckFaileLedTime);
 }
 
 void saveSingleColorResult(AgingLog& aging)
 {
-	if (1)
+#ifdef _DEBUG	
+	if (false)
+#else
+	if (true)
+#endif
 	{
 		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
 		{
@@ -707,58 +826,49 @@ void saveSingleColorResult(AgingLog& aging)
 				break;
 			}
 
+			SPDLOG_SINKS_DEBUG("Turn on {} {} Led", g_Config.ledCount, color);
 			Sleep(g_Config.intervalTime);
+			SPDLOG_SINKS_DEBUG("Sleep {} millisecond", g_Config.intervalTime);
 
 			Mat frame;
 			getFrame(frame);	// get current frame
 			char name[_MAX_PATH] = { 0 };
 			sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, aging.targetFolder(), color);
 			putText(frame, aging.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
+			SPDLOG_SINKS_DEBUG("Sleep {} millisecond", g_Config.intervalTime);
 			imwrite(name, frame);
-			
+
 			resetColor(g_Config.ledCount, 0, 0, 0);
 			Sleep(g_Config.intervalTime);
 		}
 	}
 }
 
-#if _SPDLOG
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/basic_file_sink.h>
-void initSpdlog()
-{
-	auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-	console_sink->set_level(spdlog::level::warn);
-	console_sink->set_pattern("[multi_sink_example] [%^%l%$] %v");
-
-	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/multisink.txt", true);
-	file_sink->set_level(spdlog::level::trace);
-
-	g_logger.sinks() = std::vector<sink_ptr>({ console_sink, file_sink });
-}
-#endif
-
 int main()
 {
-	printf("\n-------------version 0.2.0.1-------------\n");
+	SPDLOG_SINKS_INFO("-------------version 0.2.0.3-------------");
+
 	initVGA();
 
 	// 避免亮光影响相机初始化
 	resetColor(g_Config.ledCount, 0, 0, 0);
-
-	VideoCapture capture;
+		
 	do
 	{
 		capture.open(g_Config.cameraIndex);
-		printf("\n-------------opening camera-------------\n");
+		SPDLOG_SINKS_ERROR("opening {} camera faile", g_Config.cameraIndex);
 
 	} while (!capture.isOpened());
+
+	if (g_Config.resetRect)
+		getSelectROI(capture);
 
 	//capture.set(CAP_PROP_SETTINGS, 1);
 	capture.set(CAP_PROP_FPS, 30);
 	capture.set(CAP_PROP_FRAME_WIDTH, g_Config.frame.width);
 	capture.set(CAP_PROP_FRAME_HEIGHT, g_Config.frame.height);
 	capture.set(CAP_PROP_EXPOSURE, g_Config.exposure);
+	capture.set(CAP_PROP_SATURATION, g_Config.saturation);
 
 	g_wait = false;
 	g_main_thread_exit = eNotExit;
@@ -766,22 +876,20 @@ int main()
 
 	// 获取PPID的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
 	AgingLog aging(g_Config.ledCount, g_Config.randomShutDownLed > 0, g_Config.recheckFaileLedTime > 0);
-	
-	if (g_Config.resetRect)
-		getSelectROI(capture);
+	//g_aging = aging;	
 
 	std::thread t2(findFrameContours, std::ref(aging));
 	std::thread t3(renderTrackbarThread);
-
-
+	
 	while (g_Config.agingTime > 0)
 	{
-		printf("\n-------------Start Work-------------\n");
+		SinkInstance.pushBasicFileSinkMT(aging.targetFolder());
+
 		g_Config.agingTime--;
 
 		MainThreadIsExit;
 
-		mainLightingControl();
+		mainLightingControl(aging);
 
 		checkTheFailLedAgain(aging);
 
@@ -791,10 +899,12 @@ int main()
 			Mat fr = Mat::zeros(g_Config.frame, CV_8UC3);
 			if (aging.allLedIsOK() == Pass)
 			{
+				SPDLOG_SINKS_DEBUG("ALL LED IS OK");
 				putText(fr, "PASS", Point(0, fr.rows/2), FONT_HERSHEY_SIMPLEX, fr.cols / 100, Scalar(0, 255, 255), 5);
 			}
 			else
 			{
+				SPDLOG_SINKS_DEBUG("SOME LED FAILE");
 				putText(fr, "FAIL", Point(0, fr.rows/2), FONT_HERSHEY_SIMPLEX, fr.cols / 100, Scalar(0, 255, 255), 5);
 			}
 			int sw = GetSystemMetrics(SM_CXSCREEN);
@@ -806,10 +916,14 @@ int main()
 		}
 
 		aging.flushData();
+		SinkInstance.popupLastBasicFileSinkMT();
 	}
+
+	SPDLOG_SINKS_DEBUG("g_main_thread_exit = {}", g_main_thread_exit);
 
 	if (g_Config.agingTime == 0)	//任务完成，正常退出
 	{
+
 		g_main_thread_exit = eExit;
 	}
 
