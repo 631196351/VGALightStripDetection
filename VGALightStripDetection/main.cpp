@@ -9,23 +9,36 @@
 #include "main.h"
 #include "nvbase.h"
 #include "ene_program.h"
+#include "utility.h"
 
 using namespace cv;
 using namespace std;
 
+#define VGA_PPID_LENGTH 20
 #define LED_COUNT 22
 #define LED_HALF_COUNT (LED_COUNT/2)
+#define CONFIG_FILE "3c.ini"
 
 bool g_wait = false;
 //unsigned char g_product = 0;
 bool g_main_thread_exit = false;
+bool g_complete_a_cycle = false;	// 完成一个轮回， 进行一次抓拍
 std::mutex g_mutex_wait;
 std::condition_variable g_led_set_color_ok; // 条件变量, 指示LED 灯已经设置成功
 std::condition_variable g_image_process_ok; // 条件变量, 指示完成抓拍，已经处理好图片
 std::fstream g_aging_file;
 int g_Led_Color = WHITE;
+time_t g_start_time;
 
-
+int g_CameraIndex = 0;
+Size g_FrameSize = Size(1280, 780);
+Rect g_RectFrame = Rect(200, 240, 900, 200);
+int g_LedCount = 22;
+int g_LedHalfCount = g_LedCount / 2;
+bool g_ShowTrackBarWnd = true;
+int g_IntervalTime = 100;		// 灯珠亮灭的间隔时间
+char g_PPID[VGA_PPID_LENGTH] = { 0 };
+AgingLog2* g_lpAgingLog2 = NULL;
 //----		Red		Green	Blue	White
 //hmin		156		35		100		0
 //hmax		180		77		124		180
@@ -33,13 +46,9 @@ int g_Led_Color = WHITE;
 //smax		255		255		255		30
 //vmin		46		46		46		221
 //vmax		255		255		255		255
-HsvColor g_HsvColor[AllColor] = {
-	//{hmin,hmax,hlow,hhight,smin,smax,slow,shight,vmin,vmax,vlow,vhight}
-	{0,   180, 125, 180, 0,  30,  2,   30,  221, 255, 221, 255},			// White
-	{156, 180, 159, 180, 43, 255, 149, 255, 46,  255, 148, 255},		// Red
-	{35,  77,  35,  77,  43, 255, 43,  255, 46,  255, 136,  255},			// Green
-	{100, 124, 100, 124, 43, 255, 43,  255, 46,  255, 176,  255}		// Blue
-};
+HsvColor g_HsvColor[AllColor];
+
+bool g_AgingSettingSaveRectImages = true;
 
 #if false
 #define SPLIT_BGR true
@@ -186,9 +195,9 @@ int main001()
 #if SPLIT_BGR
 
 	int channels = 0;
-	int histSize =  256;
+	int histSize = 256;
 	float hranges[] = { 0, 255 };
-	const float* ranges[] = { hranges };	
+	const float* ranges[] = { hranges };
 
 	calcHist(&red_0_bgr[2], 1, &channels, Mat(), red_0_histogram, 1, &histSize, ranges, true, false);
 	calcHist(&red_1_bgr[2], 1, &channels, Mat(), red_1_histogram, 1, &histSize, ranges, true, false);
@@ -205,7 +214,7 @@ int main001()
 	normalize(red_1_histogram, red_1_histogram, 0, hist_h, NORM_MINMAX, -1, Mat());
 	normalize(red_2_histogram, red_2_histogram, 0, hist_h, NORM_MINMAX, -1, Mat());
 	normalize(red_3_histogram, red_3_histogram, 0, hist_h, NORM_MINMAX, -1, Mat());
-	
+
 	double v01 = compareHist(red_0_histogram, red_1_histogram, HISTCMP_CORREL);
 	double v02 = compareHist(red_0_histogram, red_2_histogram, HISTCMP_CORREL);
 	double v03 = compareHist(red_0_histogram, red_3_histogram, HISTCMP_CORREL);
@@ -356,44 +365,6 @@ void resetColor(BYTE r, BYTE g, BYTE b)
 }
 #endif
 
-
-#if 0
-int main111(int argc, char *argv[], char *envp[])
-{
-	if (nvi2cinit() != 0)
-	{
-		printf("i2cb init fail\n");
-		system("pause");
-		return -1;
-	}
-	while (1)
-	{
-		setColor(0, 0, 0);
-		u8  colorNum[22];
-		colorNum[0] = 23;
-		for (size_t i = 1; i < 22; i++)
-		{
-			colorNum[i] = i - 1;
-		}
-
-		for (size_t i = 0, t = 11; i < 11 && t < 22; i++, t++)
-		{
-			setSingleColor(i, colorNum[i], 255, 255, 255);
-
-
-			setSingleColor(t, colorNum[t], 255, 255, 255);
-
-			Sleep(100);
-		}
-		setColor(0, 0, 0);
-	}
-
-	//eneReset(); // 重置状态
-
-	return 0;
-}
-#endif
-
 void setColorThread()
 {
 	/* 这里存一个灯的映射关系，打开一个灯，需要把前面打开的灯关闭
@@ -462,7 +433,7 @@ void setColorThread()
 				// 等Main 把活做完
 				g_mutex_wait.lock();
 				printf("++++++++++++++\n");
-				g_mutex_wait.unlock();				
+				g_mutex_wait.unlock();
 				//while (g_wait) {}
 
 				//if (g_Led_Color >= BLUE)
@@ -471,7 +442,7 @@ void setColorThread()
 				//	g_Led_Color++;
 			}
 		}
-	}	
+	}
 }
 
 void setColorThread2()
@@ -563,25 +534,29 @@ void setColorThread3()
 	 12 - 11
 	 21 - 20
 	 */
-	u8 colorNum[22];
-	for (u8 i = 1; i < 22; i++)
+	u8 *colorNum = new u8[g_LedCount]{ 0 };
+	for (u8 i = 1; i < g_LedCount; i++)
 	{
 		colorNum[i] = i - 1;
 	}
-	colorNum[0] = LED_HALF_COUNT - 1;
-	colorNum[LED_HALF_COUNT] = LED_COUNT - 1;
+	colorNum[0] = g_LedHalfCount - 1;
+	colorNum[g_LedHalfCount] = g_LedCount - 1;
 
-	while (true)
+	//while (true)
 	{
+		g_lpAgingLog2 = new AgingLog2(AllColor * g_LedCount);
 		for (g_Led_Color = WHITE; g_Led_Color < AllColor; g_Led_Color++)
 		{
-			for (size_t i = 0, t = LED_HALF_COUNT; i < LED_HALF_COUNT && t < LED_COUNT; i++, t++)
+			g_complete_a_cycle = false;
+			for (size_t i = 0, t = g_LedHalfCount; i < g_LedHalfCount && t < g_LedCount; i++, t++)
 			{
 				// 在子线程的每次loop前判定是否需要退出
 				// 主线程退出是随机的, 主线程接收到退出key后, 业务循环逻辑立即退出,进入join子线程状态
 				// 子线程即便是恰巧在设置完灯后解锁, 主线程因为不再受理业务, 子线程会在下个循环开始前在此处退出
 				if (g_main_thread_exit)
 				{
+					if (g_lpAgingLog2 != NULL)
+						delete g_lpAgingLog2;
 					return;
 				}
 
@@ -615,6 +590,8 @@ void setColorThread3()
 					setSignleColor(i, 0, 0, 255);
 					setSignleColor(t, 0, 0, 255);
 				}
+				g_lpAgingLog2->setCurrentLedIndex(i, t);
+
 				printf("**************\n");
 				Sleep(50);	//灯的颜色真正设置进显卡
 				g_wait = true;
@@ -623,47 +600,118 @@ void setColorThread3()
 				// 消费者线程目前不需要关注生产者的状态
 				g_led_set_color_ok.notify_all();
 				lock.unlock(); // 解锁.
-				Sleep(100);// Give Main Thread CPU Time
+				Sleep(g_IntervalTime);// Give Main Thread CPU Time
+			}
+			
+			// 一个轮回结束后，要将所有灯都打开一次， 进行拍照保存
+			if(1)
+			{
+				std::unique_lock<std::mutex> lock(g_mutex_wait);
+				if (g_wait)
+				{
+					g_image_process_ok.wait(lock);
+				}
+				switch (g_Led_Color)
+				{
+				case WHITE:
+					resetColor(255, 255, 255);
+					break;
+				case RED:
+					resetColor(255, 0, 0);
+					break;
+				case GREEN:
+					resetColor(0, 255, 0);
+					break;
+				case BLUE:
+					resetColor(0, 0, 255);
+					break;
+				}
+				printf("**************\n");
+				Sleep(50);	//灯的颜色真正设置进显卡
+				g_complete_a_cycle = true;
+				g_wait = true;
+
+				g_led_set_color_ok.notify_all();
+				lock.unlock(); // 解锁.
+				Sleep(g_IntervalTime);// Give Main Thread CPU Time
 			}
 
-			// 等我处理完图片你在换灯
+			// 等我处理完图片你再换灯
 			std::unique_lock<std::mutex> lock(g_mutex_wait);
 			if (g_wait)
 			{
 				g_image_process_ok.wait(lock);
 			}
+			resetColor(0, 0, 0);	//所有灯都刷一个颜色后， 需要进行一次重置， 不再影响下一轮
 			lock.unlock(); // 解锁.
+		}
+
+		if (g_lpAgingLog2 != NULL)
+		{
+			tm *local = localtime(&g_start_time);
+			char format_time[MAXCHAR] = { 0 };
+			strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
+
+			g_aging_file << g_PPID << ","<< format_time << ",";
+
+			int result_count1 = 0;	// 一个轮回的结果
+			int result_count2 = 0;	// 四个轮回的结果
+			for (int i = 0; i < g_lpAgingLog2->getSize(); i++)
+			{
+				SingleLEDHSV* lpdata = g_lpAgingLog2->ptr(i);
+				g_aging_file << lpdata->h << ","
+					<< lpdata->s << ","
+					<< lpdata->v << ","
+					<< lpdata->result << ",";
+				//printf("%d - [%d, %d, %d] - %d\n", i, lpdata->h, lpdata->s, lpdata->v, lpdata->result);
+				result_count1 += lpdata->result;
+				result_count2 += lpdata->result;
+
+				if ((i + 1) % g_LedCount == 0)	// 一轮的数据已统计完
+				{
+					g_aging_file << result_count1;
+					result_count1 = 0;	// 一轮数据统计完后归零，重新来过
+				}
+			}
+			g_aging_file << ","<< result_count2 <<"\n";
+
+			
+			delete g_lpAgingLog2;
 		}
 	}
 
+	if (colorNum != NULL)
+		delete[] colorNum;
+
+	g_main_thread_exit = true;
 }
 
 bool openAgingLog()
 {
-	g_aging_file.open("./aging.csv", std::fstream::in | std::fstream::out | std::fstream::app);
+	g_aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
 	if (g_aging_file.is_open())
 	{
 		// get length of file:
-		g_aging_file.seekg(0, g_aging_file.end);
-		std::streampos length = g_aging_file.tellg();
-		if (length == 0)
-		{
-			// 添加表头
-			// PPID|img_name|convert img_name to time string|r,g,b|a8[0]|a8[1]|a8[2]|a8[3]|a8[4]|a8[5]|a8[6]|a8[7]|test result
-			g_aging_file << "PPID,"
-				<< "img_name,"
-				<< "rgb,"
-				<< "a8[0],"
-				<< "a8[1],"
-				<< "a8[2],"
-				<< "a8[3],"
-				<< "a8[4],"
-				<< "a8[5],"
-				<< "a8[6],"
-				<< "a8[7],"
-				<< "test result" << endl;
-			g_aging_file.flush();
-		}
+		//g_aging_file.seekg(0, g_aging_file.end);
+		//std::streampos length = g_aging_file.tellg();
+		//if (length == 0)
+		//{
+		//	// 添加表头
+		//	// PPID|img_name|convert img_name to time string|r,g,b|a8[0]|a8[1]|a8[2]|a8[3]|a8[4]|a8[5]|a8[6]|a8[7]|test result
+		//	g_aging_file << "PPID,"
+		//		<< "img_name,"
+		//		<< "rgb,"
+		//		<< "a8[0],"
+		//		<< "a8[1],"
+		//		<< "a8[2],"
+		//		<< "a8[3],"
+		//		<< "a8[4],"
+		//		<< "a8[5],"
+		//		<< "a8[6],"
+		//		<< "a8[7],"
+		//		<< "test result" << endl;
+		//	g_aging_file.flush();
+		//}
 		return true;
 	}
 	return false;
@@ -686,11 +734,11 @@ void setFrameImgThread(void* lpcapture)
 			startTime = clock();//计时开始
 
 			AgingLog aging;
-			
+
 			Rect rect(40, 280, 1150, 110);	// 画一个截取框出来	
 			Mat img = frame(rect);
 			//imshow("imga", img);
-			
+
 			Mat frame_clone = frame.clone();
 			rectangle(frame_clone, rect, Scalar(255, 255, 255), 5);
 			imshow("graphics_card", frame_clone);
@@ -757,7 +805,7 @@ void setFrameImgThread(void* lpcapture)
 					}
 
 				}
-			}			
+			}
 			//printf("time consuming1 = %d\n", clock() - startTime);
 			//startTime = clock();
 
@@ -880,7 +928,7 @@ void setFrameImgThread(void* lpcapture)
 				sprintf_s(msg, 256, "Success - %s", aging_img);
 				putText(img, msg, Point(0, 50), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255));
 
-				sprintf_s(msg, 256, "t[0] = %d t[1] = %d",t[0], t[1]);
+				sprintf_s(msg, 256, "t[0] = %d t[1] = %d", t[0], t[1]);
 				putText(img, msg, Point(0, 80), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255));
 
 				sprintf_s(msg, 256, "a[0] = %d,a[1] = %d,a[2] = %d,a[3] = %d,a[4] = %d,a[5] = %d,a[6] = %d,a[7] = %d"
@@ -1026,8 +1074,8 @@ void setFrameImgThread3(void* lpcapture)
 
 	char key = '0';
 	clock_t startTime;
-	
-	int lowhsv[3] = { 0 };	
+
+	int lowhsv[3] = { 0 };
 	int highsv[3] = { 0 };
 
 	while (true)
@@ -1036,8 +1084,29 @@ void setFrameImgThread3(void* lpcapture)
 		if (g_wait)
 		{
 			//g_mutex_wait.lock();
+			// 一个轮回进行一次抓拍并保存			
+			if (g_complete_a_cycle)
+			{
+				std::unique_lock<std::mutex> lock(g_mutex_wait);
+				(*capture).read(frame);
+				tm *local = localtime(&g_start_time);
+				char format_time[MAXCHAR] = { 0 };
+				strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
+
+				char frame_file[MAXCHAR] = { 0 };
+				sprintf_s(frame_file, MAXCHAR, ".\\aging_original_image\\%s-%s-%d.png", g_PPID, format_time, g_Led_Color);
+
+				imwrite(frame_file, frame);
+				g_wait = false;	// 表示扫描线程已经完工了
+				g_complete_a_cycle = false;
+				g_image_process_ok.notify_all();
+				lock.unlock();
+				continue;	// 不再走下面的扫描逻辑
+			}
+
+
 			std::unique_lock<std::mutex> lock(g_mutex_wait);
-			if(g_Led_Color < AllColor)
+			if (g_Led_Color < AllColor)
 			{
 				const HsvColor& hsv = g_HsvColor[g_Led_Color];
 				lowhsv[0] = hsv.h[0] + hsv.h[5];
@@ -1050,17 +1119,31 @@ void setFrameImgThread3(void* lpcapture)
 
 				startTime = clock();//计时开始
 				(*capture).read(frame); // !important, 确保读取出来的灯是完全点亮的
-				AgingLog aging;
+				//AgingLog aging;
 
 				//Rect rect(40, 280, 1150, 110);	// 画一个截取框出来	
-				Rect rect(200, 240, 900, 200);
+				Rect rect(g_RectFrame.x, g_RectFrame.y, g_RectFrame.width, g_RectFrame.height);
 				Mat img = frame(rect);
 				//Mat img = frame.clone();
+				if(g_AgingSettingSaveRectImages)
+				{
+					tm *local = localtime(&g_start_time);
+					char format_time[MAXCHAR] = { 0 };
+					strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
+
+					int f = g_lpAgingLog2->getCurrentLedIndex_F();
+					int s = g_lpAgingLog2->getCurrentLedIndex_S();
+
+					char frame_file[MAXCHAR] = { 0 };
+					sprintf_s(frame_file, MAXCHAR, ".\\aging_rect_image\\%s-%s-%d-%d-%d-original.png", g_PPID, format_time, g_Led_Color, f, s);
+
+					imwrite(frame_file, img);
+				}
 
 				Mat frame_clone = frame.clone();
 				rectangle(frame_clone, rect, Scalar(255, 255, 0), 5);
-				imshow("graphics_card", frame_clone);				
-
+				imshow("graphics_card", frame_clone);
+								
 				//均值滤波
 				//medianBlur(img, img, 7);
 				GaussianBlur(img, img, Size(7, 7), 1.0);
@@ -1069,15 +1152,29 @@ void setFrameImgThread3(void* lpcapture)
 
 				Mat hsv_img;
 				cvtColor(img, hsv_img, COLOR_BGR2HSV);
-				imshow("hsv_img", hsv_img);
+				//imshow("hsv_img", hsv_img);
 				//moveWindow("hsv_img", 0, 150);
 
-				Mat hsv_img_mask;				
+				Mat hsv_img_mask;
 				inRange(hsv_img, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), hsv_img_mask);
 				//imshow("inRange_mask", hsv_img_mask);
 				//moveWindow("inRange_mask", 0, 500);
+				if (g_AgingSettingSaveRectImages) 
+				{
+					tm *local = localtime(&g_start_time);
+					char format_time[MAXCHAR] = { 0 };
+					strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
 
-				//形态学处理
+					int f = g_lpAgingLog2->getCurrentLedIndex_F();
+					int s = g_lpAgingLog2->getCurrentLedIndex_S();
+
+					char frame_file[MAXCHAR] = { 0 };
+					sprintf_s(frame_file, MAXCHAR, ".\\aging_rect_image\\%s-%s-%d-%d-%d-mask.png", g_PPID, format_time, g_Led_Color, f, s);
+
+					imwrite(frame_file, hsv_img_mask);
+				}
+
+				//形态学处理消除噪点
 				Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
 				morphologyEx(hsv_img_mask, hsv_img_mask, MORPH_CLOSE, kernel);
 				//imshow("MORPH_CLOSE", hsv_img_mask);
@@ -1091,12 +1188,25 @@ void setFrameImgThread3(void* lpcapture)
 				bitwise_and(img, img, result, hsv_img_mask);
 				//imshow("bitwise_and", result);
 				//moveWindow("bitwise_and", 900, 0);
+				if (g_AgingSettingSaveRectImages) 
+				{
+					tm *local = localtime(&g_start_time);
+					char format_time[MAXCHAR] = { 0 };
+					strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
+
+					int f = g_lpAgingLog2->getCurrentLedIndex_F();
+					int s = g_lpAgingLog2->getCurrentLedIndex_S();
+
+					char frame_file[MAXCHAR] = { 0 };
+					sprintf_s(frame_file, MAXCHAR, ".\\aging_rect_image\\%s-%s-%d-%d-%d-result.png", g_PPID, format_time, g_Led_Color, f, s);
+
+					imwrite(frame_file, result);
+				}
 
 				//存储边缘
 				vector<vector<Point> > contours;
 				vector<Vec4i> hierarchy;
 
-				//找到边缘，注意为什么先把binaryFrame克隆一遍
 				Mat tempBinaryFrame = hsv_img_mask.clone();
 				findContours(tempBinaryFrame, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//查找最顶层轮廓
 
@@ -1130,7 +1240,7 @@ void setFrameImgThread3(void* lpcapture)
 						else {
 							gap = abs(rect.x - (tail->x + tail->width));
 						}
-						
+
 						if (gap < 60)
 						{
 							Rect big_rect;
@@ -1146,17 +1256,55 @@ void setFrameImgThread3(void* lpcapture)
 						}
 					}
 				}
-				if (boundRect.size() != 2)
+				if (boundRect.size() < 2)
 				{
-					//waitKey();
+					putText(result, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255));
 				}
 				//得到灯的轮廓
 				for (int index = 0; index < boundRect.size(); index++)
 				{
 					rectangle(result, boundRect[index], Scalar(0, 255, 255), 1);
-					//imshow("contours", result);
-					//moveWindow("contours", 900, 150);
-					//waitKey(1);
+					const Mat contour = hsv_img(boundRect[index]);
+					
+					if(1)
+					{						
+						int hall = 0, sall = 0, vall = 0;
+						int point_count = 0;
+						for (size_t i = 0; i < contour.rows; i++)
+						{
+							for (size_t j = 0; j < contour.cols; j++)
+							{
+								const uchar* lphsv = contour.ptr<uchar>(i, j);
+								if (lphsv[0] >= lowhsv[0])
+								{
+									hall += lphsv[0];
+									sall += lphsv[1];
+									vall += lphsv[2];
+									point_count++;
+								}
+								//printf("[%d,%d,%d]",lphsv[0], lphsv[1], lphsv[2]);
+							}
+							//printf("\n");
+						}
+						if (index == 0 && point_count > 0)
+						{
+							int f = (g_Led_Color * g_LedCount) + g_lpAgingLog2->getCurrentLedIndex_F();
+							SingleLEDHSV* lpSingleLEDHSV = g_lpAgingLog2->ptr(f);
+							lpSingleLEDHSV->h = hall / point_count;
+							lpSingleLEDHSV->s = sall / point_count;
+							lpSingleLEDHSV->v = vall / point_count;
+							lpSingleLEDHSV->result = 0;
+						}
+						else if (index == 1 && point_count > 0)
+						{
+							int s = (g_Led_Color * g_LedCount) + g_lpAgingLog2->getCurrentLedIndex_S();
+							SingleLEDHSV* lpSingleLEDHSV = g_lpAgingLog2->ptr(s);
+							lpSingleLEDHSV->h = hall / point_count;
+							lpSingleLEDHSV->s = sall / point_count;
+							lpSingleLEDHSV->v = vall / point_count;
+							lpSingleLEDHSV->result = 0;
+						}
+					}
 				}
 				imshow("contours", result);
 
@@ -1181,11 +1329,18 @@ void setFrameImgThread3(void* lpcapture)
 			waitKey();
 			g_mutex_wait.unlock();
 		}
+
+		if (g_main_thread_exit)
+		{
+			break;
+		}
 	}
 }
 
 void renderTrackbarThread()
 {
+	if (!g_ShowTrackBarWnd)
+		return;
 	int empty_w = 400, empty_h = 100;
 	Mat empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
 	namedWindow("Toolkit");
@@ -1210,7 +1365,7 @@ void renderTrackbarThread()
 
 		createTrackbar("lowVal", "Toolkit", &hsv.v[5], hsv.v[4]);
 		createTrackbar("higVal", "Toolkit", &hsv.v[6], hsv.v[4]);
-		
+
 		hl = hsv.h[0] + hsv.h[5];
 		sl = hsv.s[0] + hsv.s[5];
 		vl = hsv.v[0] + hsv.v[5];
@@ -1218,15 +1373,15 @@ void renderTrackbarThread()
 		hh = hsv.h[0] + hsv.h[6];
 		sh = hsv.s[0] + hsv.s[6];
 		vh = hsv.v[0] + hsv.v[6];
-		
+
 		sprintf_s(buf, 128, "lowHSV < higHSV !!!");
-		putText(empty, buf, Point(0, empty.rows/4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+		putText(empty, buf, Point(0, empty.rows / 4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 
 		sprintf_s(buf, 128, "Real Low HSV (%d, %d, %d)", hl, sl, vl);
-		putText(empty, buf, Point(0, empty.rows/4 * 2), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+		putText(empty, buf, Point(0, empty.rows / 4 * 2), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 
 		sprintf_s(buf, 128, "Real High HSV (%d, %d, %d)", hh, sh, vh);
-		putText(empty, buf, Point(0, empty.rows/4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+		putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		imshow("Toolkit", empty);
 		empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
 
@@ -1234,13 +1389,159 @@ void renderTrackbarThread()
 	}
 }
 
+void initConfigFile()
+{
+	TCHAR lpPath[MAX_PATH] = { 0 };
+	wcscpy_s(lpPath, MAX_PATH, L"./3c.ini");
+
+	//[Camera]
+	WritePrivateProfileString(L"Camera", L"Index", L"0", lpPath);
+
+	//[Frame]
+	WritePrivateProfileString(L"Frame", L"Width", L"1280", lpPath);
+	WritePrivateProfileString(L"Frame", L"Hight", L"780", lpPath);
+
+	//[RectFrame]
+	WritePrivateProfileString(L"RectFrame", L"X", L"200", lpPath);
+	WritePrivateProfileString(L"RectFrame", L"Y", L"240", lpPath);
+	WritePrivateProfileString(L"RectFrame", L"Width", L"900", lpPath);
+	WritePrivateProfileString(L"RectFrame", L"Hight", L"200", lpPath);
+
+	//[AgingSetting]
+	WritePrivateProfileString(L"AgingSetting", L"SaveRectImages ", L"1", lpPath);
+
+	//[LED]
+	WritePrivateProfileString(L"LED", L"Count", L"22", lpPath);
+	WritePrivateProfileString(L"LED", L"IntervalTime", L"100", lpPath);
+
+	//[TrackBarWindow]
+	WritePrivateProfileString(L"TrackBarWindow", L"IsShow", L"1", lpPath);
+
+	//[RedThreshold]
+	//{156, 180, 159, 180, 43, 255, 149, 255, 46, 255, 148, 255} // Red
+	WritePrivateProfileString(L"RedThreshold", L"Lh", L"159", lpPath);
+	WritePrivateProfileString(L"RedThreshold", L"Hh", L"180", lpPath);
+	WritePrivateProfileString(L"RedThreshold", L"Ls", L"149", lpPath);
+	WritePrivateProfileString(L"RedThreshold", L"Hs", L"255", lpPath);
+	WritePrivateProfileString(L"RedThreshold", L"Lv", L"148", lpPath);
+	WritePrivateProfileString(L"RedThreshold", L"Hv", L"255", lpPath);
+
+	//[GreenThreshold]
+	//{35, 77, 35, 77, 43, 255, 43, 255, 46, 255, 136, 255}	// Green
+	WritePrivateProfileString(L"GreenThreshold", L"Lh", L"35", lpPath);
+	WritePrivateProfileString(L"GreenThreshold", L"Hh", L"77", lpPath);
+	WritePrivateProfileString(L"GreenThreshold", L"Ls", L"43", lpPath);
+	WritePrivateProfileString(L"GreenThreshold", L"Hs", L"255", lpPath);
+	WritePrivateProfileString(L"GreenThreshold", L"Lv", L"136", lpPath);
+	WritePrivateProfileString(L"GreenThreshold", L"Hv", L"255", lpPath);
+
+	//[BlueThreshold]
+	//{100, 124, 100, 124, 43, 255, 43, 255, 46, 255, 176, 255} // Blue
+	WritePrivateProfileString(L"BlueThreshold", L"Lh", L"100", lpPath);
+	WritePrivateProfileString(L"BlueThreshold", L"Hh", L"124", lpPath);
+	WritePrivateProfileString(L"BlueThreshold", L"Ls", L"43", lpPath);
+	WritePrivateProfileString(L"BlueThreshold", L"Hs", L"255", lpPath);
+	WritePrivateProfileString(L"BlueThreshold", L"Lv", L"176", lpPath);
+	WritePrivateProfileString(L"BlueThreshold", L"Hv", L"255", lpPath);
+
+	//[WhiteThreshold]
+	//{0,   180, 125, 180, 0,  30,  2,   30,  221, 255, 221, 255} // White
+	WritePrivateProfileString(L"WhiteThreshold", L"Lh", L"125", lpPath);
+	WritePrivateProfileString(L"WhiteThreshold", L"Hh", L"180", lpPath);
+	WritePrivateProfileString(L"WhiteThreshold", L"Ls", L"2", lpPath);
+	WritePrivateProfileString(L"WhiteThreshold", L"Hs", L"30", lpPath);
+	WritePrivateProfileString(L"WhiteThreshold", L"Lv", L"221", lpPath);
+	WritePrivateProfileString(L"WhiteThreshold", L"Hv", L"255", lpPath);
+
+}
+
+void readConfigFile()
+{
+	TCHAR lpPath[MAX_PATH] = { 0 };
+	wcscpy_s(lpPath, MAX_PATH, L"./3c.ini");
+
+	//[Camera]
+	g_CameraIndex = GetPrivateProfileInt(L"Camera", L"Index", 0, lpPath);
+
+	//[Frame]
+	g_FrameSize.width = GetPrivateProfileInt(L"Frame", L"Width", 1280, lpPath);
+	g_FrameSize.height = GetPrivateProfileInt(L"Frame", L"Hight", 780, lpPath);
+
+	//[RectFrame]
+	g_RectFrame.x = GetPrivateProfileInt(L"RectFrame", L"X", 200, lpPath);
+	g_RectFrame.y = GetPrivateProfileInt(L"RectFrame", L"Y", 240, lpPath);
+	g_RectFrame.width = GetPrivateProfileInt(L"RectFrame", L"Width", 900, lpPath);
+	g_RectFrame.height = GetPrivateProfileInt(L"RectFrame", L"Hight", 200, lpPath);
+
+	//[AgingSetting]
+	g_AgingSettingSaveRectImages = GetPrivateProfileInt(L"AgingSetting", L"SaveRectImages ", 1, lpPath);
+
+	//[LED]
+	g_LedCount = GetPrivateProfileInt(L"LED", L"Count", 22, lpPath);
+	g_IntervalTime = GetPrivateProfileInt(L"LED", L"IntervalTime", 100, lpPath);
+
+	//[TrackBarWindow]
+	g_ShowTrackBarWnd = GetPrivateProfileInt(L"TrackBarWindow", L"IsShow", 1, lpPath);
+
+	//[RedThreshold]
+	//{156, 180, 159, 180, 43, 255, 149, 255, 46, 255, 148, 255} // Red
+	int r_Lh = GetPrivateProfileInt(L"RedThreshold", L"Lh", 159, lpPath);
+	int r_Hh = GetPrivateProfileInt(L"RedThreshold", L"Hh", 180, lpPath);
+	int r_Ls = GetPrivateProfileInt(L"RedThreshold", L"Ls", 149, lpPath);
+	int r_Hs = GetPrivateProfileInt(L"RedThreshold", L"Hs", 255, lpPath);
+	int r_Lv = GetPrivateProfileInt(L"RedThreshold", L"Lv", 148, lpPath);
+	int r_Hv = GetPrivateProfileInt(L"RedThreshold", L"Hv", 255, lpPath);
+
+	//[GreenThreshold]
+	//{35, 77, 35, 77, 43, 255, 43, 255, 46, 255, 136, 255}	// Green
+	int g_Lh = GetPrivateProfileInt(L"GreenThreshold", L"Lh", 35, lpPath);
+	int g_Hh = GetPrivateProfileInt(L"GreenThreshold", L"Hh", 77, lpPath);
+	int g_Ls = GetPrivateProfileInt(L"GreenThreshold", L"Ls", 43, lpPath);
+	int g_Hs = GetPrivateProfileInt(L"GreenThreshold", L"Hs", 255, lpPath);
+	int g_Lv = GetPrivateProfileInt(L"GreenThreshold", L"Lv", 136, lpPath);
+	int g_Hv = GetPrivateProfileInt(L"GreenThreshold", L"Hv", 255, lpPath);
+
+	//[BlueThreshold]
+	//{100, 124, 100, 124, 43, 255, 43, 255, 46, 255, 176, 255} // Blue
+	int b_Lh = GetPrivateProfileInt(L"BlueThreshold", L"Lh", 100, lpPath);
+	int b_Hh = GetPrivateProfileInt(L"BlueThreshold", L"Hh", 124, lpPath);
+	int b_Ls = GetPrivateProfileInt(L"BlueThreshold", L"Ls", 43, lpPath);
+	int b_Hs = GetPrivateProfileInt(L"BlueThreshold", L"Hs", 255, lpPath);
+	int b_Lv = GetPrivateProfileInt(L"BlueThreshold", L"Lv", 176, lpPath);
+	int b_Hv = GetPrivateProfileInt(L"BlueThreshold", L"Hv", 255, lpPath);
+
+	//[WhiteThreshold]
+	//{0,   180, 125, 180, 0,  30,  2,   30,  221, 255, 221, 255} // White
+	int w_Lh = GetPrivateProfileInt(L"WhiteThreshold", L"Lh", 125, lpPath);
+	int w_Hh = GetPrivateProfileInt(L"WhiteThreshold", L"Hh", 180, lpPath);
+	int w_Ls = GetPrivateProfileInt(L"WhiteThreshold", L"Ls", 2, lpPath);
+	int w_Hs = GetPrivateProfileInt(L"WhiteThreshold", L"Hs", 30, lpPath);
+	int w_Lv = GetPrivateProfileInt(L"WhiteThreshold", L"Lv", 221, lpPath);
+	int w_Hv = GetPrivateProfileInt(L"WhiteThreshold", L"Hv", 255, lpPath);
+
+	g_HsvColor[RED] = { 156, 180, r_Lh, r_Hh, 43, 255, r_Ls, r_Hs, 46, 255, r_Lv, r_Hv };
+	g_HsvColor[GREEN] = { 35, 77, g_Lh, g_Hh, 43, 255, g_Ls, g_Hs, 46, 255, g_Lv, g_Hv };
+	g_HsvColor[BLUE] = { 100, 124, b_Lh, b_Hh, 43, 255, b_Ls, b_Hs, 46, 255, b_Lv, b_Hv };
+	g_HsvColor[WHITE] = { 0, 180, w_Lh, w_Hh, 0,  30, w_Ls, w_Hs, 221, 255, w_Lv, w_Hv };
+}
+
 int main()
 {
+	fstream f(CONFIG_FILE, std::fstream::in);
+	if (!f.good())
+		initConfigFile();
+	else
+		readConfigFile();
+	f.close();
+#if true	// 全局变量初始化
+	getVGAInfo(g_PPID, VGA_PPID_LENGTH);
+	g_start_time = time(NULL); //获取日历时间
+#endif
 	Mat frame;
-	VideoCapture capture(1);
+	VideoCapture capture(g_CameraIndex);
 	//capture.set(CAP_PROP_SETTINGS, 1);
-	capture.set(CAP_PROP_FRAME_WIDTH, 1280);
-	capture.set(CAP_PROP_FRAME_HEIGHT, 720);
+	capture.set(CAP_PROP_FRAME_WIDTH, g_FrameSize.width);
+	capture.set(CAP_PROP_FRAME_HEIGHT, g_FrameSize.height);
 
 	HINSTANCE hDLL;		// Handle to DLL
 	hDLL = LoadLibrary(L"VGA_Extra_x64.dll");
@@ -1264,7 +1565,7 @@ int main()
 	std::thread t1(setColorThread3);
 	std::thread t2(setFrameImgThread3, &capture);
 	std::thread t3(renderTrackbarThread);
-	
+
 #if 0
 	//char key = '0';
 	//unsigned long index = 0;
@@ -1278,7 +1579,7 @@ int main()
 			//printf("_clock1 = %u\n", clock());
 			g_mutex_wait.lock();
 			startTime = clock();//计时开始
-			
+
 			Rect rect(230, 180, 850, 300);	// 画一个截取框出来	
 			Mat img = frame(rect);
 			imshow("img", img);
@@ -1295,7 +1596,7 @@ int main()
 					switch (g_Led_Color)
 					{
 					case WHITE:
-						if (img.at<Vec3b>(row, c)[2] < R_Threshold 
+						if (img.at<Vec3b>(row, c)[2] < R_Threshold
 							&& img.at<Vec3b>(row, c)[1] < G_Threshold
 							&& img.at<Vec3b>(row, c)[0] < B_Threshold)
 						{
@@ -1335,18 +1636,19 @@ int main()
 							img.at<Vec3b>(row, c)[0] = 0;
 							img.at<Vec3b>(row, c)[1] = 0;
 							img.at<Vec3b>(row, c)[2] = 0;
-						}else {
+						}
+						else {
 							count++;
 						}
 						break;
 					}
-					
+
 				}
 			}
 			//printf("count1 = %d\n", count);
 
 			// 将img 划分成竖向的8列, 统计每列中r >=240 的点数量
-			
+
 			count = 0;
 			for (size_t i = 0; i < img.cols; i++)
 			{
@@ -1391,7 +1693,7 @@ int main()
 					//{
 					//	aging.point_block[7]++;
 					//}
-					
+
 					switch (g_Led_Color)
 					{
 					case WHITE:
@@ -1403,22 +1705,22 @@ int main()
 							count++;
 						}
 						break;
-					case RED:				
-						if (img.at<Vec3b>(j, i)[2] >0)
+					case RED:
+						if (img.at<Vec3b>(j, i)[2] > 0)
 						{
 							aging.point_block[block_index]++;
 							count++;
 						}
 						break;
 					case GREEN:
-						if (img.at<Vec3b>(j, i)[1] >0)
+						if (img.at<Vec3b>(j, i)[1] > 0)
 						{
 							aging.point_block[block_index]++;
 							count++;
 						}
 						break;
 					case BLUE:
-						if (img.at<Vec3b>(j, i)[0] >0)
+						if (img.at<Vec3b>(j, i)[0] > 0)
 						{
 							aging.point_block[block_index]++;
 							count++;
@@ -1428,7 +1730,7 @@ int main()
 				}
 			}
 			//printf("count2 = %d\n", count);
-			
+
 
 			bool b8[8] = { 0 };	// 8个区块中, 各个区块是否有白色
 			int t[2] = { -1, -1 };	// 记录区块下标
@@ -1461,7 +1763,7 @@ int main()
 			aging.setColor(g_Led_Color);
 			time(&aging.img_name);
 
-			if (t[0] < 0 || t[1] < 0) 
+			if (t[0] < 0 || t[1] < 0)
 			{
 				const unsigned int* a8 = aging.point_block;
 				char fail_img_name[256] = { 0 };
@@ -1483,7 +1785,7 @@ int main()
 				waitKey(1);
 				aging.result = false;
 			}
-			else 
+			else
 			{
 				const unsigned int* a8 = aging.point_block;
 				char fail_img_name[256] = { 0 };
@@ -1510,7 +1812,7 @@ int main()
 			imshow("imgb", img);
 
 			aging.time_consuming = clock() - startTime;
-			
+
 			//printf("time consuming - %d\n", aging.time_consuming);
 
 			if (g_aging_file.is_open())
@@ -1549,9 +1851,8 @@ int main()
 		}
 	}
 #endif
-	t2.join();
-
 	t1.join();
+	t2.join();
 	t3.join();
 	FreeLibrary(hDLL);
 	g_aging_file.close();

@@ -18,24 +18,18 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ene_program.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="nvbase.cpp">
+    <ClCompile Include="utility.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ene_program.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="nvapi.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="nvbase.h">
+    <ClInclude Include="main.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="main.h">
+    <ClInclude Include="utility.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

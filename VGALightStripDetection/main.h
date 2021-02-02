@@ -65,6 +65,62 @@ struct AgingLog
 
 };
 
+struct SingleLEDHSV
+{
+	int hsv_avg[3] = { 0 };
+	int result = 1;	//非零为成功
+
+	int& h = hsv_avg[0];
+	int& s = hsv_avg[1];
+	int& v = hsv_avg[2];
+};
+
+struct AgingLog2
+{
+	SingleLEDHSV* lpSingleLEDHSV = NULL;
+	int nSingleLEDHSVSize = 0;
+private:
+	int currentLed[2] = { -1 };	// 指示当前亮灯的下标
+	int& f = currentLed[0];	// 指示当前第一个亮着的灯
+	int& s = currentLed[1];	// 指示当前第二个亮着的灯
+
+public:
+	AgingLog2(int size) :nSingleLEDHSVSize(size)
+	{
+		lpSingleLEDHSV = new SingleLEDHSV[nSingleLEDHSVSize];
+	}
+
+	~AgingLog2()
+	{
+		if (lpSingleLEDHSV != NULL)
+		{
+			delete[] lpSingleLEDHSV;
+		}
+		nSingleLEDHSVSize = 0;
+	}
+
+	SingleLEDHSV* ptr(int i)
+	{
+		if (i < nSingleLEDHSVSize)
+			return &lpSingleLEDHSV[i];
+		else
+			return NULL;
+	}
+
+	int getSize() const { return nSingleLEDHSVSize; }
+
+	// 两两亮灯时， 同时设置两个亮着的灯的下标
+	// 单个亮灯时， 同时设置一个亮着的灯的下标
+	void setCurrentLedIndex(int nf, int ns = -1)
+	{
+		this->f = nf;
+		this->s = ns;
+	}
+
+	int getCurrentLedIndex_F() { return this->f; }
+	int getCurrentLedIndex_S() { return this->s; }
+};
+
 //----		Red		Green	Blue	White
 //hmin		156		35		100		0
 //hmax		180		77		124		180
@@ -82,12 +138,13 @@ struct HsvColor
 	int h[7] = { 0 };
 	int s[7] = { 0 };
 	int v[7] = { 0 };
+	HsvColor() {}
 	HsvColor( int hmin, int hmax, int hlow, int hhight
 			, int smin, int smax, int slow, int shight
 			, int vmin, int vmax, int vlow, int vhight)		
 	{
-		h[0] = hmin;		// 放对应H最小值
-		h[1] = hmax;		// 放对应H最大值
+		h[0] = hmin;		// 放实际H最小值
+		h[1] = hmax;		// 放实际H最大值
 		h[2] = hlow;		// 放实际左边界, h[2]∈[ h[0], h[1] ]
 		h[3] = hhight;		// 放实际右边界, h[3]∈[ h[0], h[1] ]
 		h[4] = h[1] - h[0];	// 放TrackBar最大值

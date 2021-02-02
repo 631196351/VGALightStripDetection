@@ -136,15 +136,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ene_program.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="nvbase.cpp" />
+    <ClCompile Include="utility.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ene_program.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="nvapi.h" />
-    <ClInclude Include="nvbase.h" />
+    <ClInclude Include="utility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
