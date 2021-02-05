@@ -11,7 +11,7 @@ enum ControlLEDColor
 	AllColor
 };
 
-// ÓÃÀ´¹ıÂËÏñËØµãµÄãĞÖµ
+// ç”¨æ¥è¿‡æ»¤åƒç´ ç‚¹çš„é˜ˆå€¼
 enum 
 {
 	W_Threshold = 250,
@@ -22,15 +22,15 @@ enum
 
 struct AgingLog
 {
-	unsigned int PPID;	// ÏÔ¿¨PPID
+	unsigned int PPID;	// æ˜¾å¡PPID
 	
-	int color[3] = {255, 255, 255};	// ÉèÖÃµÄÑÕÉ«
+	int color[3] = {255, 255, 255};	// è®¾ç½®çš„é¢œè‰²
 	
-	unsigned int point_block[8] = { 0 };	// ÇĞ·Ö³öÀ´µÄ8¸öÇø¿é, ÓÃÒÔ¼ÇÂ¼Ã¿¸öÇø¿éÖĞµÄ·ûºÏÌõ¼şµÄÏñËØµã¸öÊı
+	unsigned int point_block[8] = { 0 };	// åˆ‡åˆ†å‡ºæ¥çš„8ä¸ªåŒºå—, ç”¨ä»¥è®°å½•æ¯ä¸ªåŒºå—ä¸­çš„ç¬¦åˆæ¡ä»¶çš„åƒç´ ç‚¹ä¸ªæ•°
 	
-	clock_t time_consuming;		// ²âÊÔºÄÊ±
+	clock_t time_consuming;		// æµ‹è¯•è€—æ—¶
 
-	time_t img_name;	// ¼ÇÂ¼Ê§°ÜÊ±µÄimgÎÄ¼şÃû
+	time_t img_name;	// è®°å½•å¤±è´¥æ—¶çš„imgæ–‡ä»¶å
 	
 	bool result;
 
@@ -68,7 +68,7 @@ struct AgingLog
 struct SingleLEDHSV
 {
 	int hsv_avg[3] = { 0 };
-	int result = 1;	//·ÇÁãÎª³É¹¦
+	int result = 1;	//éé›¶ä¸ºæˆåŠŸ
 
 	int& h = hsv_avg[0];
 	int& s = hsv_avg[1];
@@ -80,9 +80,9 @@ struct AgingLog2
 	SingleLEDHSV* lpSingleLEDHSV = NULL;
 	int nSingleLEDHSVSize = 0;
 private:
-	int currentLed[2] = { -1 };	// Ö¸Ê¾µ±Ç°ÁÁµÆµÄÏÂ±ê
-	int& f = currentLed[0];	// Ö¸Ê¾µ±Ç°µÚÒ»¸öÁÁ×ÅµÄµÆ
-	int& s = currentLed[1];	// Ö¸Ê¾µ±Ç°µÚ¶ş¸öÁÁ×ÅµÄµÆ
+	int currentLed[2] = { -1 };	// æŒ‡ç¤ºå½“å‰äº®ç¯çš„ä¸‹æ ‡
+	int& f = currentLed[0];	// æŒ‡ç¤ºå½“å‰ç¬¬ä¸€ä¸ªäº®ç€çš„ç¯
+	int& s = currentLed[1];	// æŒ‡ç¤ºå½“å‰ç¬¬äºŒä¸ªäº®ç€çš„ç¯
 
 public:
 	AgingLog2(int size) :nSingleLEDHSVSize(size)
@@ -109,8 +109,8 @@ public:
 
 	int getSize() const { return nSingleLEDHSVSize; }
 
-	// Á½Á½ÁÁµÆÊ±£¬ Í¬Ê±ÉèÖÃÁ½¸öÁÁ×ÅµÄµÆµÄÏÂ±ê
-	// µ¥¸öÁÁµÆÊ±£¬ Í¬Ê±ÉèÖÃÒ»¸öÁÁ×ÅµÄµÆµÄÏÂ±ê
+	// ä¸¤ä¸¤äº®ç¯æ—¶ï¼Œ åŒæ—¶è®¾ç½®ä¸¤ä¸ªäº®ç€çš„ç¯çš„ä¸‹æ ‡
+	// å•ä¸ªäº®ç¯æ—¶ï¼Œ åŒæ—¶è®¾ç½®ä¸€ä¸ªäº®ç€çš„ç¯çš„ä¸‹æ ‡
 	void setCurrentLedIndex(int nf, int ns = -1)
 	{
 		this->f = nf;
@@ -129,10 +129,10 @@ public:
 //vmin		46		46		46		221
 //vmax		255		255		255		255
 // createTrackbar(const String& trackbarname, const String& winname,int* value, int count,TrackbarCallback onChange = 0,void* userdata = 0);
-// @param count ±íÊ¾»¬¶¯¿Ø¼şµÄ¿Ì¶È·¶Î§£»Ö»ÄÜ±íÊ¾[0, count], ÎŞ·¨±íÊ¾ Red µÄ[hmin, hmax]
-// SO£¬ĞèÒªÍ¨¹ıÕâ¸ö½á¹¹Ìå½«Red µÄ[hmin, hmax]»Ø¹éµ½[0, count]±íÊ¾
-// ¼´£º [0, hmax - hmin]
-// »ñÈ¡µ½Trackbar µÄvalueºó£¬ value + hmin ¼´ÎªÎÒÃÇÏëÒª h_value
+// @param count è¡¨ç¤ºæ»‘åŠ¨æ§ä»¶çš„åˆ»åº¦èŒƒå›´ï¼›åªèƒ½è¡¨ç¤º[0, count], æ— æ³•è¡¨ç¤º Red çš„[hmin, hmax]
+// SOï¼Œéœ€è¦é€šè¿‡è¿™ä¸ªç»“æ„ä½“å°†Red çš„[hmin, hmax]å›å½’åˆ°[0, count]è¡¨ç¤º
+// å³ï¼š [0, hmax - hmin]
+// è·å–åˆ°Trackbar çš„valueåï¼Œ value + hmin å³ä¸ºæˆ‘ä»¬æƒ³è¦ h_value
 struct HsvColor
 {
 	int h[7] = { 0 };
@@ -143,13 +143,13 @@ struct HsvColor
 			, int smin, int smax, int slow, int shight
 			, int vmin, int vmax, int vlow, int vhight)		
 	{
-		h[0] = hmin;		// ·ÅÊµ¼ÊH×îĞ¡Öµ
-		h[1] = hmax;		// ·ÅÊµ¼ÊH×î´óÖµ
-		h[2] = hlow;		// ·ÅÊµ¼Ê×ó±ß½ç, h[2]¡Ê[ h[0], h[1] ]
-		h[3] = hhight;		// ·ÅÊµ¼ÊÓÒ±ß½ç, h[3]¡Ê[ h[0], h[1] ]
-		h[4] = h[1] - h[0];	// ·ÅTrackBar×î´óÖµ
-		h[5] = h[2] - h[0]; // ·ÅTrackBar ×ó±ß½çÄ¬ÈÏÖµ, h[5]¡Ê[ 0, h[4] ]
-		h[6] = h[3] - h[0];	// ·ÅTrackBar ÓÒ±ß½çÄ¬ÈÏÖµ, h[6]¡Ê[ 0, h[4] ]
+		h[0] = hmin;		// æ”¾å®é™…Hæœ€å°å€¼
+		h[1] = hmax;		// æ”¾å®é™…Hæœ€å¤§å€¼
+		h[2] = hlow;		// æ”¾å®é™…å·¦è¾¹ç•Œ, h[2]âˆˆ[ h[0], h[1] ]
+		h[3] = hhight;		// æ”¾å®é™…å³è¾¹ç•Œ, h[3]âˆˆ[ h[0], h[1] ]
+		h[4] = h[1] - h[0];	// æ”¾TrackBaræœ€å¤§å€¼
+		h[5] = h[2] - h[0]; // æ”¾TrackBar å·¦è¾¹ç•Œé»˜è®¤å€¼, h[5]âˆˆ[ 0, h[4] ]
+		h[6] = h[3] - h[0];	// æ”¾TrackBar å³è¾¹ç•Œé»˜è®¤å€¼, h[6]âˆˆ[ 0, h[4] ]
 
 		s[0] = smin;
 		s[1] = smax;

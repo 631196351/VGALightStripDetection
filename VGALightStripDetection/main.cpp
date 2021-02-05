@@ -22,10 +22,10 @@ using namespace std;
 bool g_wait = false;
 //unsigned char g_product = 0;
 bool g_main_thread_exit = false;
-bool g_complete_a_cycle = false;	// Íê³ÉÒ»¸öÂÖ»Ø£¬ ½øĞĞÒ»´Î×¥ÅÄ
+bool g_complete_a_cycle = false;	// å®Œæˆä¸€ä¸ªè½®å›ï¼Œ è¿›è¡Œä¸€æ¬¡æŠ“æ‹
 std::mutex g_mutex_wait;
-std::condition_variable g_led_set_color_ok; // Ìõ¼ş±äÁ¿, Ö¸Ê¾LED µÆÒÑ¾­ÉèÖÃ³É¹¦
-std::condition_variable g_image_process_ok; // Ìõ¼ş±äÁ¿, Ö¸Ê¾Íê³É×¥ÅÄ£¬ÒÑ¾­´¦ÀíºÃÍ¼Æ¬
+std::condition_variable g_led_set_color_ok; // æ¡ä»¶å˜é‡, æŒ‡ç¤ºLED ç¯å·²ç»è®¾ç½®æˆåŠŸ
+std::condition_variable g_image_process_ok; // æ¡ä»¶å˜é‡, æŒ‡ç¤ºå®ŒæˆæŠ“æ‹ï¼Œå·²ç»å¤„ç†å¥½å›¾ç‰‡
 std::fstream g_aging_file;
 int g_Led_Color = WHITE;
 time_t g_start_time;
@@ -36,7 +36,7 @@ Rect g_RectFrame = Rect(200, 240, 900, 200);
 int g_LedCount = 22;
 int g_LedHalfCount = g_LedCount / 2;
 bool g_ShowTrackBarWnd = true;
-int g_IntervalTime = 100;		// µÆÖéÁÁÃğµÄ¼ä¸ôÊ±¼ä
+int g_IntervalTime = 100;		// ç¯ç äº®ç­çš„é—´éš”æ—¶é—´
 char g_PPID[VGA_PPID_LENGTH] = { 0 };
 AgingLog2* g_lpAgingLog2 = NULL;
 //----		Red		Green	Blue	White
@@ -75,7 +75,7 @@ void rgb_less_250_set_to_0(Mat& src)
 
 int main001()
 {
-	// ¶ÁÈ¡Ò»¸öÕı³£µÄµÆ´ø
+	// è¯»å–ä¸€ä¸ªæ­£å¸¸çš„ç¯å¸¦
 	Mat red_0 = imread("./img/red_bands00.png");
 	if (!red_0.data)
 	{
@@ -88,7 +88,7 @@ int main001()
 	imshow("red_0", red_0);
 	moveWindow("red_0", 300, 0);
 
-	// ½«Õı³£µÆ´ø×ª³É»Ò¶ÈÍ¼, ×÷Îª¶Ô±ÈÄ¿±ê
+	// å°†æ­£å¸¸ç¯å¸¦è½¬æˆç°åº¦å›¾, ä½œä¸ºå¯¹æ¯”ç›®æ ‡
 	//Mat red_0_gray;
 	//cvtColor(red_0, red_0_gray, COLOR_BGR2GRAY);
 	//imshow("red_0_gray", red_0_gray);
@@ -105,7 +105,7 @@ int main001()
 	moveWindow("red_0_hsv", 1200, 0);
 #endif
 
-	// ¶ÁÈ¡ÃğÒ»¸öµÆµÄµÆ´ø, ²¢×ª³É»Ò¶ÈÍ¼
+	// è¯»å–ç­ä¸€ä¸ªç¯çš„ç¯å¸¦, å¹¶è½¬æˆç°åº¦å›¾
 	Mat red_1 = imread("./img/red_bands1.png");
 	if (!red_1.data)
 	{
@@ -134,7 +134,7 @@ int main001()
 	moveWindow("red_1_hsv", 1200, 200);
 #endif
 
-	// ¶ÁÈ¡Ãğ2¸öµÆµÄµÆ´ø, ²¢×ª³É»Ò¶ÈÍ¼
+	// è¯»å–ç­2ä¸ªç¯çš„ç¯å¸¦, å¹¶è½¬æˆç°åº¦å›¾
 	Mat red_2 = imread("./img/red_bands2.png");
 	if (!red_2.data)
 	{
@@ -162,7 +162,7 @@ int main001()
 	moveWindow("red_2_hsv", 1200, 400);
 #endif
 
-	// ¶ÁÈ¡Ãğ3¸öµÆµÄµÆ´ø, ²¢×ª³É»Ò¶ÈÍ¼
+	// è¯»å–ç­3ä¸ªç¯çš„ç¯å¸¦, å¹¶è½¬æˆç°åº¦å›¾
 	Mat red_3 = imread("./img/red_bands3.png");
 	if (!red_3.data)
 	{
@@ -240,7 +240,7 @@ int main001()
 	imshow("histogram", histImage);
 
 #else
-	// 4. ³õÊ¼»¯¼ÆËãÖ±·½Í¼ĞèÒªµÄÊµ²Î(bins, ·¶Î§£¬Í¨µÀ H ºÍ S ).
+	// 4. åˆå§‹åŒ–è®¡ç®—ç›´æ–¹å›¾éœ€è¦çš„å®å‚(bins, èŒƒå›´ï¼Œé€šé“ H å’Œ S ).
 	int h_bins = 50; int s_bins = 60;
 	int histSize[] = { h_bins, s_bins };
 	// hue varies from 0 to 179, saturation from 0 to 255     
@@ -287,7 +287,7 @@ lpLoadVenderDLL  LOAD_VENDOR_DLL;
 lpVGA_Read_IC_I2C    VGA_READ_IC_I2C;
 lpVGA_Write_IC_I2C   VGA_WRITE_IC_I2C;
 
-// LED µÆµÄµØÖ·
+// LED ç¯çš„åœ°å€
 BYTE REG[22] = { 0x60, 0x63, 0x66, 0x69, 0x6c, 0x6f, 0x72, 0x75, 0x78, 0x7b, 0x7e
 				, 0x81, 0x84, 0x87, 0x8a, 0x8d, 0x90, 0x93, 0x96, 0x99, 0x9c, 0x9f };
 
@@ -313,19 +313,19 @@ void setColor(unsigned char red, unsigned char blue, unsigned char green)
 
 void setSingleColor(u8 ledNumlight, u8 ledNumDelight, u8 r, u8 g, u8 b)
 {
-	u8 bufLight[3] = { r,g,b };	// Òª´ò¿ªµÄµÆÑÕÉ«
-	u8 bufDelight[3] = { 0,0,0 };// Òª¹ØµôµÄµÆ
+	u8 bufLight[3] = { r,g,b };	// è¦æ‰“å¼€çš„ç¯é¢œè‰²
+	u8 bufDelight[3] = { 0,0,0 };// è¦å…³æ‰çš„ç¯
 
 	eneWriteRegs(0x8160 + ledNumlight * 3, bufLight, 3);
 
 	eneWriteRegs(0x8160 + ledNumDelight * 3, bufDelight, 3);
 
-	eneWriteReg(0x8021, 1);	// ÉèÖÃÎª¾²Ì¬
-	eneWriteReg(0x802f, 1);	// ÉèÖÃÆôÓÃ
+	eneWriteReg(0x8021, 1);	// è®¾ç½®ä¸ºé™æ€
+	eneWriteReg(0x802f, 1);	// è®¾ç½®å¯ç”¨
 }
 #else
 
-// ¸ôÀëÓ²¼şÆ½Ì¨, ÉèÖÃledµÆ¹â
+// éš”ç¦»ç¡¬ä»¶å¹³å°, è®¾ç½®ledç¯å…‰
 void setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 {
 	//Set Start Address
@@ -355,7 +355,7 @@ void setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 	VGA_WRITE_IC_I2C(0xCE, 0x01, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
 }
 
-// ÖØÖÃÎªÌØ¶¨ÑÕÉ«
+// é‡ç½®ä¸ºç‰¹å®šé¢œè‰²
 void resetColor(BYTE r, BYTE g, BYTE b)
 {
 	for (int i = 0; i < LED_COUNT; i++)
@@ -367,7 +367,7 @@ void resetColor(BYTE r, BYTE g, BYTE b)
 
 void setColorThread()
 {
-	/* ÕâÀï´æÒ»¸öµÆµÄÓ³Éä¹ØÏµ£¬´ò¿ªÒ»¸öµÆ£¬ĞèÒª°ÑÇ°Ãæ´ò¿ªµÄµÆ¹Ø±Õ
+	/* è¿™é‡Œå­˜ä¸€ä¸ªç¯çš„æ˜ å°„å…³ç³»ï¼Œæ‰“å¼€ä¸€ä¸ªç¯ï¼Œéœ€è¦æŠŠå‰é¢æ‰“å¼€çš„ç¯å…³é—­
 	 0 - 10
 	 1 - 0
 	 10 - 9
@@ -392,9 +392,9 @@ void setColorThread()
 			{
 				for (size_t i = 0, t = LED_HALF_COUNT; i < LED_HALF_COUNT && t < LED_COUNT; i++, t++)
 				{
-					// ÔÚ×ÓÏß³ÌµÄÃ¿´ÎloopÇ°ÅĞ¶¨ÊÇ·ñĞèÒªÍË³ö
-					// Ö÷Ïß³ÌÍË³öÊÇËæ»úµÄ, Ö÷Ïß³Ì½ÓÊÕµ½ÍË³ökeyºó, ÒµÎñÑ­»·Âß¼­Á¢¼´ÍË³ö,½øÈëjoin×ÓÏß³Ì×´Ì¬
-					// ×ÓÏß³Ì¼´±ãÊÇÇ¡ÇÉÔÚÉèÖÃÍêµÆºó½âËø, Ö÷Ïß³ÌÒòÎª²»ÔÙÊÜÀíÒµÎñ, ×ÓÏß³Ì»áÔÚÏÂ¸öÑ­»·¿ªÊ¼Ç°ÔÚ´Ë´¦ÍË³ö
+					// åœ¨å­çº¿ç¨‹çš„æ¯æ¬¡loopå‰åˆ¤å®šæ˜¯å¦éœ€è¦é€€å‡º
+					// ä¸»çº¿ç¨‹é€€å‡ºæ˜¯éšæœºçš„, ä¸»çº¿ç¨‹æ¥æ”¶åˆ°é€€å‡ºkeyå, ä¸šåŠ¡å¾ªç¯é€»è¾‘ç«‹å³é€€å‡º,è¿›å…¥joinå­çº¿ç¨‹çŠ¶æ€
+					// å­çº¿ç¨‹å³ä¾¿æ˜¯æ°å·§åœ¨è®¾ç½®å®Œç¯åè§£é”, ä¸»çº¿ç¨‹å› ä¸ºä¸å†å—ç†ä¸šåŠ¡, å­çº¿ç¨‹ä¼šåœ¨ä¸‹ä¸ªå¾ªç¯å¼€å§‹å‰åœ¨æ­¤å¤„é€€å‡º
 					if (g_main_thread_exit)
 					{
 						return;
@@ -424,13 +424,13 @@ void setColorThread()
 						setSignleColor(t, 0, 0, 255);
 					}
 					printf("**************\n");
-					Sleep(50);	//µÆµÄÑÕÉ«ÕæÕıÉèÖÃ½øÏÔ¿¨
+					Sleep(50);	//ç¯çš„é¢œè‰²çœŸæ­£è®¾ç½®è¿›æ˜¾å¡
 					g_wait = true;
 					g_mutex_wait.unlock();
 					Sleep(50);// Give Main Thread CPU Time
 				}
 
-				// µÈMain °Ñ»î×öÍê
+				// ç­‰Main æŠŠæ´»åšå®Œ
 				g_mutex_wait.lock();
 				printf("++++++++++++++\n");
 				g_mutex_wait.unlock();
@@ -447,7 +447,7 @@ void setColorThread()
 
 void setColorThread2()
 {
-	/* ÕâÀï´æÒ»¸öµÆµÄÓ³Éä¹ØÏµ£¬´ò¿ªÒ»¸öµÆ£¬ĞèÒª°ÑÇ°Ãæ´ò¿ªµÄµÆ¹Ø±Õ
+	/* è¿™é‡Œå­˜ä¸€ä¸ªç¯çš„æ˜ å°„å…³ç³»ï¼Œæ‰“å¼€ä¸€ä¸ªç¯ï¼Œéœ€è¦æŠŠå‰é¢æ‰“å¼€çš„ç¯å…³é—­
 	 0 - 10
 	 1 - 0
 	 10 - 9
@@ -470,15 +470,15 @@ void setColorThread2()
 		{
 			for (size_t i = 0, t = LED_HALF_COUNT; i < LED_HALF_COUNT && t < LED_COUNT; i++, t++)
 			{
-				// ÔÚ×ÓÏß³ÌµÄÃ¿´ÎloopÇ°ÅĞ¶¨ÊÇ·ñĞèÒªÍË³ö
-				// Ö÷Ïß³ÌÍË³öÊÇËæ»úµÄ, Ö÷Ïß³Ì½ÓÊÕµ½ÍË³ökeyºó, ÒµÎñÑ­»·Âß¼­Á¢¼´ÍË³ö,½øÈëjoin×ÓÏß³Ì×´Ì¬
-				// ×ÓÏß³Ì¼´±ãÊÇÇ¡ÇÉÔÚÉèÖÃÍêµÆºó½âËø, Ö÷Ïß³ÌÒòÎª²»ÔÙÊÜÀíÒµÎñ, ×ÓÏß³Ì»áÔÚÏÂ¸öÑ­»·¿ªÊ¼Ç°ÔÚ´Ë´¦ÍË³ö
+				// åœ¨å­çº¿ç¨‹çš„æ¯æ¬¡loopå‰åˆ¤å®šæ˜¯å¦éœ€è¦é€€å‡º
+				// ä¸»çº¿ç¨‹é€€å‡ºæ˜¯éšæœºçš„, ä¸»çº¿ç¨‹æ¥æ”¶åˆ°é€€å‡ºkeyå, ä¸šåŠ¡å¾ªç¯é€»è¾‘ç«‹å³é€€å‡º,è¿›å…¥joinå­çº¿ç¨‹çŠ¶æ€
+				// å­çº¿ç¨‹å³ä¾¿æ˜¯æ°å·§åœ¨è®¾ç½®å®Œç¯åè§£é”, ä¸»çº¿ç¨‹å› ä¸ºä¸å†å—ç†ä¸šåŠ¡, å­çº¿ç¨‹ä¼šåœ¨ä¸‹ä¸ªå¾ªç¯å¼€å§‹å‰åœ¨æ­¤å¤„é€€å‡º
 				if (g_main_thread_exit)
 				{
 					return;
 				}
 
-				// Ò»¸öµ¥Éú²úÕß-µ¥Ïû·ÑÕßÄ£ĞÍ
+				// ä¸€ä¸ªå•ç”Ÿäº§è€…-å•æ¶ˆè´¹è€…æ¨¡å‹
 				std::unique_lock<std::mutex> lock(g_mutex_wait);
 				if (g_wait)
 				{
@@ -509,13 +509,13 @@ void setColorThread2()
 					setSignleColor(t, 0, 0, 255);
 				}
 				printf("**************\n");
-				Sleep(50);	//µÆµÄÑÕÉ«ÕæÕıÉèÖÃ½øÏÔ¿¨
+				Sleep(50);	//ç¯çš„é¢œè‰²çœŸæ­£è®¾ç½®è¿›æ˜¾å¡
 				g_wait = true;
 				//g_mutex_wait.unlock();
 
-				// Ïû·ÑÕßÏß³ÌÄ¿Ç°²»ĞèÒª¹Ø×¢Éú²úÕßµÄ×´Ì¬
+				// æ¶ˆè´¹è€…çº¿ç¨‹ç›®å‰ä¸éœ€è¦å…³æ³¨ç”Ÿäº§è€…çš„çŠ¶æ€
 				g_led_set_color_ok.notify_all();
-				lock.unlock(); // ½âËø.
+				lock.unlock(); // è§£é”.
 				Sleep(2000);// Give Main Thread CPU Time
 			}
 		}
@@ -525,7 +525,7 @@ void setColorThread2()
 
 void setColorThread3()
 {
-	/* ÕâÀï´æÒ»¸öµÆµÄÓ³Éä¹ØÏµ£¬´ò¿ªÒ»¸öµÆ£¬ĞèÒª°ÑÇ°Ãæ´ò¿ªµÄµÆ¹Ø±Õ
+	/* è¿™é‡Œå­˜ä¸€ä¸ªç¯çš„æ˜ å°„å…³ç³»ï¼Œæ‰“å¼€ä¸€ä¸ªç¯ï¼Œéœ€è¦æŠŠå‰é¢æ‰“å¼€çš„ç¯å…³é—­
 	 0 - 10
 	 1 - 0
 	 10 - 9
@@ -550,9 +550,9 @@ void setColorThread3()
 			g_complete_a_cycle = false;
 			for (size_t i = 0, t = g_LedHalfCount; i < g_LedHalfCount && t < g_LedCount; i++, t++)
 			{
-				// ÔÚ×ÓÏß³ÌµÄÃ¿´ÎloopÇ°ÅĞ¶¨ÊÇ·ñĞèÒªÍË³ö
-				// Ö÷Ïß³ÌÍË³öÊÇËæ»úµÄ, Ö÷Ïß³Ì½ÓÊÕµ½ÍË³ökeyºó, ÒµÎñÑ­»·Âß¼­Á¢¼´ÍË³ö,½øÈëjoin×ÓÏß³Ì×´Ì¬
-				// ×ÓÏß³Ì¼´±ãÊÇÇ¡ÇÉÔÚÉèÖÃÍêµÆºó½âËø, Ö÷Ïß³ÌÒòÎª²»ÔÙÊÜÀíÒµÎñ, ×ÓÏß³Ì»áÔÚÏÂ¸öÑ­»·¿ªÊ¼Ç°ÔÚ´Ë´¦ÍË³ö
+				// åœ¨å­çº¿ç¨‹çš„æ¯æ¬¡loopå‰åˆ¤å®šæ˜¯å¦éœ€è¦é€€å‡º
+				// ä¸»çº¿ç¨‹é€€å‡ºæ˜¯éšæœºçš„, ä¸»çº¿ç¨‹æ¥æ”¶åˆ°é€€å‡ºkeyå, ä¸šåŠ¡å¾ªç¯é€»è¾‘ç«‹å³é€€å‡º,è¿›å…¥joinå­çº¿ç¨‹çŠ¶æ€
+				// å­çº¿ç¨‹å³ä¾¿æ˜¯æ°å·§åœ¨è®¾ç½®å®Œç¯åè§£é”, ä¸»çº¿ç¨‹å› ä¸ºä¸å†å—ç†ä¸šåŠ¡, å­çº¿ç¨‹ä¼šåœ¨ä¸‹ä¸ªå¾ªç¯å¼€å§‹å‰åœ¨æ­¤å¤„é€€å‡º
 				if (g_main_thread_exit)
 				{
 					if (g_lpAgingLog2 != NULL)
@@ -560,7 +560,7 @@ void setColorThread3()
 					return;
 				}
 
-				// Ò»¸öµ¥Éú²úÕß-µ¥Ïû·ÑÕßÄ£ĞÍ
+				// ä¸€ä¸ªå•ç”Ÿäº§è€…-å•æ¶ˆè´¹è€…æ¨¡å‹
 				std::unique_lock<std::mutex> lock(g_mutex_wait);
 				if (g_wait)
 				{
@@ -593,18 +593,18 @@ void setColorThread3()
 				g_lpAgingLog2->setCurrentLedIndex(i, t);
 
 				printf("**************\n");
-				Sleep(50);	//µÆµÄÑÕÉ«ÕæÕıÉèÖÃ½øÏÔ¿¨
+				Sleep(50);	//ç¯çš„é¢œè‰²çœŸæ­£è®¾ç½®è¿›æ˜¾å¡
 				g_wait = true;
 				//g_mutex_wait.unlock();
 
-				// Ïû·ÑÕßÏß³ÌÄ¿Ç°²»ĞèÒª¹Ø×¢Éú²úÕßµÄ×´Ì¬
+				// æ¶ˆè´¹è€…çº¿ç¨‹ç›®å‰ä¸éœ€è¦å…³æ³¨ç”Ÿäº§è€…çš„çŠ¶æ€
 				g_led_set_color_ok.notify_all();
-				lock.unlock(); // ½âËø.
+				lock.unlock(); // è§£é”.
 				Sleep(g_IntervalTime);// Give Main Thread CPU Time
 			}
-			
-			// Ò»¸öÂÖ»Ø½áÊøºó£¬Òª½«ËùÓĞµÆ¶¼´ò¿ªÒ»´Î£¬ ½øĞĞÅÄÕÕ±£´æ
-			if(1)
+
+			// ä¸€ä¸ªè½®å›ç»“æŸåï¼Œè¦å°†æ‰€æœ‰ç¯éƒ½æ‰“å¼€ä¸€æ¬¡ï¼Œ è¿›è¡Œæ‹ç…§ä¿å­˜
+			if (1)
 			{
 				std::unique_lock<std::mutex> lock(g_mutex_wait);
 				if (g_wait)
@@ -627,23 +627,23 @@ void setColorThread3()
 					break;
 				}
 				printf("**************\n");
-				Sleep(50);	//µÆµÄÑÕÉ«ÕæÕıÉèÖÃ½øÏÔ¿¨
+				Sleep(50);	//ç¯çš„é¢œè‰²çœŸæ­£è®¾ç½®è¿›æ˜¾å¡
 				g_complete_a_cycle = true;
 				g_wait = true;
 
 				g_led_set_color_ok.notify_all();
-				lock.unlock(); // ½âËø.
+				lock.unlock(); // è§£é”.
 				Sleep(g_IntervalTime);// Give Main Thread CPU Time
 			}
 
-			// µÈÎÒ´¦ÀíÍêÍ¼Æ¬ÄãÔÙ»»µÆ
+			// ç­‰æˆ‘å¤„ç†å®Œå›¾ç‰‡ä½ å†æ¢ç¯
 			std::unique_lock<std::mutex> lock(g_mutex_wait);
 			if (g_wait)
 			{
 				g_image_process_ok.wait(lock);
 			}
-			resetColor(0, 0, 0);	//ËùÓĞµÆ¶¼Ë¢Ò»¸öÑÕÉ«ºó£¬ ĞèÒª½øĞĞÒ»´ÎÖØÖÃ£¬ ²»ÔÙÓ°ÏìÏÂÒ»ÂÖ
-			lock.unlock(); // ½âËø.
+			resetColor(0, 0, 0);	//æ‰€æœ‰ç¯éƒ½åˆ·ä¸€ä¸ªé¢œè‰²åï¼Œ éœ€è¦è¿›è¡Œä¸€æ¬¡é‡ç½®ï¼Œ ä¸å†å½±å“ä¸‹ä¸€è½®
+			lock.unlock(); // è§£é”.
 		}
 
 		if (g_lpAgingLog2 != NULL)
@@ -652,10 +652,10 @@ void setColorThread3()
 			char format_time[MAXCHAR] = { 0 };
 			strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
 
-			g_aging_file << g_PPID << ","<< format_time << ",";
+			g_aging_file << g_PPID << "," << format_time << ",";
 
-			int result_count1 = 0;	// Ò»¸öÂÖ»ØµÄ½á¹û
-			int result_count2 = 0;	// ËÄ¸öÂÖ»ØµÄ½á¹û
+			int result_count1 = 0;	// ä¸€ä¸ªè½®å›çš„ç»“æœ
+			int result_count2 = 0;	// å››ä¸ªè½®å›çš„ç»“æœ
 			for (int i = 0; i < g_lpAgingLog2->getSize(); i++)
 			{
 				SingleLEDHSV* lpdata = g_lpAgingLog2->ptr(i);
@@ -667,15 +667,15 @@ void setColorThread3()
 				result_count1 += lpdata->result;
 				result_count2 += lpdata->result;
 
-				if ((i + 1) % g_LedCount == 0)	// Ò»ÂÖµÄÊı¾İÒÑÍ³¼ÆÍê
+				if ((i + 1) % g_LedCount == 0)	// ä¸€è½®çš„æ•°æ®å·²ç»Ÿè®¡å®Œ
 				{
 					g_aging_file << result_count1;
-					result_count1 = 0;	// Ò»ÂÖÊı¾İÍ³¼ÆÍêºó¹éÁã£¬ÖØĞÂÀ´¹ı
+					result_count1 = 0;	// ä¸€è½®æ•°æ®ç»Ÿè®¡å®Œåå½’é›¶ï¼Œé‡æ–°æ¥è¿‡
 				}
 			}
-			g_aging_file << ","<< result_count2 <<"\n";
+			g_aging_file << "," << result_count2 << "\n";
 
-			
+
 			delete g_lpAgingLog2;
 		}
 	}
@@ -696,7 +696,7 @@ bool openAgingLog()
 		//std::streampos length = g_aging_file.tellg();
 		//if (length == 0)
 		//{
-		//	// Ìí¼Ó±íÍ·
+		//	// æ·»åŠ è¡¨å¤´
 		//	// PPID|img_name|convert img_name to time string|r,g,b|a8[0]|a8[1]|a8[2]|a8[3]|a8[4]|a8[5]|a8[6]|a8[7]|test result
 		//	g_aging_file << "PPID,"
 		//		<< "img_name,"
@@ -731,11 +731,11 @@ void setFrameImgThread(void* lpcapture)
 		if (g_wait)
 		{
 			g_mutex_wait.lock();
-			startTime = clock();//¼ÆÊ±¿ªÊ¼
+			startTime = clock();//è®¡æ—¶å¼€å§‹
 
 			AgingLog aging;
 
-			Rect rect(40, 280, 1150, 110);	// »­Ò»¸ö½ØÈ¡¿ò³öÀ´	
+			Rect rect(40, 280, 1150, 110);	// ç”»ä¸€ä¸ªæˆªå–æ¡†å‡ºæ¥	
 			Mat img = frame(rect);
 			//imshow("imga", img);
 
@@ -809,13 +809,13 @@ void setFrameImgThread(void* lpcapture)
 			//printf("time consuming1 = %d\n", clock() - startTime);
 			//startTime = clock();
 
-			// ½«img »®·Ö³ÉÊúÏòµÄ8ÁĞ, Í³¼ÆÃ¿ÁĞÖĞr >=240 µÄµãÊıÁ¿
+			// å°†img åˆ’åˆ†æˆç«–å‘çš„8åˆ—, ç»Ÿè®¡æ¯åˆ—ä¸­r >=240 çš„ç‚¹æ•°é‡
 			count = 0;
 			for (size_t i = 0; i < img.cols; i++)
 			{
-				//uchar c; //È¡³öÖ¸¶¨Í¨µÀµÄÑÕÉ«Öµ
-				//int t;   // ¸ÃÑÕÉ«Öµ¶ÔÓ¦µÄ¹ıÂËãĞÖµ
-				int block_index = i / (img.cols / 8);	// ¸ÃÏñËØµãËùÔÚÇø¿é
+				//uchar c; //å–å‡ºæŒ‡å®šé€šé“çš„é¢œè‰²å€¼
+				//int t;   // è¯¥é¢œè‰²å€¼å¯¹åº”çš„è¿‡æ»¤é˜ˆå€¼
+				int block_index = i / (img.cols / 8);	// è¯¥åƒç´ ç‚¹æ‰€åœ¨åŒºå—
 
 				for (size_t j = 0; j < img.rows; j++)
 				{
@@ -858,8 +858,8 @@ void setFrameImgThread(void* lpcapture)
 			//printf("time consuming2 = %d\n", clock() - startTime);
 
 
-			bool b8[8] = { 0 };	// 8¸öÇø¿éÖĞ, ¸÷¸öÇø¿éÊÇ·ñÓĞcolor
-			int t[2] = { -1, -1 };	// ¼ÇÂ¼Çø¿éÏÂ±ê
+			bool b8[8] = { 0 };	// 8ä¸ªåŒºå—ä¸­, å„ä¸ªåŒºå—æ˜¯å¦æœ‰color
+			int t[2] = { -1, -1 };	// è®°å½•åŒºå—ä¸‹æ ‡
 			for (int s = 0; s < 8; s++)
 			{
 				if (s == 0 && aging.point_block[s] > 100)
@@ -885,7 +885,7 @@ void setFrameImgThread(void* lpcapture)
 				}
 			}
 
-			// »®Ïß
+			// åˆ’çº¿
 			for (int i = 1; i < 8; i++)
 				line(img, Point(img.cols / 8 * i, 0), Point(img.cols / 8 * i, img.rows), Scalar(255, 255, 0));
 
@@ -997,23 +997,23 @@ void setFrameImgThread2(void* lpcapture)
 			//g_mutex_wait.lock();
 			std::unique_lock<std::mutex> lock(g_mutex_wait);
 			{
-				startTime = clock();//¼ÆÊ±¿ªÊ¼
-				(*capture).read(frame); // !important, È·±£¶ÁÈ¡³öÀ´µÄµÆÊÇÍêÈ«µãÁÁµÄ
+				startTime = clock();//è®¡æ—¶å¼€å§‹
+				(*capture).read(frame); // !important, ç¡®ä¿è¯»å–å‡ºæ¥çš„ç¯æ˜¯å®Œå…¨ç‚¹äº®çš„
 				AgingLog aging;
 
-				Rect rect(40, 280, 1150, 110);	// »­Ò»¸ö½ØÈ¡¿ò³öÀ´	
+				Rect rect(40, 280, 1150, 110);	// ç”»ä¸€ä¸ªæˆªå–æ¡†å‡ºæ¥	
 				Mat img = frame(rect);
 
 				Mat frame_clone = frame.clone();
 				rectangle(frame_clone, rect, Scalar(255, 255, 255), 5);
 				imshow("graphics_card", frame_clone);
 
-				// ·ÖÀë³É3ÕÅµ¥Í¨µÀimage
+				// åˆ†ç¦»æˆ3å¼ å•é€šé“image
 				Mat channels_m[3];
 				split(img, channels_m);
 				//cvtColor(img, img, COLOR_BGR2GRAY);
 				//imshow("gray_img", img);
-				// Ö±½ÓŞD“Q³É¶şÖµˆD
+				// ç›´æ¥è½‰æ›æˆäºŒå€¼åœ–
 				switch (g_Led_Color)
 				{
 				case WHITE:
@@ -1033,12 +1033,12 @@ void setFrameImgThread2(void* lpcapture)
 
 				imshow("threshold_img", img);
 
-				//¾ùÖµÂË²¨
+				//å‡å€¼æ»¤æ³¢
 				medianBlur(img, img, 5);
 
 				imshow("medianBlur_img", img);
 
-				//ĞÎÌ¬Ñ§´¦Àí
+				//å½¢æ€å­¦å¤„ç†
 				Mat kernel = getStructuringElement(MORPH_CROSS, Size(4, 4));
 				morphologyEx(img, img, MORPH_CLOSE, kernel, Point(-1, -1), 7, BORDER_REPLICATE);
 
@@ -1053,12 +1053,12 @@ void setFrameImgThread2(void* lpcapture)
 		}
 
 		key = waitKey(1);
-		if (key == 0x1b)	// Esc ¼ü
+		if (key == 0x1b)	// Esc é”®
 		{
 			g_main_thread_exit = true;
 			break;
 		}
-		else if (key == 0x20) // ¿Õ¸ñ¼ü
+		else if (key == 0x20) // ç©ºæ ¼é”®
 		{
 			g_mutex_wait.lock();
 			waitKey();
@@ -1084,7 +1084,7 @@ void setFrameImgThread3(void* lpcapture)
 		if (g_wait)
 		{
 			//g_mutex_wait.lock();
-			// Ò»¸öÂÖ»Ø½øĞĞÒ»´Î×¥ÅÄ²¢±£´æ			
+			// ä¸€ä¸ªè½®å›è¿›è¡Œä¸€æ¬¡æŠ“æ‹å¹¶ä¿å­˜			
 			if (g_complete_a_cycle)
 			{
 				std::unique_lock<std::mutex> lock(g_mutex_wait);
@@ -1097,11 +1097,11 @@ void setFrameImgThread3(void* lpcapture)
 				sprintf_s(frame_file, MAXCHAR, ".\\aging_original_image\\%s-%s-%d.png", g_PPID, format_time, g_Led_Color);
 
 				imwrite(frame_file, frame);
-				g_wait = false;	// ±íÊ¾É¨ÃèÏß³ÌÒÑ¾­Íê¹¤ÁË
+				g_wait = false;	// è¡¨ç¤ºæ‰«æçº¿ç¨‹å·²ç»å®Œå·¥äº†
 				g_complete_a_cycle = false;
 				g_image_process_ok.notify_all();
 				lock.unlock();
-				continue;	// ²»ÔÙ×ßÏÂÃæµÄÉ¨ÃèÂß¼­
+				continue;	// ä¸å†èµ°ä¸‹é¢çš„æ‰«æé€»è¾‘
 			}
 
 
@@ -1117,15 +1117,15 @@ void setFrameImgThread3(void* lpcapture)
 				highsv[1] = hsv.s[0] + hsv.s[6];
 				highsv[2] = hsv.v[0] + hsv.v[6];
 
-				startTime = clock();//¼ÆÊ±¿ªÊ¼
-				(*capture).read(frame); // !important, È·±£¶ÁÈ¡³öÀ´µÄµÆÊÇÍêÈ«µãÁÁµÄ
+				startTime = clock();//è®¡æ—¶å¼€å§‹
+				(*capture).read(frame); // !important, ç¡®ä¿è¯»å–å‡ºæ¥çš„ç¯æ˜¯å®Œå…¨ç‚¹äº®çš„
 				//AgingLog aging;
 
-				//Rect rect(40, 280, 1150, 110);	// »­Ò»¸ö½ØÈ¡¿ò³öÀ´	
+				//Rect rect(40, 280, 1150, 110);	// ç”»ä¸€ä¸ªæˆªå–æ¡†å‡ºæ¥	
 				Rect rect(g_RectFrame.x, g_RectFrame.y, g_RectFrame.width, g_RectFrame.height);
 				Mat img = frame(rect);
 				//Mat img = frame.clone();
-				if(g_AgingSettingSaveRectImages)
+				if (g_AgingSettingSaveRectImages)
 				{
 					tm *local = localtime(&g_start_time);
 					char format_time[MAXCHAR] = { 0 };
@@ -1143,8 +1143,8 @@ void setFrameImgThread3(void* lpcapture)
 				Mat frame_clone = frame.clone();
 				rectangle(frame_clone, rect, Scalar(255, 255, 0), 5);
 				imshow("graphics_card", frame_clone);
-								
-				//¾ùÖµÂË²¨
+
+				//å‡å€¼æ»¤æ³¢
 				//medianBlur(img, img, 7);
 				GaussianBlur(img, img, Size(7, 7), 1.0);
 				//imshow("medianBlur_img", img);
@@ -1159,7 +1159,7 @@ void setFrameImgThread3(void* lpcapture)
 				inRange(hsv_img, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), hsv_img_mask);
 				//imshow("inRange_mask", hsv_img_mask);
 				//moveWindow("inRange_mask", 0, 500);
-				if (g_AgingSettingSaveRectImages) 
+				if (g_AgingSettingSaveRectImages)
 				{
 					tm *local = localtime(&g_start_time);
 					char format_time[MAXCHAR] = { 0 };
@@ -1174,7 +1174,7 @@ void setFrameImgThread3(void* lpcapture)
 					imwrite(frame_file, hsv_img_mask);
 				}
 
-				//ĞÎÌ¬Ñ§´¦ÀíÏû³ıÔëµã
+				//å½¢æ€å­¦å¤„ç†æ¶ˆé™¤å™ªç‚¹
 				Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
 				morphologyEx(hsv_img_mask, hsv_img_mask, MORPH_CLOSE, kernel);
 				//imshow("MORPH_CLOSE", hsv_img_mask);
@@ -1188,7 +1188,7 @@ void setFrameImgThread3(void* lpcapture)
 				bitwise_and(img, img, result, hsv_img_mask);
 				//imshow("bitwise_and", result);
 				//moveWindow("bitwise_and", 900, 0);
-				if (g_AgingSettingSaveRectImages) 
+				if (g_AgingSettingSaveRectImages)
 				{
 					tm *local = localtime(&g_start_time);
 					char format_time[MAXCHAR] = { 0 };
@@ -1203,26 +1203,26 @@ void setFrameImgThread3(void* lpcapture)
 					imwrite(frame_file, result);
 				}
 
-				//´æ´¢±ßÔµ
+				//å­˜å‚¨è¾¹ç¼˜
 				vector<vector<Point> > contours;
 				vector<Vec4i> hierarchy;
 
 				Mat tempBinaryFrame = hsv_img_mask.clone();
-				findContours(tempBinaryFrame, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//²éÕÒ×î¶¥²ãÂÖÀª
+				findContours(tempBinaryFrame, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//æŸ¥æ‰¾æœ€é¡¶å±‚è½®å»“
 
-				//´æ´¢
+				//å­˜å‚¨
 				vector<Rect> boundRect;
 				boundRect.clear();
 				for (int index = 0; index < contours.size(); index++)
 				{
-					// µÚÒ»¸öÂÖÀª»áÊ×ÏÈ·ÅÈë¶ÓÁĞ
-					// µÚ¶ş¸öÂÖÀª»á¸ú¶ÓÁĞÖĞµÄ×îºóÒ»¸öÂÖÀª½øĞĞ±È½Ï£¬¿´±Ë´ËµÄ¾àÀëÊÇ·ñ³¬¹ıãĞÖµ
-					// Èç¹ûÃ»ÓĞ³¬¹ıãĞÖµ£¬ËµÃ÷Í¬ÊôÒ»¸ö´óÂÖÀª£¬ËùÒÔºÏ²¢Á½¸öÂÖÀªºó£¬ÖØĞÂ·ÅÈë¶ÓÁĞ
-					// Èç¹û³¬³öãĞÖµ£¬ ËµÃ÷ÊÇÁ½¸ö¶ÀÁ¢µÄÂÖÀª
+					// ç¬¬ä¸€ä¸ªè½®å»“ä¼šé¦–å…ˆæ”¾å…¥é˜Ÿåˆ—
+					// ç¬¬äºŒä¸ªè½®å»“ä¼šè·Ÿé˜Ÿåˆ—ä¸­çš„æœ€åä¸€ä¸ªè½®å»“è¿›è¡Œæ¯”è¾ƒï¼Œçœ‹å½¼æ­¤çš„è·ç¦»æ˜¯å¦è¶…è¿‡é˜ˆå€¼
+					// å¦‚æœæ²¡æœ‰è¶…è¿‡é˜ˆå€¼ï¼Œè¯´æ˜åŒå±ä¸€ä¸ªå¤§è½®å»“ï¼Œæ‰€ä»¥åˆå¹¶ä¸¤ä¸ªè½®å»“åï¼Œé‡æ–°æ”¾å…¥é˜Ÿåˆ—
+					// å¦‚æœè¶…å‡ºé˜ˆå€¼ï¼Œ è¯´æ˜æ˜¯ä¸¤ä¸ªç‹¬ç«‹çš„è½®å»“
 					vector<Point> contours_poly;
 					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
 					Rect rect = boundingRect(Mat(contours_poly));
-					if (rect.width < 20 || rect.height < 10)// ÏÈ¹ıÂËµôĞ¡µã
+					if (rect.width < 20 || rect.height < 10)// å…ˆè¿‡æ»¤æ‰å°ç‚¹
 						continue;
 					if (boundRect.empty())
 					{
@@ -1260,14 +1260,14 @@ void setFrameImgThread3(void* lpcapture)
 				{
 					putText(result, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255));
 				}
-				//µÃµ½µÆµÄÂÖÀª
+				//å¾—åˆ°ç¯çš„è½®å»“
 				for (int index = 0; index < boundRect.size(); index++)
 				{
 					rectangle(result, boundRect[index], Scalar(0, 255, 255), 1);
 					const Mat contour = hsv_img(boundRect[index]);
-					
-					if(1)
-					{						
+
+					if (1)
+					{
 						int hall = 0, sall = 0, vall = 0;
 						int point_count = 0;
 						for (size_t i = 0; i < contour.rows; i++)
@@ -1318,12 +1318,12 @@ void setFrameImgThread3(void* lpcapture)
 		}
 
 		key = waitKey(1);
-		if (key == 0x1b)	// Esc ¼ü
+		if (key == 0x1b)	// Esc é”®
 		{
 			g_main_thread_exit = true;
 			break;
 		}
-		else if (key == 0x20) // ¿Õ¸ñ¼ü
+		else if (key == 0x20) // ç©ºæ ¼é”®
 		{
 			g_mutex_wait.lock();
 			waitKey();
@@ -1354,7 +1354,7 @@ void renderTrackbarThread()
 		if (g_main_thread_exit) {
 			break;
 		}
-		if (g_Led_Color >= AllColor)// ·ÀÖ¹Ô½½ç
+		if (g_Led_Color >= AllColor)// é˜²æ­¢è¶Šç•Œ
 			continue;
 		HsvColor& hsv = g_HsvColor[g_Led_Color];
 		createTrackbar("lowHue", "Toolkit", &hsv.h[5], hsv.h[4]);
@@ -1533,9 +1533,9 @@ int main()
 	else
 		readConfigFile();
 	f.close();
-#if true	// È«¾Ö±äÁ¿³õÊ¼»¯
+#if true	// å…¨å±€å˜é‡åˆå§‹åŒ–
 	getVGAInfo(g_PPID, VGA_PPID_LENGTH);
-	g_start_time = time(NULL); //»ñÈ¡ÈÕÀúÊ±¼ä
+	g_start_time = time(NULL); //è·å–æ—¥å†æ—¶é—´
 #endif
 	Mat frame;
 	VideoCapture capture(g_CameraIndex);
@@ -1549,13 +1549,13 @@ int main()
 	VGA_READ_IC_I2C = (lpVGA_Read_IC_I2C)GetProcAddress(hDLL, "VGA_Read_IC_I2C");
 	VGA_WRITE_IC_I2C = (lpVGA_Write_IC_I2C)GetProcAddress(hDLL, "VGA_Write_IC_I2C");
 
-	// ÔØÈëdll
+	// è½½å…¥dll
 	LOAD_VENDOR_DLL();
 
-	// ¹Ø±ÕËùÓĞµÆ
+	// å…³é—­æ‰€æœ‰ç¯
 	resetColor(0, 0, 0);
 
-	// ³õÊ¼»¯logÎÄ¼ş¾ä±ú
+	// åˆå§‹åŒ–logæ–‡ä»¶å¥æŸ„
 	if (!openAgingLog())
 	{
 		printf("open aging.csv error!\n");
@@ -1578,9 +1578,9 @@ int main()
 			AgingLog aging;
 			//printf("_clock1 = %u\n", clock());
 			g_mutex_wait.lock();
-			startTime = clock();//¼ÆÊ±¿ªÊ¼
+			startTime = clock();//è®¡æ—¶å¼€å§‹
 
-			Rect rect(230, 180, 850, 300);	// »­Ò»¸ö½ØÈ¡¿ò³öÀ´	
+			Rect rect(230, 180, 850, 300);	// ç”»ä¸€ä¸ªæˆªå–æ¡†å‡ºæ¥	
 			Mat img = frame(rect);
 			imshow("img", img);
 
@@ -1647,14 +1647,14 @@ int main()
 			}
 			//printf("count1 = %d\n", count);
 
-			// ½«img »®·Ö³ÉÊúÏòµÄ8ÁĞ, Í³¼ÆÃ¿ÁĞÖĞr >=240 µÄµãÊıÁ¿
+			// å°†img åˆ’åˆ†æˆç«–å‘çš„8åˆ—, ç»Ÿè®¡æ¯åˆ—ä¸­r >=240 çš„ç‚¹æ•°é‡
 
 			count = 0;
 			for (size_t i = 0; i < img.cols; i++)
 			{
-				//uchar c; //È¡³öÖ¸¶¨Í¨µÀµÄÑÕÉ«Öµ
-				//int t;		// ¸ÃÑÕÉ«Öµ¶ÔÓ¦µÄ¹ıÂËãĞÖµ
-				int block_index = i / (img.cols / 8);	// ¸ÃÏñËØµãËùÔÚÇø¿é
+				//uchar c; //å–å‡ºæŒ‡å®šé€šé“çš„é¢œè‰²å€¼
+				//int t;		// è¯¥é¢œè‰²å€¼å¯¹åº”çš„è¿‡æ»¤é˜ˆå€¼
+				int block_index = i / (img.cols / 8);	// è¯¥åƒç´ ç‚¹æ‰€åœ¨åŒºå—
 
 				for (size_t j = 0; j < img.rows; j++)
 				{
@@ -1732,8 +1732,8 @@ int main()
 			//printf("count2 = %d\n", count);
 
 
-			bool b8[8] = { 0 };	// 8¸öÇø¿éÖĞ, ¸÷¸öÇø¿éÊÇ·ñÓĞ°×É«
-			int t[2] = { -1, -1 };	// ¼ÇÂ¼Çø¿éÏÂ±ê
+			bool b8[8] = { 0 };	// 8ä¸ªåŒºå—ä¸­, å„ä¸ªåŒºå—æ˜¯å¦æœ‰ç™½è‰²
+			int t[2] = { -1, -1 };	// è®°å½•åŒºå—ä¸‹æ ‡
 			for (int s = 0; s < 8; s++)
 			{
 				if (s == 0 && aging.point_block[s] > 100)

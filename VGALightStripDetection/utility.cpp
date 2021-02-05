@@ -34,7 +34,7 @@ int getVGAInfo(char* ppid, size_t size)
 	WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
 	GetExitCodeProcess(ShExecInfo.hProcess, &exitCode);
 
-	// µÈ8Ãë
+	// ç­‰8ç§’
 	//_tsystem(L"choice /t 8 /d y /n > nul");
 
 	//unsigned int ppid = 0;
