@@ -27,7 +27,7 @@ std::mutex g_mutex_wait;
 std::condition_variable g_led_set_color_ok; // 条件变量, 指示LED 灯已经设置成功
 std::condition_variable g_image_process_ok; // 条件变量, 指示完成抓拍，已经处理好图片
 std::fstream g_aging_file;
-int g_Led_Color = WHITE;
+int g_Led_Color = BLUE;
 time_t g_start_time;
 
 int g_CameraIndex = 0;
@@ -324,7 +324,16 @@ void setSingleColor(u8 ledNumlight, u8 ledNumDelight, u8 r, u8 g, u8 b)
 	eneWriteReg(0x802f, 1);	// 设置启用
 }
 #else
-
+void initVGA()
+{
+	HINSTANCE hDLL;		// Handle to DLL
+	hDLL = LoadLibrary(L"VGA_Extra_x64.dll");
+	LOAD_VENDOR_DLL = (lpLoadVenderDLL)GetProcAddress(hDLL, "LoadVenderDLL");
+	VGA_READ_IC_I2C = (lpVGA_Read_IC_I2C)GetProcAddress(hDLL, "VGA_Read_IC_I2C");
+	VGA_WRITE_IC_I2C = (lpVGA_Write_IC_I2C)GetProcAddress(hDLL, "VGA_Write_IC_I2C");
+	// 载入dll
+	LOAD_VENDOR_DLL();
+}
 // 隔离硬件平台, 设置led灯光
 void setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 {
@@ -686,6 +695,171 @@ void setColorThread3()
 	g_main_thread_exit = true;
 }
 
+void setColorThread4()
+{
+	/* 这里存一个灯的映射关系，打开一个灯，需要把前面打开的灯关闭
+	 0 - 10
+	 1 - 0
+	 10 - 9
+	 -------------
+	 11 - 21
+	 12 - 11
+	 21 - 20
+	 */
+	u8 *colorNum = new u8[g_LedCount]{ 0 };
+	for (u8 i = 1; i < g_LedCount; i++)
+	{
+		colorNum[i] = i - 1;
+	}
+	colorNum[0] = g_LedHalfCount - 1;
+	colorNum[g_LedHalfCount] = g_LedCount - 1;
+
+	while (g_AgingTime > 0)
+	{
+		g_lpAgingLog2 = new AgingLog2((g_StopColor - g_StartColor) * g_LedCount);
+		for (g_Led_Color = g_StartColor; g_Led_Color < g_StopColor; g_Led_Color++)
+		{
+			g_complete_a_cycle = false;
+			for (size_t i = 0, t = g_LedHalfCount; i < g_LedHalfCount && t < g_LedCount; i++, t++)
+			{
+				// 在子线程的每次loop前判定是否需要退出
+				// 主线程退出是随机的, 主线程接收到退出key后, 业务循环逻辑立即退出,进入join子线程状态
+				// 子线程即便是恰巧在设置完灯后解锁, 主线程因为不再受理业务, 子线程会在下个循环开始前在此处退出
+				if (g_main_thread_exit)
+				{
+					if (g_lpAgingLog2 != NULL)
+						delete g_lpAgingLog2;
+					return;
+				}
+
+				// 一个单生产者-单消费者模型
+				std::unique_lock<std::mutex> lock(g_mutex_wait);
+				if (g_wait)
+				{
+					g_image_process_ok.wait(lock);
+				}
+				//g_mutex_wait.lock();
+				setSignleColor(colorNum[i], 0, 0, 0);
+				setSignleColor(colorNum[t], 0, 0, 0);
+
+				if (g_Led_Color == WHITE)
+				{
+					setSignleColor(i, 255, 255, 255);
+					setSignleColor(t, 255, 255, 255);
+				}
+				else if (g_Led_Color == RED)
+				{
+					setSignleColor(i, 255, 0, 0);
+					setSignleColor(t, 255, 0, 0);
+				}
+				else if (g_Led_Color == GREEN)
+				{
+					setSignleColor(i, 0, 255, 0);
+					setSignleColor(t, 0, 255, 0);
+				}
+				else if (g_Led_Color == BLUE)
+				{
+					setSignleColor(i, 0, 0, 255);
+					setSignleColor(t, 0, 0, 255);
+				}
+				g_lpAgingLog2->setCurrentLedIndex(i, t);
+
+				printf("**************\n");
+				Sleep(50);	//灯的颜色真正设置进显卡
+				g_wait = true;
+				//g_mutex_wait.unlock();
+
+				// 消费者线程目前不需要关注生产者的状态
+				g_led_set_color_ok.notify_all();
+				lock.unlock(); // 解锁.
+				Sleep(g_IntervalTime);// Give Main Thread CPU Time
+			}
+
+			// 一个轮回结束后，要将所有灯都打开一次， 进行拍照保存
+			if (0)
+			{
+				std::unique_lock<std::mutex> lock(g_mutex_wait);
+				if (g_wait)
+				{
+					g_image_process_ok.wait(lock);
+				}
+				switch (g_Led_Color)
+				{
+				case WHITE:
+					resetColor(255, 255, 255);
+					break;
+				case RED:
+					resetColor(255, 0, 0);
+					break;
+				case GREEN:
+					resetColor(0, 255, 0);
+					break;
+				case BLUE:
+					resetColor(0, 0, 255);
+					break;
+				}
+				printf("**************\n");
+				Sleep(50);	//灯的颜色真正设置进显卡
+				g_complete_a_cycle = true;
+				g_wait = true;
+
+				g_led_set_color_ok.notify_all();
+				lock.unlock(); // 解锁.
+				Sleep(g_IntervalTime);// Give Main Thread CPU Time
+			}
+
+			// 等我处理完图片你再换灯
+			std::unique_lock<std::mutex> lock(g_mutex_wait);
+			if (g_wait)
+			{
+				g_image_process_ok.wait(lock);
+			}
+			resetColor(0, 0, 0);	//所有灯都刷一个颜色后， 需要进行一次重置， 不再影响下一轮
+			lock.unlock(); // 解锁.
+		}
+
+		if (g_lpAgingLog2 != NULL)
+		{
+			tm *local = localtime(&g_start_time);
+			char format_time[MAXCHAR] = { 0 };
+			strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
+
+			g_aging_file << g_PPID << "," << format_time << ",";
+
+			int result_count1 = 0;	// 一个轮回的结果
+			int result_count2 = 0;	// 四个轮回的结果
+			for (int i = 0; i < g_lpAgingLog2->getSize(); i++)
+			{
+				SingleLEDHSV* lpdata = g_lpAgingLog2->ptr(i);
+				g_aging_file << lpdata->h << ","
+					<< lpdata->s << ","
+					<< lpdata->v << ","
+					<< lpdata->result << ",";
+				//printf("%d - [%d, %d, %d] - %d\n", i, lpdata->h, lpdata->s, lpdata->v, lpdata->result);
+				result_count1 += lpdata->result;
+				result_count2 += lpdata->result;
+
+				if ((i + 1) % g_LedCount == 0)	// 一轮的数据已统计完
+				{
+					g_aging_file << result_count1;
+					result_count1 = 0;	// 一轮数据统计完后归零，重新来过
+				}
+			}
+			g_aging_file << "," << result_count2 << "\n";
+
+
+			delete g_lpAgingLog2;
+		}
+
+		g_AgingTime--;
+	}
+
+	if (colorNum != NULL)
+		delete[] colorNum;
+
+	g_main_thread_exit = true;
+}
+
 bool openAgingLog()
 {
 	g_aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
@@ -715,6 +889,53 @@ bool openAgingLog()
 		return true;
 	}
 	return false;
+}
+
+
+int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
+{
+	int min_dist;
+
+	//首先计算两个矩形中心点
+	Point C1, C2;
+	C1.x = rect1.x + (rect1.width / 2);
+	C1.y = rect1.y + (rect1.height / 2);
+	C2.x = rect2.x + (rect2.width / 2);
+	C2.y = rect2.y + (rect2.height / 2);
+
+	// 分别计算两矩形中心点在X轴和Y轴方向的距离
+	int Dx, Dy;
+	Dx = abs(C2.x - C1.x);
+	Dy = abs(C2.y - C1.y);
+
+	//两矩形不相交，在X轴方向有部分重合的两个矩形，最小距离是上矩形的下边线与下矩形的上边线之间的距离
+	if ((Dx < ((rect1.width + rect2.width) / 2)) && (Dy >= ((rect1.height + rect2.height) / 2)))
+	{
+		min_dist = Dy - ((rect1.height + rect2.height) / 2);
+	}
+
+	//两矩形不相交，在Y轴方向有部分重合的两个矩形，最小距离是左矩形的右边线与右矩形的左边线之间的距离
+	else if ((Dx >= ((rect1.width + rect2.width) / 2)) && (Dy < ((rect1.height + rect2.height) / 2)))
+	{
+		min_dist = Dx - ((rect1.width + rect2.width) / 2);
+	}
+
+	//两矩形不相交，在X轴和Y轴方向无重合的两个矩形，最小距离是距离最近的两个顶点之间的距离，
+	// 利用勾股定理，很容易算出这一距离
+	else if ((Dx >= ((rect1.width + rect2.width) / 2)) && (Dy >= ((rect1.height + rect2.height) / 2)))
+	{
+		int delta_x = Dx - ((rect1.width + rect2.width) / 2);
+		int delta_y = Dy - ((rect1.height + rect2.height) / 2);
+		min_dist = sqrt(delta_x * delta_x + delta_y * delta_y);
+	}
+
+	//两矩形相交，最小距离为负值，返回-1
+	else
+	{
+		min_dist = -1;
+	}
+
+	return min_dist;
 }
 
 void setFrameImgThread(void* lpcapture)
@@ -1337,6 +1558,283 @@ void setFrameImgThread3(void* lpcapture)
 	}
 }
 
+void setFrameImgThread4(void* lpcapture)
+{
+	Mat frame;
+	VideoCapture* capture = (VideoCapture*)lpcapture;
+
+	char key = '0';
+	clock_t startTime;
+
+	int lowhsv[3] = { 0 };
+	int highsv[3] = { 0 };
+
+	while (true)
+	{
+		(*capture).read(frame);
+		if (frame.empty())
+		{
+			(*capture).open("video/GA1.avi");
+			continue;
+		}
+		if (g_wait)
+		{
+			//g_mutex_wait.lock();
+			// 一个轮回进行一次抓拍并保存			
+			if (g_complete_a_cycle)
+			{
+				std::unique_lock<std::mutex> lock(g_mutex_wait);
+				(*capture).read(frame);
+				tm *local = localtime(&g_start_time);
+				char format_time[MAXCHAR] = { 0 };
+				strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
+
+				char frame_file[MAXCHAR] = { 0 };
+				sprintf_s(frame_file, MAXCHAR, ".\\aging_original_image\\%s-%s-%d.png", g_PPID, format_time, g_Led_Color);
+
+				imwrite(frame_file, frame);
+				g_wait = false;	// 表示扫描线程已经完工了
+				g_complete_a_cycle = false;
+				g_image_process_ok.notify_all();
+				lock.unlock();
+				continue;	// 不再走下面的扫描逻辑
+			}
+
+			std::unique_lock<std::mutex> lock(g_mutex_wait);
+			if (g_Led_Color < AllColor)
+			{
+				const HsvColor& hsv = g_HsvColor[g_Led_Color];
+				lowhsv[0] = hsv.h[0] + hsv.h[5];
+				lowhsv[1] = hsv.s[0] + hsv.s[5];
+				lowhsv[2] = hsv.v[0] + hsv.v[5];
+
+				highsv[0] = hsv.h[0] + hsv.h[6];
+				highsv[1] = hsv.s[0] + hsv.s[6];
+				highsv[2] = hsv.v[0] + hsv.v[6];
+
+				startTime = clock();//计时开始
+				//(*capture).read(frame); // !important, 确保读取出来的灯是完全点亮的
+				//AgingLog aging;
+
+				// ROI
+				Rect rect(g_RectFrame.x, g_RectFrame.y, g_RectFrame.width, g_RectFrame.height);
+				Mat original_img = frame(rect);
+
+
+				Mat img = original_img.clone();
+				if (g_AgingSettingSaveRectImages)
+				{
+					tm *local = localtime(&g_start_time);
+					char format_time[MAXCHAR] = { 0 };
+					strftime(format_time, MAXCHAR, "%Y%m%d%H%M%S", local);
+
+					int f = g_lpAgingLog2->getCurrentLedIndex_F();
+					int s = g_lpAgingLog2->getCurrentLedIndex_S();
+
+					char frame_file[MAXCHAR] = { 0 };
+					sprintf_s(frame_file, MAXCHAR, ".\\aging_rect_image\\%s-%s-%d-%d-%d-original.png", g_PPID, format_time, g_Led_Color, f, s);
+
+					imwrite(frame_file, img);
+				}
+
+				Mat frame_clone = frame.clone();
+				rectangle(frame_clone, rect, Scalar(255, 255, 0), 5);
+				imshow("graphics_card", frame_clone);
+
+
+				for (size_t i = 0; i < img.rows; i++)
+				{
+					for (size_t j = 0; j < img.cols; j++)
+					{
+						uchar* lpdata = img.ptr<uchar>(i, j);
+						if ((lpdata[0] < g_BGRColors[g_Led_Color].b || lpdata[1] < g_BGRColors[g_Led_Color].g || lpdata[2] < g_BGRColors[g_Led_Color].r)
+							|| (lpdata[0] >= g_BGRColors[WHITE].b && lpdata[1] >= g_BGRColors[WHITE].g && lpdata[2] >= g_BGRColors[WHITE].r))
+						{
+							lpdata[0] = 0;
+							lpdata[1] = 0;
+							lpdata[2] = 0;
+						}
+						//switch (g_Led_Color)
+						//{
+						//	if (/*lpdata[0] > g_BGRColors[g_Led_Color].b && lpdata[1] > g_BGRColors[g_Led_Color].g && lpdata[2] > (g_BGRColors[g_Led_Color].r + g_tick)
+						//		||*/ (lpdata[0] < g_BGRColors[g_Led_Color].b || lpdata[1] < g_BGRColors[g_Led_Color].g || lpdata[2] < g_BGRColors[g_Led_Color].r))
+						//	{
+						//		lpdata[0] = 0;
+						//		lpdata[1] = 0;
+						//		lpdata[2] = 0;
+						//	}
+						//
+						//default:
+						//	break;
+						//}
+					}
+				}				
+				imshow("img", img);
+
+				//均值滤波
+				medianBlur(img, img, 3);
+				//GaussianBlur(img, img, Size(7, 7), 1.0);
+				imshow("img blure", img);
+
+
+				Mat hsv_img;
+				cvtColor(img, hsv_img, COLOR_BGR2HSV);
+				imshow("hsv_img", hsv_img);
+
+				Mat mask;
+				inRange(hsv_img, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), mask);
+				imshow("mask", mask);
+
+				//形态学处理消除噪点
+				Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(11, 11));
+				dilate(mask, mask, kernel);
+				imshow("dilate", mask);
+
+				morphologyEx(mask, mask, MORPH_CLOSE, kernel);
+				morphologyEx(mask, mask, MORPH_OPEN, kernel);
+				imshow("morphologyEx", mask);
+
+				Mat result = Mat::zeros(img.size(), img.type());
+				bitwise_and(original_img, original_img, result, mask);
+				imshow("bitwise_and", result);
+
+				//存储边缘
+				vector<vector<Point> > contours;
+				vector<Vec4i> hierarchy;
+				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//查找最顶层轮廓
+
+				// 生成最小包围矩形
+				vector<Rect> boundRect;
+				for (int index = 0; index < contours.size(); index++)
+				{
+					// 绘制各自小轮廓
+					Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
+					drawContours(result, contours, index, color, 2);
+
+					vector<Point> contours_poly;
+					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
+					Rect rect = boundingRect(Mat(contours_poly));
+					boundRect.push_back(rect);
+				}
+
+				//sort(boundRect.begin(), boundRect.end(), [](const Rect& l, const Rect& r) -> bool {return l.x < r.x;});
+
+				// 轮廓合并
+				vector<Rect> boundRect2;
+				for (int i = 0; i < boundRect.size(); i++)
+				{
+					Rect& rect = boundRect[i];
+					if (rect.area() <= g_MinContoursArea)
+					{
+						rect = Rect();
+						continue;
+					}
+					for (int j = 0; j < boundRect.size(); j++)
+					{
+						if (i == j)	// 跳过自己
+							continue;
+						Rect& rect2 = boundRect[j];
+						if (rect2.area() <= g_MinContoursArea)
+							continue;
+						int gap = min_distance_of_rectangles(rect, rect2);
+						//printf("(%d, %d) space (%d, %d) = %d\n", rect.x, rect.y, rect.x, rect.y, gap);
+						if (gap < g_MinContoursSpace)
+						{
+							Rect big_rect;
+							big_rect.x = min(rect.x, rect2.x);
+							big_rect.y = min(rect.y, rect2.y);
+							big_rect.width = max(rect.x + rect.width, rect2.x + rect2.width) - big_rect.x;
+							big_rect.height = max(rect.y + rect.height, rect2.y + rect2.height) - big_rect.y;
+							rect = big_rect;
+							rect2 = Rect();
+						}
+					}
+				}
+
+				//if (boundRect2.size() < 2)
+				//{
+				//	putText(result, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255));
+				//}
+				//得到灯的轮廓
+				for (int index = 0; index < boundRect.size(); index++)
+				{
+					if (boundRect[index].area() > 0)
+					{
+						rectangle(result, boundRect[index], Scalar(0, 255, 255), 1);
+					}
+					const Mat contour = hsv_img(boundRect[index]);
+
+					if (0)
+					{
+						int hall = 0, sall = 0, vall = 0;
+						int point_count = 0;
+						for (size_t i = 0; i < contour.rows; i++)
+						{
+							for (size_t j = 0; j < contour.cols; j++)
+							{
+								const uchar* lphsv = contour.ptr<uchar>(i, j);
+								if (lphsv[0] >= lowhsv[0])
+								{
+									hall += lphsv[0];
+									sall += lphsv[1];
+									vall += lphsv[2];
+									point_count++;
+								}
+								//printf("[%d,%d,%d]",lphsv[0], lphsv[1], lphsv[2]);
+							}
+							//printf("\n");
+						}
+						if (index == 0 && point_count > 0)
+						{
+							int f = (g_Led_Color * g_LedCount) + g_lpAgingLog2->getCurrentLedIndex_F();
+							SingleLEDHSV* lpSingleLEDHSV = g_lpAgingLog2->ptr(f);
+							lpSingleLEDHSV->h = hall / point_count;
+							lpSingleLEDHSV->s = sall / point_count;
+							lpSingleLEDHSV->v = vall / point_count;
+							lpSingleLEDHSV->result = 0;
+						}
+						else if (index == 1 && point_count > 0)
+						{
+							int s = (g_Led_Color * g_LedCount) + g_lpAgingLog2->getCurrentLedIndex_S();
+							SingleLEDHSV* lpSingleLEDHSV = g_lpAgingLog2->ptr(s);
+							lpSingleLEDHSV->h = hall / point_count;
+							lpSingleLEDHSV->s = sall / point_count;
+							lpSingleLEDHSV->v = vall / point_count;
+							lpSingleLEDHSV->result = 0;
+						}
+					}
+				}
+				imshow("contours", result);
+
+				waitKey(1);
+				g_wait = false;
+				printf("--------------%d\n", clock() - startTime);
+				//g_mutex_wait.unlock();
+			}
+			g_image_process_ok.notify_all();
+			lock.unlock();
+		}
+
+		key = waitKey(30);
+		if (key == 0x1b)	// Esc 键
+		{
+			g_main_thread_exit = true;
+			break;
+		}
+		else if (key == 0x20) // 空格键
+		{
+			g_mutex_wait.lock();
+			waitKey();
+			g_mutex_wait.unlock();
+		}
+
+		if (g_main_thread_exit)
+		{
+			break;
+		}
+	}
+}
+
 void renderTrackbarThread()
 {
 	if (!g_ShowTrackBarWnd)
@@ -1348,6 +1846,10 @@ void renderTrackbarThread()
 	int hl = 0, sl = 0, vl = 0;
 	int hh = 0, sh = 0, vh = 0;
 
+	Mat empty2 = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
+	namedWindow("Toolkit_RGB");
+	imshow("Toolkit_RGB", empty2);
+
 	char buf[128] = { 0 };
 	while (true)
 	{
@@ -1356,6 +1858,7 @@ void renderTrackbarThread()
 		}
 		if (g_Led_Color >= AllColor)// 防止越界
 			continue;
+		
 		HsvColor& hsv = g_HsvColor[g_Led_Color];
 		createTrackbar("lowHue", "Toolkit", &hsv.h[5], hsv.h[4]);
 		createTrackbar("higHue", "Toolkit", &hsv.h[6], hsv.h[4]);
@@ -1384,6 +1887,16 @@ void renderTrackbarThread()
 		putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		imshow("Toolkit", empty);
 		empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
+
+		g_mutex_wait.lock();
+		createTrackbar("b", "Toolkit_RGB", &g_BGRColors[g_Led_Color].color[0], 255);
+		createTrackbar("g", "Toolkit_RGB", &g_BGRColors[g_Led_Color].color[1], 255);
+		createTrackbar("r", "Toolkit_RGB", &g_BGRColors[g_Led_Color].color[2], 255);
+
+		createTrackbar("tick", "Toolkit_RGB", &g_tick, 200);
+		g_mutex_wait.unlock();
+
+		imshow("Toolkit_RGB", empty2);
 
 		waitKey(1);
 	}
@@ -1475,13 +1988,34 @@ void readConfigFile()
 
 	//[AgingSetting]
 	g_AgingSettingSaveRectImages = GetPrivateProfileInt(L"AgingSetting", L"SaveRectImages ", 1, lpPath);
+	g_AgingTime = GetPrivateProfileInt(L"AgingSetting", L"AgingTime ", 1, lpPath);
+	g_IntervalTime = GetPrivateProfileInt(L"AgingSetting", L"IntervalTime", 100, lpPath);
+	g_MinContoursArea = GetPrivateProfileInt(L"AgingSetting", L"MinContoursArea", 200, lpPath);
+	g_MinContoursSpace = GetPrivateProfileInt(L"AgingSetting", L"MinContoursSpace", 60, lpPath);
 
 	//[LED]
 	g_LedCount = GetPrivateProfileInt(L"LED", L"Count", 22, lpPath);
-	g_IntervalTime = GetPrivateProfileInt(L"LED", L"IntervalTime", 100, lpPath);
+	g_StartColor = (LEDColor)GetPrivateProfileInt(L"LED", L"StartColor", 0, lpPath);
+	g_StopColor = (LEDColor)GetPrivateProfileInt(L"LED", L"StopColor", 4, lpPath);
 
 	//[TrackBarWindow]
 	g_ShowTrackBarWnd = GetPrivateProfileInt(L"TrackBarWindow", L"IsShow", 1, lpPath);
+
+	g_BGRColors[BLUE].b = GetPrivateProfileInt(L"ThresholdB", L"b", 250, lpPath);
+	g_BGRColors[BLUE].g = GetPrivateProfileInt(L"ThresholdB", L"g", 250, lpPath);
+	g_BGRColors[BLUE].r = GetPrivateProfileInt(L"ThresholdB", L"r", 250, lpPath);
+
+	g_BGRColors[GREEN].b = GetPrivateProfileInt(L"ThresholdG", L"b", 250, lpPath);
+	g_BGRColors[GREEN].g = GetPrivateProfileInt(L"ThresholdG", L"g", 250, lpPath);
+	g_BGRColors[GREEN].r = GetPrivateProfileInt(L"ThresholdG", L"r", 250, lpPath);
+
+	g_BGRColors[RED].b = GetPrivateProfileInt(L"ThresholdR", L"b", 250, lpPath);
+	g_BGRColors[RED].g = GetPrivateProfileInt(L"ThresholdR", L"g", 250, lpPath);
+	g_BGRColors[RED].r = GetPrivateProfileInt(L"ThresholdR", L"r", 250, lpPath);
+
+	g_BGRColors[WHITE].b = GetPrivateProfileInt(L"ThresholdW", L"b", 250, lpPath);
+	g_BGRColors[WHITE].g = GetPrivateProfileInt(L"ThresholdW", L"g", 250, lpPath);
+	g_BGRColors[WHITE].r = GetPrivateProfileInt(L"ThresholdW", L"r", 250, lpPath);
 
 	//[RedThreshold]
 	//{156, 180, 159, 180, 43, 255, 149, 255, 46, 255, 148, 255} // Red
@@ -1519,13 +2053,13 @@ void readConfigFile()
 	int w_Lv = GetPrivateProfileInt(L"WhiteThreshold", L"Lv", 221, lpPath);
 	int w_Hv = GetPrivateProfileInt(L"WhiteThreshold", L"Hv", 255, lpPath);
 
-	g_HsvColor[RED] = { 156, 180, r_Lh, r_Hh, 43, 255, r_Ls, r_Hs, 46, 255, r_Lv, r_Hv };
-	g_HsvColor[GREEN] = { 35, 77, g_Lh, g_Hh, 43, 255, g_Ls, g_Hs, 46, 255, g_Lv, g_Hv };
-	g_HsvColor[BLUE] = { 100, 124, b_Lh, b_Hh, 43, 255, b_Ls, b_Hs, 46, 255, b_Lv, b_Hv };
-	g_HsvColor[WHITE] = { 0, 180, w_Lh, w_Hh, 0,  30, w_Ls, w_Hs, 221, 255, w_Lv, w_Hv };
+	g_HsvColor[RED] = { 0, 180, r_Lh, r_Hh, 0, 255, r_Ls, r_Hs, 0, 255, r_Lv, r_Hv };
+	g_HsvColor[GREEN] = { 0, 180, g_Lh, g_Hh, 0, 255, g_Ls, g_Hs, 0, 255, g_Lv, g_Hv };
+	g_HsvColor[BLUE] = { 0, 180, b_Lh, b_Hh, 0, 255, b_Ls, b_Hs, 0, 255, b_Lv, b_Hv };
+	g_HsvColor[WHITE] = { 0, 180, w_Lh, w_Hh, 0,  255, w_Ls, w_Hs, 0, 255, w_Lv, w_Hv };
 }
 
-int main()
+int main000()
 {
 	fstream f(CONFIG_FILE, std::fstream::in);
 	if (!f.good())
@@ -1538,7 +2072,8 @@ int main()
 	g_start_time = time(NULL); //获取日历时间
 #endif
 	Mat frame;
-	VideoCapture capture(g_CameraIndex);
+	VideoCapture capture;
+	//VideoCapture capture(g_CameraIndex);
 	//capture.set(CAP_PROP_SETTINGS, 1);
 	capture.set(CAP_PROP_FRAME_WIDTH, g_FrameSize.width);
 	capture.set(CAP_PROP_FRAME_HEIGHT, g_FrameSize.height);
@@ -1562,8 +2097,8 @@ int main()
 		return -1;
 	}
 
-	std::thread t1(setColorThread3);
-	std::thread t2(setFrameImgThread3, &capture);
+	std::thread t1(setColorThread4);
+	std::thread t2(setFrameImgThread4, &capture);
 	std::thread t3(renderTrackbarThread);
 
 #if 0
@@ -1857,5 +2392,569 @@ int main()
 	FreeLibrary(hDLL);
 	g_aging_file.close();
 	destroyAllWindows();
+	return 0;
+}
+
+
+int main456()
+{
+	HINSTANCE hDLL;		// Handle to DLL
+	hDLL = LoadLibrary(L"VGA_Extra_x64.dll");
+	LOAD_VENDOR_DLL = (lpLoadVenderDLL)GetProcAddress(hDLL, "LoadVenderDLL");
+	VGA_READ_IC_I2C = (lpVGA_Read_IC_I2C)GetProcAddress(hDLL, "VGA_Read_IC_I2C");
+	VGA_WRITE_IC_I2C = (lpVGA_Write_IC_I2C)GetProcAddress(hDLL, "VGA_Write_IC_I2C");
+
+	// 载入dll
+	LOAD_VENDOR_DLL();
+
+	readConfigFile();
+
+	// 关闭所有灯
+	resetColor(0, 0, 0);
+	Sleep(30);
+
+	Mat frame;
+	Mat frame1;
+	//g_FrameSize.width = (640);
+	//g_FrameSize.height = (480);
+	VideoCapture capture(0);
+	capture.set(CAP_PROP_SETTINGS, 1);
+	capture.set(CAP_PROP_FPS, 30);
+	capture.set(CAP_PROP_FRAME_WIDTH, g_FrameSize.width);
+	capture.set(CAP_PROP_FRAME_HEIGHT, g_FrameSize.height);
+
+	u8 *colorNum = new u8[g_LedCount]{ 0 };
+	for (u8 i = 1; i < g_LedCount; i++)
+	{
+		colorNum[i] = i - 1;
+	}
+	//colorNum[0] = g_LedHalfCount - 1;
+	//colorNum[g_LedHalfCount] = g_LedCount - 1;
+	colorNum[0] = g_LedCount - 1;
+
+	Sleep(1000);
+	capture >> frame;
+	Rect rect(g_RectFrame.x, g_RectFrame.y, g_RectFrame.width, g_RectFrame.height);
+	frame = frame(rect);
+	imshow("1111", frame);
+	//waitKey(30);
+
+
+	clock_t startTime0, startTime,startTime2;
+	int lowhsv[3] = { 0 };
+	int highsv[3] = { 0 };
+	std::thread t3(renderTrackbarThread);
+
+
+	//while (true)
+	{
+		startTime0 = clock();
+		for (g_Led_Color = BLUE; g_Led_Color < WHITE; g_Led_Color++)
+		{			
+			size_t t = 0;
+			for (size_t index = 0; index < LED_COUNT; index++)
+			{
+				startTime = clock();
+				startTime2 = clock();
+				setSignleColor(colorNum[index], 0, 0, 0);
+				//setSignleColor(colorNum[t], 0, 0, 0);
+
+				/*if (g_Led_Color == WHITE)
+				{
+					setSignleColor(index, 255, 255, 255);
+					setSignleColor(t, 255, 255, 255);
+				}
+				else*/ if (g_Led_Color == RED)
+				{
+					setSignleColor(index, 255, 0, 0);
+					//setSignleColor(t, 255, 0, 0);
+				}
+				else if (g_Led_Color == GREEN)
+				{
+					setSignleColor(index, 0, 255, 0);
+					//setSignleColor(t, 0, 255, 0);
+				}
+				else if (g_Led_Color == BLUE)
+				{
+					setSignleColor(index, 0, 0, 255);
+					//setSignleColor(t, 0, 0, 255);
+				}
+				printf("1--------------%d\n", clock() - startTime);
+				startTime = clock();
+
+				for (int i = 0; i < 3; i++)
+				{
+					startTime = clock();
+					capture.read(frame1);	
+					waitKey(33);
+					printf("1.1--------------%d\n", clock() - startTime);
+
+					
+				}
+				startTime = clock();
+
+				Rect rect(g_RectFrame.x, g_RectFrame.y, g_RectFrame.width, g_RectFrame.height);
+				frame1 = frame1(rect);
+				
+				imshow("2222", frame1);
+				printf("2--------------%d\n", clock() - startTime);
+				startTime = clock();
+				//Mat frame1_result = frame1.clone();
+
+				for (int i = 0; i < frame.rows; i++)
+				{
+					for (int j = 0; j < frame.cols; j++)
+					{
+						uchar* pdata = frame.ptr<uchar>(i, j);
+						uchar* pdata1 = frame1.ptr<uchar>(i, j);
+
+						
+						switch (g_Led_Color)
+						{
+						case RED:
+							if ((pdata1[2] - pdata[2] < 150))
+							{
+								pdata1[0] = pdata1[1] = pdata1[2] = 0;
+							}
+							break;
+						case GREEN:
+							if ((pdata1[1] - pdata[1] < 150))
+							{
+								pdata1[0] = pdata1[1] = pdata1[2] = 0;
+							}
+							break;
+						case BLUE:
+							if ((pdata1[0] - pdata[0] < 150))
+							{
+								pdata1[0] = pdata1[1] = pdata1[2] = 0;
+							}
+							break;
+						/*case WHITE:
+							if ((pdata1[2] - pdata[2] < 150))
+							{
+								pdata1[0] = pdata1[1] = pdata1[2] = 0;
+							}
+							break;*/
+						}
+					}
+				}
+				
+				printf("3--------------%d\n", clock() - startTime);
+				startTime = clock();
+
+				const HsvColor& hsv = g_HsvColor[g_Led_Color];
+				lowhsv[0] = hsv.h[0] + hsv.h[5];
+				lowhsv[1] = hsv.s[0] + hsv.s[5];
+				lowhsv[2] = hsv.v[0] + hsv.v[5];
+
+				highsv[0] = hsv.h[0] + hsv.h[6];
+				highsv[1] = hsv.s[0] + hsv.s[6];
+				highsv[2] = hsv.v[0] + hsv.v[6];
+				
+				//均值滤波
+				medianBlur(frame1, frame1, 3);
+				//GaussianBlur(img, img, Size(7, 7), 1.0);
+				//imshow("frame1 blure", frame1);
+				printf("4--------------%d\n", clock() - startTime);
+				startTime = clock();
+
+				Mat mask;
+				Mat frame1_hsv = frame1.clone();
+				cvtColor(frame1, frame1_hsv, COLOR_BGR2HSV);
+				inRange(frame1_hsv, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), mask);
+
+				//inRange(frame1, Scalar(35, 43, 46), Scalar(124, 255, 255), hsv_img_mask);
+				//形态学处理消除噪点
+				//Mat result1, result2;
+				//Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+				//Mat kernel2 = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+
+				//dilate(hsv_img_mask, hsv_img_mask, kernel);
+				//imshow("hsv_img_mask", hsv_img_mask);
+				//
+				//// 7-腐蚀
+				//erode(hsv_img_mask, result1, kernel2);
+				//imshow("result1", result1);
+				//
+				//// 5-腐蚀
+				//erode(hsv_img_mask, result2, kernel);
+				//imshow("result2", result2);
+				//morphologyEx(hsv_img_mask, hsv_img_mask, MORPH_OPEN, kernel);
+
+				imshow("mask", mask);
+				printf("5--------------%d\n", clock() - startTime);
+				startTime = clock();
+
+				//Mat result = Mat::zeros(frame1.size(), frame1.type());
+				//存储边缘
+				vector<vector<Point> > contours;
+				vector<Vec4i> hierarchy;
+				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//查找最顶层轮廓
+
+				// 生成最小包围矩形
+				vector<Rect> boundRect;
+				for (int index = 0; index < contours.size(); index++)
+				{
+					// 绘制各自小轮廓
+					//Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
+					//drawContours(result, contours, index, color, 2);
+
+					vector<Point> contours_poly;
+					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
+					Rect rect = boundingRect(Mat(contours_poly));
+					boundRect.push_back(rect);
+				}
+
+				//sort(boundRect.begin(), boundRect.end(), [](const Rect& l, const Rect& r) -> bool {return l.x < r.x;});
+
+				// 轮廓合并
+				//vector<Rect> boundRect2;
+				for (int i = 0; i < boundRect.size(); i++)
+				{
+					Rect& rect = boundRect[i];
+					//if (rect.area() <= g_MinContoursArea)
+					//{
+					//	rect = Rect();
+					//	continue;
+					//}
+					for (int j = 0; j < boundRect.size(); j++)
+					{
+						if (i == j)	// 跳过自己
+							continue;
+						Rect& rect2 = boundRect[j];
+						//if (rect2.area() <= g_MinContoursArea)
+						//	continue;
+						int gap = min_distance_of_rectangles(rect, rect2);
+						//printf("(%d, %d) space (%d, %d) = %d\n", rect.x, rect.y, rect.x, rect.y, gap);
+						if (gap < g_MinContoursSpace)
+						{
+							Rect big_rect;
+							big_rect.x = min(rect.x, rect2.x);
+							big_rect.y = min(rect.y, rect2.y);
+							big_rect.width = max(rect.x + rect.width, rect2.x + rect2.width) - big_rect.x;
+							big_rect.height = max(rect.y + rect.height, rect2.y + rect2.height) - big_rect.y;
+							rect = big_rect;
+							rect2 = Rect();
+						}
+					}
+				}
+				
+				if (boundRect.size() < 1)
+				{
+					putText(frame1, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255));
+				}
+				//得到灯的轮廓
+				for (int index = 0; index < boundRect.size(); index++)
+				{
+					if (boundRect[index].area() > 0)
+					{
+						rectangle(frame1, boundRect[index], Scalar(0, 255, 255), 3);
+					}
+				}
+				imshow("result", frame1);
+				printf("6--------------%d\n", clock() - startTime);
+				printf("--------------%d\n", clock() - startTime2);
+				
+				//if (index > 8 && index < 13)
+				//{
+				//	char name[128] = { 0 };
+				//	sprintf_s(name, 128, "aging_rect_image/frame1_result-%d-%d.png", rand(), index);
+				//	imwrite(name, frame1_result);
+				//}
+			}
+			/*if (char(waitKey(1)) == 'q')
+			{
+				waitKey();
+			}*/
+		}
+		printf("--------------%d\n", clock() - startTime0);
+
+		waitKey(1);
+	}
+	t3.join();
+	waitKey();
+	return 0;
+}
+
+Mat g_frame;
+Mat g_current_frame;
+Mat g_background_frame;
+
+void getFrame(Mat& f)
+{
+	g_mutex_wait.lock();
+	f = g_frame.clone();	
+	g_mutex_wait.unlock();
+}
+
+void autoGetCaptureFrame(void* arg)
+{
+	VideoCapture* lpcapture = (VideoCapture*)arg;
+	while (true)
+	{
+		g_mutex_wait.lock();
+		lpcapture->read(g_frame);		
+		g_mutex_wait.unlock();
+		imshow("g_frame", g_frame);
+
+		if (waitKey(33) == 0x1b)	// Esc 键
+		{
+			break;
+		}
+	}
+}
+
+
+void findFrameContours()
+{
+	int currentColor = 0;
+	while (true)
+	{
+		while (g_wait)
+		{
+			Sleep(1);
+		}
+		{
+			currentColor = g_Led_Color;
+			//printf("this color = %d\n", currentColor);
+
+			//while (false)
+			{
+				Mat frame, mask;
+				getFrame(frame);	// get current frame
+				printf("\n2--------------\n");
+				if (frame.empty())
+				{
+					printf("current frame empty !\n");
+					return;
+				}
+
+				clock_t startTime0 = clock(), startTime = clock();
+				int lowhsv[3] = { 0 };
+				int highsv[3] = { 0 };
+
+				Rect rect(g_RectFrame.x, g_RectFrame.y, g_RectFrame.width, g_RectFrame.height);
+				frame = frame(rect);
+				Mat original_frame = frame.clone();
+				//printf("--------------cols = %d, rols = %d", frame.cols, frame.rows);
+				//namedWindow("original_frame");
+				imshow("original_frame", frame);
+				imshow("background", g_background_frame(rect));
+
+				for (int i = 0; i < frame.rows; i++)
+				{
+					for (int j = 0; j < frame.cols; j++)
+					{
+						uchar* lpback = g_background_frame.ptr<uchar>(i, j);
+						uchar* lpframe = frame.ptr<uchar>(i, j);
+
+						switch (currentColor)
+						{
+						case RED:
+							if ((lpframe[2] - lpback[2] < 150))
+							{
+								lpframe[0] = lpframe[1] = lpframe[2] = 0;
+							}
+							break;
+						case GREEN:
+							if ((lpframe[1] - lpback[1] < 150))
+							{
+								lpframe[0] = lpframe[1] = lpframe[2] = 0;
+							}
+							break;
+						case BLUE:
+							if ((lpframe[0] - lpback[0] < 150))
+							{
+								lpframe[0] = lpframe[1] = lpframe[2] = 0;
+							}
+							break;
+						//case WHITE:
+						//	if ((lpframe[0] - lpback[0] < 180) || (lpframe[1] - lpback[1] < 180) || (lpframe[2] - lpback[2] < 180))
+						//	{
+						//		lpframe[0] = lpframe[1] = lpframe[2] = 0;
+						//	}
+						//	break;
+						}
+					}
+				}
+
+				if (currentColor == WHITE)
+				{
+					Mat background = g_background_frame(rect);
+					Mat temp_frame = frame.clone();
+					cvtColor(background, background, COLOR_BGR2GRAY);
+					cvtColor(temp_frame, temp_frame, COLOR_BGR2GRAY);					
+					absdiff(background, temp_frame, temp_frame);
+					threshold(temp_frame, temp_frame, 50, 255, THRESH_BINARY);
+					medianBlur(temp_frame, temp_frame, 3);
+					imshow("background", background);
+					imshow("temp_frame", temp_frame);
+					waitKey(1);
+
+				}
+				printf("3--------------%d\n", clock() - startTime);
+				startTime = clock();
+
+				const HsvColor& hsv = g_HsvColor[currentColor];
+				lowhsv[0] = hsv.h[0] + hsv.h[5];
+				lowhsv[1] = hsv.s[0] + hsv.s[5];
+				lowhsv[2] = hsv.v[0] + hsv.v[5];
+
+				highsv[0] = hsv.h[0] + hsv.h[6];
+				highsv[1] = hsv.s[0] + hsv.s[6];
+				highsv[2] = hsv.v[0] + hsv.v[6];
+
+				//均值滤波
+				medianBlur(frame, frame, 3);
+				printf("4--------------%d\n", clock() - startTime);
+				startTime = clock();
+
+
+				cvtColor(frame, frame, COLOR_BGR2HSV);
+				inRange(frame, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), mask);
+				cv::imshow("mask", mask);
+				printf("5--------------%d\n", clock() - startTime);
+				startTime = clock();
+
+				//存储边缘
+				vector<vector<Point> > contours;
+				vector<Vec4i> hierarchy;
+				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//查找最顶层轮廓
+
+				// 生成最小包围矩形
+				vector<Rect> boundRect;
+				for (int index = 0; index < contours.size(); index++)
+				{
+					vector<Point> contours_poly;
+					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
+					Rect rect = boundingRect(Mat(contours_poly));
+					boundRect.push_back(rect);
+				}
+
+				//sort(boundRect.begin(), boundRect.end(), [](const Rect& l, const Rect& r) -> bool {return l.x < r.x;});
+
+				// 轮廓合并
+				for (int i = 0; i < boundRect.size(); i++)
+				{
+					Rect& rect = boundRect[i];
+					for (int j = 0; j < boundRect.size(); j++)
+					{
+						if (i == j)	// 跳过自己
+							continue;
+						Rect& rect2 = boundRect[j];
+						int gap = min_distance_of_rectangles(rect, rect2);
+						//printf("(%d, %d) space (%d, %d) = %d\n", rect.x, rect.y, rect.x, rect.y, gap);
+						if (gap < g_MinContoursSpace)
+						{
+							Rect big_rect;
+							big_rect.x = min(rect.x, rect2.x);
+							big_rect.y = min(rect.y, rect2.y);
+							big_rect.width = max(rect.x + rect.width, rect2.x + rect2.width) - big_rect.x;
+							big_rect.height = max(rect.y + rect.height, rect2.y + rect2.height) - big_rect.y;
+							rect = big_rect;
+							rect2 = Rect();
+						}
+					}
+				}
+
+				if (boundRect.size() < 1)
+				{
+					putText(original_frame, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255));
+				}
+				//得到灯的轮廓
+				for (int index = 0; index < boundRect.size(); index++)
+				{
+					if (boundRect[index].area() > 0)
+					{
+						rectangle(original_frame, boundRect[index], Scalar(0, 255, 255), 3);
+					}
+				}
+				imshow("result", original_frame);
+
+				waitKey(1);
+				printf("6--------------%d\n", clock() - startTime);
+				printf("7--------------%d\n", clock() - startTime0);
+			}
+			g_wait = true;
+		}
+	}	
+}
+
+int main()
+{
+	initVGA();
+
+	readConfigFile();
+
+	VideoCapture capture(0);
+	if (!capture.isOpened())
+	{
+		printf("error capture not open\n!");
+		return -1;
+	}
+	//capture.set(CAP_PROP_SETTINGS, 1);
+	capture.set(CAP_PROP_FPS, 30);
+	capture.set(CAP_PROP_FRAME_WIDTH, g_FrameSize.width);
+	capture.set(CAP_PROP_FRAME_HEIGHT, g_FrameSize.height);
+
+	g_wait = true;
+	std::thread t1(autoGetCaptureFrame, (void*)&capture);	
+	std::thread t2(findFrameContours);
+
+	// 关闭所有灯
+	resetColor(0, 0, 0);
+	Sleep(100);
+	getFrame(g_background_frame);	
+	//imshow("g_background_frame", g_background_frame);
+	//waitKey(1);
+
+	u8 *colorNum = new u8[g_LedCount]{ 0 };
+	for (u8 i = 1; i < g_LedCount; i++)
+	{
+		colorNum[i] = i - 1;
+	}
+	colorNum[0] = g_LedCount - 1;
+
+	clock_t startTime0, startTime;
+
+	while (true)
+	{
+		g_wait = true;
+		startTime0 = clock();
+		for (int color = g_Led_Color = WHITE; color < AllColor; g_Led_Color = ++color)
+		{
+			if (g_Led_Color >= AllColor)
+				g_Led_Color = WHITE;
+			for (size_t index = 0; index < LED_COUNT; index++)
+			{
+				setSignleColor(colorNum[index], 0, 0, 0);				
+				if (color == RED)
+				{
+					setSignleColor(index, 255, 0, 0);
+				}
+				else if (color == GREEN)
+				{
+					setSignleColor(index, 0, 255, 0);
+				}
+				else if (color == BLUE)
+				{
+					setSignleColor(index, 0, 0, 255);
+				}
+				else if (color == WHITE)
+				{
+					setSignleColor(index, 255, 255, 255);
+				}
+				Sleep(100);
+				//printf("led = %d, current = %d, last = %d\n", index, i, g_Led_Color);
+				g_wait = false;
+				Sleep(20);
+			}
+		}
+		printf("main ==== %d\n", clock() - startTime0);
+	}
+	
+
+	t1.join();
+	t2.join();
 	return 0;
 }

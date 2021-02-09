@@ -2,12 +2,12 @@
 
 #include <ctime>
 
-enum ControlLEDColor
-{
-	WHITE,
-	RED,
-	GREEN,
+enum LEDColor
+{	
 	BLUE,
+	GREEN,
+	RED,
+	WHITE,
 	AllColor
 };
 
@@ -168,3 +168,20 @@ struct HsvColor
 		v[6] = v[3] - v[0];
 	}
 };
+
+struct BGRColor
+{
+	int color[3] = { 0 };
+	int& b = color[0];
+	int& g = color[1];
+	int& r = color[2];
+};
+
+BGRColor g_BGRColors[AllColor];
+
+LEDColor g_StartColor = BLUE;
+LEDColor g_StopColor = AllColor;
+unsigned g_AgingTime = 1;
+int g_MinContoursArea = 200;
+int g_MinContoursSpace = 60;
+int g_tick = 50;
