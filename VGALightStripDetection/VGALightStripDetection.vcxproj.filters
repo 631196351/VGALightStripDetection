@@ -21,6 +21,21 @@
     <ClCompile Include="utility.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ConfigData.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CommonColor.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PreDefine.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="main2.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AgingLog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nvapi.h">
@@ -30,6 +45,18 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="utility.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigData.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonColor.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PreDefine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="AgingLog.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

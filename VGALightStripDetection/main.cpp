@@ -1,3 +1,4 @@
+#if 0
 #include <opencv2/opencv.hpp>
 #include <stdio.h>
 #include <vector>
@@ -2676,6 +2677,7 @@ int main456()
 	return 0;
 }
 
+#if 0
 Mat g_frame;
 Mat g_current_frame;
 Mat g_background_frame;
@@ -2880,7 +2882,7 @@ void findFrameContours()
 	}	
 }
 
-int main()
+int main0223()
 {
 	initVGA();
 
@@ -2958,3 +2960,7 @@ int main()
 	t2.join();
 	return 0;
 }
+
+#endif
+
+#endif
