@@ -19,76 +19,76 @@ void ConfigData::saveConfigData()
 	wcscpy_s(lpPath, MAX_PATH, L"./3c.ini");
 
 	TCHAR d[128] = { 0 };
-	
 	//[Camera]
-	SPRINTF(cameraIndex);	WritePrivateProfileString(L"Camera", L"Index", d, lpPath);
+	SPRINTF(cameraIndex); WritePrivateProfileString(L"Camera", L"Index", d, lpPath);
 
 	//[Frame]
-	SPRINTF(frame.width);  WritePrivateProfileString(L"Frame", L"Width", d, lpPath);
+	SPRINTF(frame.width); WritePrivateProfileString(L"Frame", L"Width", d, lpPath);
 	SPRINTF(frame.height); WritePrivateProfileString(L"Frame", L"Hight", d, lpPath);
 
 	//[RectFrame]
-	SPRINTF(rect.x);						WritePrivateProfileString(L"RectFrame", L"X", d, lpPath);
-	SPRINTF(rect.y);						WritePrivateProfileString(L"RectFrame", L"Y", d, lpPath);
-	SPRINTF(rect.width);					WritePrivateProfileString(L"RectFrame", L"Width", d, lpPath);
-	SPRINTF(rect.height);					WritePrivateProfileString(L"RectFrame", L"Hight", d, lpPath);
+	SPRINTF(rect.x);	WritePrivateProfileString(L"RectFrame", L"X", d, lpPath);
+	SPRINTF(rect.y);	WritePrivateProfileString(L"RectFrame", L"Y", d, lpPath);
+	SPRINTF(rect.width);	WritePrivateProfileString(L"RectFrame", L"Width", d, lpPath);
+	SPRINTF(rect.height);	WritePrivateProfileString(L"RectFrame", L"Hight", d, lpPath);
 
 	//[AgingSetting]
-	SPRINTF(agingSettingSaveRectImages);	WritePrivateProfileString(L"AgingSetting", L"SaveRectImages ", d, lpPath);
-	SPRINTF(agingTime);						WritePrivateProfileString(L"AgingSetting", L"AgingTime ", d, lpPath);
-	SPRINTF(intervalTime);					WritePrivateProfileString(L"AgingSetting", L"IntervalTime", d, lpPath);
-	SPRINTF(minContoursArea);				WritePrivateProfileString(L"AgingSetting", L"MinContoursArea", d, lpPath);
-	SPRINTF(minContoursSpace);				WritePrivateProfileString(L"AgingSetting", L"MinContoursSpace", d, lpPath);
-	SPRINTF(resetRect);						WritePrivateProfileString(L"AgingSetting", L"ResetRectFrame", d, lpPath);
+	SPRINTF(debugMode); WritePrivateProfileString(L"AgingSetting", L"DebugMode ", d, lpPath);
+	//SPRINTF(agingSettingSaveRectImages); WritePrivateProfileString(L"AgingSetting", L"SaveRectImages ", d, lpPath);
+	SPRINTF(agingTime); WritePrivateProfileString(L"AgingSetting", L"AgingTime ", d, lpPath);
+	SPRINTF(intervalTime); WritePrivateProfileString(L"AgingSetting", L"IntervalTime", d, lpPath);
+	SPRINTF(minContoursArea); WritePrivateProfileString(L"AgingSetting", L"MinContoursArea", d, lpPath);
+	SPRINTF(minContoursSpace); WritePrivateProfileString(L"AgingSetting", L"MinContoursSpace", d, lpPath);
+	SPRINTF(resetRect); WritePrivateProfileString(L"AgingSetting", L"ResetRectFrame", d, lpPath);
 
 	//[LED]
-	SPRINTF(ledCount);						WritePrivateProfileString(L"LED", L"Count", d, lpPath);
-	SPRINTF(startColor);					WritePrivateProfileString(L"LED", L"StartColor", d, lpPath);
-	SPRINTF(stopColor);						WritePrivateProfileString(L"LED", L"StopColor", d, lpPath);
+	SPRINTF(ledCount); WritePrivateProfileString(L"LED", L"Count", d, lpPath);
+	SPRINTF(startColor); WritePrivateProfileString(L"LED", L"StartColor", d, lpPath);
+	SPRINTF(stopColor); WritePrivateProfileString(L"LED", L"StopColor", d, lpPath);
 
 	//[TrackBarWindow]
-	SPRINTF(showTrackBarWnd);				WritePrivateProfileString(L"TrackBarWindow", L"IsShow", d, lpPath);
+	SPRINTF(showTrackBarWnd); WritePrivateProfileString(L"TrackBarWindow", L"IsShow", d, lpPath);
 
-	SPRINTF(bgrColorThres[BLUE]);  WritePrivateProfileString(L"ThresholdB", L"t", d, lpPath);
+	SPRINTF(bgrColorThres[BLUE]); WritePrivateProfileString(L"ThresholdB", L"t", d, lpPath);
 	SPRINTF(bgrColorThres[GREEN]); WritePrivateProfileString(L"ThresholdG", L"t", d, lpPath);
 	SPRINTF(bgrColorThres[RED]); WritePrivateProfileString(L"ThresholdR", L"t", d, lpPath);
 	SPRINTF(bgrColorThres[WHITE]); WritePrivateProfileString(L"ThresholdW", L"t", d, lpPath);
 
 	//[RedThreshold]
 	//{156, 180, 159, 180, 43, 255, 149, 255, 46, 255, 148, 255} // Red
-	WritePrivateProfileString(L"RedThreshold", L"Lh", L"159", lpPath);
-	WritePrivateProfileString(L"RedThreshold", L"Hh", L"180", lpPath);
-	WritePrivateProfileString(L"RedThreshold", L"Ls", L"149", lpPath);
-	WritePrivateProfileString(L"RedThreshold", L"Hs", L"255", lpPath);
-	WritePrivateProfileString(L"RedThreshold", L"Lv", L"148", lpPath);
-	WritePrivateProfileString(L"RedThreshold", L"Hv", L"255", lpPath);
+	SPRINTF(hsvColor[RED].h[2]); WritePrivateProfileString(L"RedThreshold", L"Lh", d, lpPath);
+	SPRINTF(hsvColor[RED].h[3]); WritePrivateProfileString(L"RedThreshold", L"Hh", d, lpPath);
+	SPRINTF(hsvColor[RED].s[2]); WritePrivateProfileString(L"RedThreshold", L"Ls", d, lpPath);
+	SPRINTF(hsvColor[RED].s[3]); WritePrivateProfileString(L"RedThreshold", L"Hs", d, lpPath);
+	SPRINTF(hsvColor[RED].v[2]); WritePrivateProfileString(L"RedThreshold", L"Lv", d, lpPath);
+	SPRINTF(hsvColor[RED].v[3]); WritePrivateProfileString(L"RedThreshold", L"Hv", d, lpPath);
 
 	//[GreenThreshold]
 	//{35, 77, 35, 77, 43, 255, 43, 255, 46, 255, 136, 255}	// Green
-	WritePrivateProfileString(L"GreenThreshold", L"Lh", L"35", lpPath);
-	WritePrivateProfileString(L"GreenThreshold", L"Hh", L"77", lpPath);
-	WritePrivateProfileString(L"GreenThreshold", L"Ls", L"43", lpPath);
-	WritePrivateProfileString(L"GreenThreshold", L"Hs", L"255", lpPath);
-	WritePrivateProfileString(L"GreenThreshold", L"Lv", L"136", lpPath);
-	WritePrivateProfileString(L"GreenThreshold", L"Hv", L"255", lpPath);
+	SPRINTF(hsvColor[GREEN].h[2]); WritePrivateProfileString(L"GreenThreshold", L"Lh", d, lpPath);
+	SPRINTF(hsvColor[GREEN].h[3]); WritePrivateProfileString(L"GreenThreshold", L"Hh", d, lpPath);
+	SPRINTF(hsvColor[GREEN].s[2]); WritePrivateProfileString(L"GreenThreshold", L"Ls", d, lpPath);
+	SPRINTF(hsvColor[GREEN].s[3]); WritePrivateProfileString(L"GreenThreshold", L"Hs", d, lpPath);
+	SPRINTF(hsvColor[GREEN].v[2]); WritePrivateProfileString(L"GreenThreshold", L"Lv", d, lpPath);
+	SPRINTF(hsvColor[GREEN].v[3]); WritePrivateProfileString(L"GreenThreshold", L"Hv", d, lpPath);
 
 	//[BlueThreshold]
 	//{100, 124, 100, 124, 43, 255, 43, 255, 46, 255, 176, 255} // Blue
-	WritePrivateProfileString(L"BlueThreshold", L"Lh", L"100", lpPath);
-	WritePrivateProfileString(L"BlueThreshold", L"Hh", L"124", lpPath);
-	WritePrivateProfileString(L"BlueThreshold", L"Ls", L"43", lpPath);
-	WritePrivateProfileString(L"BlueThreshold", L"Hs", L"255", lpPath);
-	WritePrivateProfileString(L"BlueThreshold", L"Lv", L"176", lpPath);
-	WritePrivateProfileString(L"BlueThreshold", L"Hv", L"255", lpPath);
+	SPRINTF(hsvColor[BLUE].h[2]); WritePrivateProfileString(L"BlueThreshold", L"Lh", d, lpPath);
+	SPRINTF(hsvColor[BLUE].h[3]); WritePrivateProfileString(L"BlueThreshold", L"Hh", d, lpPath);
+	SPRINTF(hsvColor[BLUE].s[2]); WritePrivateProfileString(L"BlueThreshold", L"Ls", d, lpPath);
+	SPRINTF(hsvColor[BLUE].s[3]); WritePrivateProfileString(L"BlueThreshold", L"Hs", d, lpPath);
+	SPRINTF(hsvColor[BLUE].v[2]); WritePrivateProfileString(L"BlueThreshold", L"Lv", d, lpPath);
+	SPRINTF(hsvColor[BLUE].v[3]); WritePrivateProfileString(L"BlueThreshold", L"Hv", d, lpPath);
 
 	//[WhiteThreshold]
 	//{0,   180, 125, 180, 0,  30,  2,   30,  221, 255, 221, 255} // White
-	WritePrivateProfileString(L"WhiteThreshold", L"Lh", L"125", lpPath);
-	WritePrivateProfileString(L"WhiteThreshold", L"Hh", L"180", lpPath);
-	WritePrivateProfileString(L"WhiteThreshold", L"Ls", L"2", lpPath);
-	WritePrivateProfileString(L"WhiteThreshold", L"Hs", L"30", lpPath);
-	WritePrivateProfileString(L"WhiteThreshold", L"Lv", L"221", lpPath);
-	WritePrivateProfileString(L"WhiteThreshold", L"Hv", L"255", lpPath);
+	SPRINTF(hsvColor[WHITE].h[2]); WritePrivateProfileString(L"WhiteThreshold", L"Lh", d, lpPath);
+	SPRINTF(hsvColor[WHITE].h[3]); WritePrivateProfileString(L"WhiteThreshold", L"Hh", d, lpPath);
+	SPRINTF(hsvColor[WHITE].s[2]); WritePrivateProfileString(L"WhiteThreshold", L"Ls", d, lpPath);
+	SPRINTF(hsvColor[WHITE].s[3]); WritePrivateProfileString(L"WhiteThreshold", L"Hs", d, lpPath);
+	SPRINTF(hsvColor[WHITE].v[2]); WritePrivateProfileString(L"WhiteThreshold", L"Lv", d, lpPath);
+	SPRINTF(hsvColor[WHITE].v[3]); WritePrivateProfileString(L"WhiteThreshold", L"Hv", d, lpPath);
 
 }
 
@@ -112,7 +112,7 @@ void ConfigData::readConfigFile()
 
 	//[AgingSetting]
 	debugMode = GetPrivateProfileInt(L"AgingSetting", L"DebugMode ", 0, lpPath);
-	agingSettingSaveRectImages = GetPrivateProfileInt(L"AgingSetting", L"SaveRectImages ", 1, lpPath);
+	//agingSettingSaveRectImages = GetPrivateProfileInt(L"AgingSetting", L"SaveRectImages ", 1, lpPath);
 	agingTime = GetPrivateProfileInt(L"AgingSetting", L"AgingTime ", 1, lpPath);
 	intervalTime = GetPrivateProfileInt(L"AgingSetting", L"IntervalTime", 100, lpPath);
 	minContoursArea = GetPrivateProfileInt(L"AgingSetting", L"MinContoursArea", 200, lpPath);

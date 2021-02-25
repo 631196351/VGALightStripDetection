@@ -181,12 +181,17 @@ void autoGetCaptureFrame(VideoCapture& capture)
 
 void getSelectROI(VideoCapture& capture)
 {
-	Mat temp;
-	capture.read(temp);
-	Rect r = selectROI(temp);
-	//rectangle(temp, r, Scalar(0, 255, 255), 5);
+	Mat roi;
+	capture.read(roi);
+	Rect r = selectROI(roi);
+	//char rectangle[128] = { 0 };
+	//sprintf_s(rectangle, 128, "x = %d, y = %d, width = %d, height = %d", r.x, r.y, r.width, r.height);
+	//putText(roi, rectangle, Point(0, 100), FONT_HERSHEY_SIMPLEX, 2, Scalar(0, 255, 255));
 	printf("\nselectROI = (%d, %d, %d, %d)\n", r.x, r.y, r.width, r.height);
 	g_Config.rect = r;
+	g_Config.resetRect = false;
+	destroyWindow("ROI selector");
+	g_Config.saveConfigData();
 }
 
 void getPPIDThread(AgingLog& aging)

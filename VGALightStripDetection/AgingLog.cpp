@@ -9,6 +9,9 @@
 
 #define color_num (AllColor )
 
+static bool reset_ppid = false;
+time_t aging_time;
+
 AgingLog::AgingLog(int led_count)
 {
 	if (led_count > 0)
@@ -26,14 +29,14 @@ AgingLog::AgingLog(int led_count)
 		if (length == 0)
 		{
 			// 添加表头
-			aging_file << "PPID,";
+			aging_file << "PPID," << "Time,";
 				
 			char buf[10] = { 0 };
 			for (int i = 0; i < color_num; i++)
 			{
 				for (int j = 0; j < led_count; j++)
 				{
-					sprintf_s(buf, 10, "'%02d%02d',", i, j);
+					sprintf_s(buf, 10, "%02d%02d\t,", i, j);
 					aging_file << buf;
 				}
 			}
@@ -42,9 +45,13 @@ AgingLog::AgingLog(int led_count)
 		}
 	}
 
-	//getVGAInfo(PPID, VGA_PPID_LENGTH);
-
-	sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", time(0));
+	getVGAInfo(PPID, VGA_PPID_LENGTH);
+	if (PPID[0] == 0)	// 获取不到PPID时， 用time() 来替代
+	{
+		time(&aging_time);
+		sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", aging_time);
+		reset_ppid = true;
+	}
 
 	if (0 != _access(AgingFolder, 0))
 	{
@@ -92,7 +99,11 @@ void AgingLog::saveAgingLog()
 
 		char buf[10] = { 0 };
 		int r = 0;
-		aging_file << PPID << ",";
+		struct tm *p = localtime(&aging_time);
+		char t[128] = { 0 };
+		sprintf_s(t, 128, "%d%02d%02d%02d%02d%02d\t", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+
+		aging_file << PPID << "," << t <<",";
 		for (int i = 0; i < lpLedCount * color_num; i++)
 		{
 			r += lpLed[i];
@@ -141,7 +152,12 @@ void AgingLog::flushData()
 	saveAgingLog();
 
 	memset(lpLed, 0, lpLedCount*color_num);
-	sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", time(0));
+
+	if (reset_ppid)
+	{
+		time(&aging_time);
+		sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", aging_time);
+	}
 
 	if (0 != _access(AgingFolder, 0))
 	{

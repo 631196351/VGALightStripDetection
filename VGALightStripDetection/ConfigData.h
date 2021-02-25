@@ -39,6 +39,6 @@ public:
 
 	/*************** Aging Setting ***************/
 	bool showTrackBarWnd = true;
-	bool agingSettingSaveRectImages = true;
+	//bool agingSettingSaveRectImages = true;
 	unsigned agingTime = 1;
 };
