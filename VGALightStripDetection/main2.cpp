@@ -356,14 +356,25 @@ void findFrameContours(AgingLog& aging)
 				vector<Vec4i> hierarchy;
 				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//查找最顶层轮廓
 
+				Mat result = Mat::zeros(original_frame.size(), original_frame.type());
 				// 生成最小包围矩形
 				vector<Rect> boundRect;
 				for (int index = 0; index < contours.size(); index++)
 				{
+					// 绘制各自小轮廓
+					Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
+					drawContours(result, contours, index, color, 1);
+
 					vector<Point> contours_poly;
 					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
 					Rect rect = boundingRect(Mat(contours_poly));
 					boundRect.push_back(rect);
+				}
+
+				{
+					char name[128] = { 0 };
+					sprintf_s(name, 128, "%s/%s/%02d%02d_contours.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+					imwrite(name, result);
 				}
 				
 				// 轮廓合并
