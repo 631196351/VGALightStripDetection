@@ -9,7 +9,7 @@ enum LEDColor
 	AllColor
 };
 
-// ÓÃÀ´¹ıÂËÏñËØµãµÄãĞÖµ
+// ç”¨æ¥è¿‡æ»¤åƒç´ ç‚¹çš„é˜ˆå€¼
 enum
 {
 	W_Threshold = 250,

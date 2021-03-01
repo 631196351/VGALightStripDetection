@@ -16,7 +16,7 @@ AgingLog::AgingLog(int led_count)
 {
 	if (led_count > 0)
 	{
-		lpLedCount = led_count; // white ÔİÊ±²»¼Æ
+		lpLedCount = led_count; // white æš‚æ—¶ä¸è®¡
 		lpLed = new int[led_count * color_num] { 0 };
 	}
 	
@@ -28,7 +28,7 @@ AgingLog::AgingLog(int led_count)
 		std::streampos length = aging_file.tellg();
 		if (length == 0)
 		{
-			// Ìí¼Ó±íÍ·
+			// æ·»åŠ è¡¨å¤´
 			aging_file << "PPID," << "Time,";
 				
 			char buf[10] = { 0 };
@@ -46,7 +46,7 @@ AgingLog::AgingLog(int led_count)
 	}
 
 	getVGAInfo(PPID, VGA_PPID_LENGTH);
-	if (PPID[0] == 0)	// »ñÈ¡²»µ½PPIDÊ±£¬ ÓÃtime() À´Ìæ´ú
+	if (PPID[0] == 0)	// è·å–ä¸åˆ°PPIDæ—¶ï¼Œ ç”¨time() æ¥æ›¿ä»£
 	{
 		time(&aging_time);
 		sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", aging_time);
@@ -55,7 +55,7 @@ AgingLog::AgingLog(int led_count)
 
 	if (0 != _access(AgingFolder, 0))
 	{
-		_mkdir(AgingFolder);   // ·µ»Ø 0 ±íÊ¾´´½¨³É¹¦£¬-1 ±íÊ¾Ê§°Ü		
+		_mkdir(AgingFolder);   // è¿”å› 0 è¡¨ç¤ºåˆ›å»ºæˆåŠŸï¼Œ-1 è¡¨ç¤ºå¤±è´¥		
 	}
 	char path[128] = { 0 };
 	sprintf_s(path, 128, "%s/%s", AgingFolder, PPID);
@@ -161,7 +161,7 @@ void AgingLog::flushData()
 
 	if (0 != _access(AgingFolder, 0))
 	{
-		_mkdir(AgingFolder);   // ·µ»Ø 0 ±íÊ¾´´½¨³É¹¦£¬-1 ±íÊ¾Ê§°Ü		
+		_mkdir(AgingFolder);   // è¿”å› 0 è¡¨ç¤ºåˆ›å»ºæˆåŠŸï¼Œ-1 è¡¨ç¤ºå¤±è´¥		
 	}
 	char path[128] = { 0 };
 	sprintf_s(path, 128, "%s/%s", AgingFolder, PPID);

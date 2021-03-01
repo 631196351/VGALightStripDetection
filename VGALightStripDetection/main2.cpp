@@ -38,32 +38,32 @@ int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
 	int min_dist;
 
-	//Ê×ÏÈ¼ÆËãÁ½¸ö¾ØĞÎÖĞĞÄµã
+	//é¦–å…ˆè®¡ç®—ä¸¤ä¸ªçŸ©å½¢ä¸­å¿ƒç‚¹
 	Point C1, C2;
 	C1.x = rect1.x + (rect1.width / 2);
 	C1.y = rect1.y + (rect1.height / 2);
 	C2.x = rect2.x + (rect2.width / 2);
 	C2.y = rect2.y + (rect2.height / 2);
 
-	// ·Ö±ğ¼ÆËãÁ½¾ØĞÎÖĞĞÄµãÔÚXÖáºÍYÖá·½ÏòµÄ¾àÀë
+	// åˆ†åˆ«è®¡ç®—ä¸¤çŸ©å½¢ä¸­å¿ƒç‚¹åœ¨Xè½´å’ŒYè½´æ–¹å‘çš„è·ç¦»
 	int Dx, Dy;
 	Dx = abs(C2.x - C1.x);
 	Dy = abs(C2.y - C1.y);
 
-	//Á½¾ØĞÎ²»Ïà½»£¬ÔÚXÖá·½ÏòÓĞ²¿·ÖÖØºÏµÄÁ½¸ö¾ØĞÎ£¬×îĞ¡¾àÀëÊÇÉÏ¾ØĞÎµÄÏÂ±ßÏßÓëÏÂ¾ØĞÎµÄÉÏ±ßÏßÖ®¼äµÄ¾àÀë
+	//ä¸¤çŸ©å½¢ä¸ç›¸äº¤ï¼Œåœ¨Xè½´æ–¹å‘æœ‰éƒ¨åˆ†é‡åˆçš„ä¸¤ä¸ªçŸ©å½¢ï¼Œæœ€å°è·ç¦»æ˜¯ä¸ŠçŸ©å½¢çš„ä¸‹è¾¹çº¿ä¸ä¸‹çŸ©å½¢çš„ä¸Šè¾¹çº¿ä¹‹é—´çš„è·ç¦»
 	if ((Dx < ((rect1.width + rect2.width) / 2)) && (Dy >= ((rect1.height + rect2.height) / 2)))
 	{
 		min_dist = Dy - ((rect1.height + rect2.height) / 2);
 	}
 
-	//Á½¾ØĞÎ²»Ïà½»£¬ÔÚYÖá·½ÏòÓĞ²¿·ÖÖØºÏµÄÁ½¸ö¾ØĞÎ£¬×îĞ¡¾àÀëÊÇ×ó¾ØĞÎµÄÓÒ±ßÏßÓëÓÒ¾ØĞÎµÄ×ó±ßÏßÖ®¼äµÄ¾àÀë
+	//ä¸¤çŸ©å½¢ä¸ç›¸äº¤ï¼Œåœ¨Yè½´æ–¹å‘æœ‰éƒ¨åˆ†é‡åˆçš„ä¸¤ä¸ªçŸ©å½¢ï¼Œæœ€å°è·ç¦»æ˜¯å·¦çŸ©å½¢çš„å³è¾¹çº¿ä¸å³çŸ©å½¢çš„å·¦è¾¹çº¿ä¹‹é—´çš„è·ç¦»
 	else if ((Dx >= ((rect1.width + rect2.width) / 2)) && (Dy < ((rect1.height + rect2.height) / 2)))
 	{
 		min_dist = Dx - ((rect1.width + rect2.width) / 2);
 	}
 
-	//Á½¾ØĞÎ²»Ïà½»£¬ÔÚXÖáºÍYÖá·½ÏòÎŞÖØºÏµÄÁ½¸ö¾ØĞÎ£¬×îĞ¡¾àÀëÊÇ¾àÀë×î½üµÄÁ½¸ö¶¥µãÖ®¼äµÄ¾àÀë£¬
-	// ÀûÓÃ¹´¹É¶¨Àí£¬ºÜÈİÒ×Ëã³öÕâÒ»¾àÀë
+	//ä¸¤çŸ©å½¢ä¸ç›¸äº¤ï¼Œåœ¨Xè½´å’ŒYè½´æ–¹å‘æ— é‡åˆçš„ä¸¤ä¸ªçŸ©å½¢ï¼Œæœ€å°è·ç¦»æ˜¯è·ç¦»æœ€è¿‘çš„ä¸¤ä¸ªé¡¶ç‚¹ä¹‹é—´çš„è·ç¦»ï¼Œ
+	// åˆ©ç”¨å‹¾è‚¡å®šç†ï¼Œå¾ˆå®¹æ˜“ç®—å‡ºè¿™ä¸€è·ç¦»
 	else if ((Dx >= ((rect1.width + rect2.width) / 2)) && (Dy >= ((rect1.height + rect2.height) / 2)))
 	{
 		int delta_x = Dx - ((rect1.width + rect2.width) / 2);
@@ -71,7 +71,7 @@ int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 		min_dist = sqrt(delta_x * delta_x + delta_y * delta_y);
 	}
 
-	//Á½¾ØĞÎÏà½»£¬×îĞ¡¾àÀëÎª¸ºÖµ£¬·µ»Ø-1
+	//ä¸¤çŸ©å½¢ç›¸äº¤ï¼Œæœ€å°è·ç¦»ä¸ºè´Ÿå€¼ï¼Œè¿”å›-1
 	else
 	{
 		min_dist = -1;
@@ -101,7 +101,7 @@ void renderTrackbarThread()
 		if (g_main_thread_exit) {
 			break;
 		}
-		if (g_Led >= AllColor)// ·ÀÖ¹Ô½½ç
+		if (g_Led >= AllColor)// é˜²æ­¢è¶Šç•Œ
 			continue;
 
 		HsvColor& hsv = g_Config.hsvColor[g_Led];
@@ -170,7 +170,7 @@ void autoGetCaptureFrame(VideoCapture& capture)
 		rectangle(temp, g_Config.rect, Scalar(0, 255, 255), 5);
 		imshow("camera", temp);
 
-		if (waitKey(33) == 0x1b)	// Esc ¼ü
+		if (waitKey(33) == 0x1b)	// Esc é”®
 		{
 			g_main_thread_exit = true;			
 		}
@@ -294,11 +294,11 @@ void findFrameContours(AgingLog& aging)
 					cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
 					cvtColor(back, back_gray, COLOR_BGR2GRAY);
 
-					bitwise_xor(frame_gray, back_gray, temp);	// È¡³öÁ½·ùÍ¼ËùÓĞµÄ²»Í¬µã£¬¼ÇÎªtemp¼¯ºÏ
+					bitwise_xor(frame_gray, back_gray, temp);	// å–å‡ºä¸¤å¹…å›¾æ‰€æœ‰çš„ä¸åŒç‚¹ï¼Œè®°ä¸ºtempé›†åˆ
 					//imshow("bitwise_xor", temp);
 					//waitKey(1);
 
-					//ÔÚ temp ¼¯ºÏÖĞÕÒROI²¿·ÖµÄµã
+					//åœ¨ temp é›†åˆä¸­æ‰¾ROIéƒ¨åˆ†çš„ç‚¹
 					bitwise_and(frame_gray, temp, mask);
 					//imshow("bitwise_and", mask);
 					//waitKey(1);
@@ -332,7 +332,7 @@ void findFrameContours(AgingLog& aging)
 					highsv[1] = hsv.s[0] + hsv.s[6];
 					highsv[2] = hsv.v[0] + hsv.v[6];
 
-					//¾ùÖµÂË²¨
+					//å‡å€¼æ»¤æ³¢
 					medianBlur(frame, frame, 3);
 					printf("4--------------%d\n", clock() - startTime);
 					startTime = clock();
@@ -351,17 +351,17 @@ void findFrameContours(AgingLog& aging)
 					imwrite(name, mask);
 				}
 
-				//´æ´¢±ßÔµ
+				//å­˜å‚¨è¾¹ç¼˜
 				vector<vector<Point> > contours;
 				vector<Vec4i> hierarchy;
-				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//²éÕÒ×î¶¥²ãÂÖÀª
+				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//æŸ¥æ‰¾æœ€é¡¶å±‚è½®å»“
 
 				Mat result = Mat::zeros(original_frame.size(), original_frame.type());
-				// Éú³É×îĞ¡°üÎ§¾ØĞÎ
+				// ç”Ÿæˆæœ€å°åŒ…å›´çŸ©å½¢
 				vector<Rect> boundRect;
 				for (int index = 0; index < contours.size(); index++)
 				{
-					// »æÖÆ¸÷×ÔĞ¡ÂÖÀª
+					// ç»˜åˆ¶å„è‡ªå°è½®å»“
 					Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
 					drawContours(result, contours, index, color, 1);
 
@@ -377,13 +377,13 @@ void findFrameContours(AgingLog& aging)
 					imwrite(name, result);
 				}
 				
-				// ÂÖÀªºÏ²¢
+				// è½®å»“åˆå¹¶
 				for (int i = 0; i < boundRect.size(); i++)
 				{
 					Rect& rect = boundRect[i];
 					for (int j = 0; j < boundRect.size(); j++)
 					{
-						if (i == j)	// Ìø¹ı×Ô¼º
+						if (i == j)	// è·³è¿‡è‡ªå·±
 							continue;
 						Rect& rect2 = boundRect[j];
 						int gap = min_distance_of_rectangles(rect, rect2);
@@ -401,7 +401,7 @@ void findFrameContours(AgingLog& aging)
 					}
 				}
 
-				//µÃµ½µÆµÄÂÖÀª
+				//å¾—åˆ°ç¯çš„è½®å»“
 				size_t empty_rect = 0;
 				for (int index = 0; index < boundRect.size(); index++)
 				{
@@ -477,7 +477,7 @@ int main()
 	while (g_Config.agingTime > 0)
 	{
 		g_Config.agingTime--;
-		// ¹Ø±ÕËùÓĞµÆ
+		// å…³é—­æ‰€æœ‰ç¯
 		resetColor(g_Config.ledCount, 0, 0, 0);
 		Sleep(g_Config.intervalTime);
 		printf("\nget_background_frame--------------\n");
@@ -531,12 +531,12 @@ int main()
 				getFrame(g_current_frame);
 				printf("\nindex = %d, g_Led = %d, time =%d", index, g_Led, clock() - startTime1);
 				g_set_led_mutex.unlock();
-				Sleep(10); // ÈÃ³öCPUÊ±¼ä
+				Sleep(10); // è®©å‡ºCPUæ—¶é—´
 			}
-			// Ò»¸öÂÖ»Ø±£´æÒ»¸öµÆÉ«
+			// ä¸€ä¸ªè½®å›ä¿å­˜ä¸€ä¸ªç¯è‰²
 			if(1)
 			{
-				//Sleep(200); // µÈ¹¤×÷Ïß³Ì°ÑÊÂÇé×öÍê
+				//Sleep(200); // ç­‰å·¥ä½œçº¿ç¨‹æŠŠäº‹æƒ…åšå®Œ
 				switch (color)
 				{
 				case BLUE:
@@ -608,7 +608,7 @@ std::mutex g_get_frame_mutex1, g_get_frame_mutex2;
 
 void getFrameA(Mat& f)
 {
-	//Sleep(110); // ±£Ö¤camera ÄÜ¹»×¥µ½ÕıÈ·µÄÍ¼
+	//Sleep(110); // ä¿è¯camera èƒ½å¤ŸæŠ“åˆ°æ­£ç¡®çš„å›¾
 	waitKey(33);
 	g_get_frame_mutex1.lock();
 	f = g_frame1.clone();
@@ -636,7 +636,7 @@ void autoGetCaptureFrameA(VideoCapture& capture)
 		g_get_frame_mutex1.unlock();
 		imshow("aaaaa", g_frame1);
 
-		if (waitKey(33) == 0x1b)	// Esc ¼ü
+		if (waitKey(33) == 0x1b)	// Esc é”®
 		{
 			g_main_thread_exit = true;
 			break;
@@ -656,7 +656,7 @@ void autoGetCaptureFrameB(VideoCapture& capture)
 		g_get_frame_mutex2.unlock();
 		imshow("bbbbb", g_frame2);
 
-		if (waitKey(33) == 0x1b)	// Esc ¼ü
+		if (waitKey(33) == 0x1b)	// Esc é”®
 		{
 			g_main_thread_exit = true;
 			break;
@@ -754,7 +754,7 @@ int main()
 	std::thread t4(findFrameContoursB);
 	
 
-	// ¹Ø±ÕËùÓĞµÆ
+	// å…³é—­æ‰€æœ‰ç¯
 	resetColor(g_Config.ledCount, 0, 0, 0);
 	Sleep(110);
 
