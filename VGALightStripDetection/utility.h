@@ -45,3 +45,5 @@ void setSignleColor(int led, BYTE r, BYTE g, BYTE b);
 // 重置为特定颜色
 void resetColor(int count, BYTE r, BYTE g, BYTE b);
 #endif
+
+void createPPIDFolder(const char* ppid);

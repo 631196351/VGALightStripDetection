@@ -29,10 +29,12 @@ ConfigData g_Config;
 
 int g_Led = BLUE;
 int g_Index = 0;
+//int g_Index222 = 0;	// 为了测试getFrame获取到的frame是否准确
 bool g_wait = false;
 bool g_main_thread_exit = false;
 
-VideoCapture g_capture;
+//VideoCapture g_capture;
+//AgingLog* g_aging = nullptr;	// 为了在getFrame 中保存测试frame
 
 int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
@@ -143,22 +145,31 @@ void renderTrackbarThread()
 
 void getFrame(Mat& f)
 {
-	for (int i = 0; i < 2; i++) {
-		clock_t t = clock();
-		g_get_frame_mutex.lock();
-		g_capture.read(g_frame);
-		f = g_frame.clone();
-		f = f(g_Config.rect);
-		g_get_frame_mutex.unlock();
-		Sleep(1);
+	for (int i = 0; i < 4; i++) 
+	{
+		cv::waitKey(33);
 
-		printf("\ngetFrame--------------%d\n", clock() - t);
+		g_get_frame_mutex.lock();
+		f = g_frame.clone();
+		g_get_frame_mutex.unlock();
+
+		f = f(g_Config.rect);
+
+		/*{
+			clock_t t2 = clock();
+			char name[128] = { 0 };
+			sprintf_s(name, 128, "%s/%s/%02d%02d_getFrame_%d.jpg", AgingFolder, g_aging->ppid(), g_Led, g_Index222, clock());
+			printf("\ngetFrame5--------------%d\n", clock() - t2);
+			t2 = clock();
+			imwrite(name, f);
+			printf("\ngetFrame6--------------%d\n", clock() - t2);
+		}*/
 	}
 }
 
 void autoGetCaptureFrame(VideoCapture& capture)
 {
-	Mat temp;
+	Mat camera;
 	while (true)
 	{
 		if (g_main_thread_exit) {
@@ -166,16 +177,16 @@ void autoGetCaptureFrame(VideoCapture& capture)
 		}
 		g_get_frame_mutex.lock();
 		capture.read(g_frame);
-		temp = g_frame.clone();
-		rectangle(temp, g_Config.rect, Scalar(0, 255, 255), 5);
-		imshow("camera", temp);
+		g_get_frame_mutex.unlock();
 
-		if (waitKey(33) == 0x1b)	// Esc 键
+		camera = g_frame.clone();
+		rectangle(camera, g_Config.rect, Scalar(0, 255, 255), 5);
+		imshow("camera", camera);
+
+		if (cv::waitKey(33) == 0x1b)	// Esc 键
 		{
 			g_main_thread_exit = true;			
 		}
-		g_get_frame_mutex.unlock();
-		Sleep(1);
 	}
 }
 
@@ -184,23 +195,20 @@ void getSelectROI(VideoCapture& capture)
 	Mat roi;
 	capture.read(roi);
 	Rect r = selectROI(roi);
-	//char rectangle[128] = { 0 };
-	//sprintf_s(rectangle, 128, "x = %d, y = %d, width = %d, height = %d", r.x, r.y, r.width, r.height);
-	//putText(roi, rectangle, Point(0, 100), FONT_HERSHEY_SIMPLEX, 2, Scalar(0, 255, 255));
 	printf("\nselectROI = (%d, %d, %d, %d)\n", r.x, r.y, r.width, r.height);
 	g_Config.rect = r;
 	g_Config.resetRect = false;
-	destroyWindow("ROI selector");
+	cv::destroyWindow("ROI selector");
 	g_Config.saveConfigData();
 }
 
-void getPPIDThread(AgingLog& aging)
-{
-	char ppid[VGA_PPID_LENGTH] = { 0 };
-	getVGAInfo(ppid, VGA_PPID_LENGTH);
-
-	aging.setPPID(ppid, VGA_PPID_LENGTH);
-}
+//void getPPIDThread(AgingLog& aging)
+//{
+//	char ppid[VGA_PPID_LENGTH] = { 0 };
+//	getVGAInfo(ppid, VGA_PPID_LENGTH);
+//
+//	aging.setPPID(ppid, VGA_PPID_LENGTH);
+//}
 
 void findFrameContours(AgingLog& aging)
 {	
@@ -210,10 +218,7 @@ void findFrameContours(AgingLog& aging)
 		if (g_main_thread_exit) {
 			break;
 		}
-		//while (g_wait)
-		//{
-			Sleep(1);
-		//}
+
 		g_set_led_mutex.lock();
 		if(g_wait)
 		{
@@ -223,12 +228,12 @@ void findFrameContours(AgingLog& aging)
 			int currentIndex = g_Index;
 			printf("\ncurrentColor = %d, currentIndex = %d\n", currentColor, currentIndex);
 			
-			{
-				printf("\n1--------------%d\n", clock() - startTime);
-				startTime = clock();
+			{				
 				Mat original_frame, frame, mask, back;
-				//getFrame(original_frame);	// get current frame
+
 				original_frame = g_current_frame.clone();
+				frame = original_frame.clone();
+				back = g_background_frame.clone();
 				
 				printf("\n2--------------%d\n", clock() - startTime);
 				startTime = clock();
@@ -238,56 +243,13 @@ void findFrameContours(AgingLog& aging)
 					printf("current frame empty !\n");
 					return;
 				}
-
-				
+								
 				int lowhsv[3] = { 0 };
-				int highsv[3] = { 0 };
-
-				//Rect rect = g_Config.rect;
-				//frame = original_frame.clone();
-				//original_frame = original_frame(g_Config.rect);
-				//{
-				//	char name[128] = { 0 };
-				//	sprintf_s(name, 128, "%s/%s/%02d%02d_original_frame.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
-				//	imwrite(name, original_frame);
-				//}
-				frame = original_frame.clone();
-				back = g_background_frame.clone();
+				int highsv[3] = { 0 };				
 
 				DebugMode(imshow("original_frame", frame));
 				DebugMode(imshow("background", back));
-				
-				for (int i = 0; i < frame.rows; i++)
-				{
-					for (int j = 0; j < frame.cols; j++)
-					{
-						const uchar* lpback = back.ptr<uchar>(i, j);
-						uchar* lpframe = frame.ptr<uchar>(i, j);
-
-						switch (currentColor)
-						{
-						case RED:
-							if ((lpframe[2] - lpback[2] < g_Config.bgrColorThres[currentColor]))
-							{
-								lpframe[0] = lpframe[1] = lpframe[2] = 0;
-							}
-							break;
-						case GREEN:
-							if ((lpframe[1] - lpback[1] < g_Config.bgrColorThres[currentColor]))
-							{
-								lpframe[0] = lpframe[1] = lpframe[2] = 0;
-							}
-							break;
-						case BLUE:
-							if ((lpframe[0] - lpback[0] < g_Config.bgrColorThres[currentColor]))
-							{
-								lpframe[0] = lpframe[1] = lpframe[2] = 0;
-							}
-							break;
-						}
-					}
-				}
-				
+												
 				if (currentColor == WHITE)
 				{
 					Mat frame_gray, back_gray, temp;
@@ -295,30 +257,48 @@ void findFrameContours(AgingLog& aging)
 					cvtColor(back, back_gray, COLOR_BGR2GRAY);
 
 					bitwise_xor(frame_gray, back_gray, temp);	// 取出两幅图所有的不同点，记为temp集合
-					//imshow("bitwise_xor", temp);
-					//waitKey(1);
+					DebugMode(imshow("bitwise_xor", temp));
 
 					//在 temp 集合中找ROI部分的点
 					bitwise_and(frame_gray, temp, mask);
-					//imshow("bitwise_and", mask);
-					//waitKey(1);
+					DebugMode(imshow("bitwise_and", mask));
 
-					medianBlur(mask, mask, 5);
+					medianBlur(mask, mask, 3);
 
-					//switch (currentColor)
-					//{
-					//case RED:						
-					//case GREEN:
-					//case BLUE:
-					//	threshold(mask, mask, 50, 255, THRESH_TOZERO);
-					//	break;
-					//case WHITE:
-						threshold(mask, mask, g_Config.bgrColorThres[currentColor], 255, THRESH_TOZERO);
-					//}
-
+					threshold(mask, mask, g_Config.bgrColorThres[currentColor], 255, THRESH_TOZERO);
 				}
 				else 
 				{
+					for (int i = 0; i < frame.rows; i++)
+					{
+						for (int j = 0; j < frame.cols; j++)
+						{
+							const uchar* lpback = back.ptr<uchar>(i, j);
+							uchar* lpframe = frame.ptr<uchar>(i, j);
+
+							switch (currentColor)
+							{
+							case RED:
+								if ((lpframe[2] - lpback[2] < g_Config.bgrColorThres[currentColor]))
+								{
+									lpframe[0] = lpframe[1] = lpframe[2] = 0;
+								}
+								break;
+							case GREEN:
+								if ((lpframe[1] - lpback[1] < g_Config.bgrColorThres[currentColor]))
+								{
+									lpframe[0] = lpframe[1] = lpframe[2] = 0;
+								}
+								break;
+							case BLUE:
+								if ((lpframe[0] - lpback[0] < g_Config.bgrColorThres[currentColor]))
+								{
+									lpframe[0] = lpframe[1] = lpframe[2] = 0;
+								}
+								break;
+							}
+						}
+					}
 
 					printf("3--------------%d\n", clock() - startTime);
 					startTime = clock();
@@ -343,6 +323,7 @@ void findFrameContours(AgingLog& aging)
 					printf("5--------------%d\n", clock() - startTime);
 					startTime = clock();
 				}
+				
 				DebugMode(imshow("mask", mask));
 
 				{
@@ -367,10 +348,11 @@ void findFrameContours(AgingLog& aging)
 
 					vector<Point> contours_poly;
 					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
-					Rect rect = boundingRect(Mat(contours_poly));
+					Rect rect = boundingRect(contours_poly);
 					boundRect.push_back(rect);
 				}
 
+				DebugMode(imshow("contours", result));
 				{
 					char name[128] = { 0 };
 					sprintf_s(name, 128, "%s/%s/%02d%02d_contours.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
@@ -440,31 +422,35 @@ void findFrameContours(AgingLog& aging)
 int main()
 {
 	initVGA();
-	
-	AgingLog aging(g_Config.ledCount);
 
-	VideoCapture capture(g_Config.cameraIndex);
-	if (!capture.isOpened())
+	VideoCapture capture;
+	do
 	{
-		printf("error capture not open\n!");
-		return -1;
-	}
+		capture.open(g_Config.cameraIndex);
+		printf("\n-------------opening camera-------------\n");
+
+	} while (!capture.isOpened());
+
 	//capture.set(CAP_PROP_SETTINGS, 1);
 	capture.set(CAP_PROP_FPS, 30);
 	capture.set(CAP_PROP_FRAME_WIDTH, g_Config.frame.width);
 	capture.set(CAP_PROP_FRAME_HEIGHT, g_Config.frame.height);
 
-	g_capture = capture;
+	//g_capture = capture;
 	g_wait = false;
 	g_main_thread_exit = false;
+	std::thread t1(autoGetCaptureFrame, std::ref(capture));
 
-	if(g_Config.resetRect)
+	// 获取PPID的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
+	AgingLog aging(g_Config.ledCount);
+	//g_aging = &aging;
+	
+	if (g_Config.resetRect)
 		getSelectROI(capture);
 
-	std::thread t1(autoGetCaptureFrame, std::ref(capture));
 	std::thread t2(findFrameContours, std::ref(aging));
 	std::thread t3(renderTrackbarThread);
-		
+
 	u8 *colorNum = new u8[g_Config.ledCount]{ 0 };
 	for (u8 i = 1; i < g_Config.ledCount; i++)
 	{
@@ -474,53 +460,61 @@ int main()
 
 	clock_t startTime = clock(), startTime1;
 
+	Mat internal_back;	// 暂存back
 	while (g_Config.agingTime > 0)
 	{
 		g_Config.agingTime--;
 		// 关闭所有灯
 		resetColor(g_Config.ledCount, 0, 0, 0);
-		Sleep(g_Config.intervalTime);
-		printf("\nget_background_frame--------------\n");
 
-		getFrame(g_background_frame);
+		createPPIDFolder(aging.ppid());
 
-		DebugMode(imshow("background", g_background_frame));
-		DebugMode(waitKey(1));
+		if (g_main_thread_exit) { break; }
+		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
 		{
-			char name[128] = { 0 };
-			sprintf_s(name, 128, "%s/%s/back.png", AgingFolder, aging.ppid());
-			imwrite(name, g_background_frame);
-		}
-
-		if (g_main_thread_exit) {break;}
-		//for (int color = g_Led_Color = WHITE; color < AllColor; g_Led_Color = ++color)
-		for(int color = g_Config.startColor; color < g_Config.stopColor; ++color)
-		{
-			if (g_main_thread_exit) {break;}
+			if (g_main_thread_exit) { break; }
 			g_Led = color;
-			
+
 			for (size_t index = 0; index < g_Config.ledCount; index++)
 			{
-				if (g_main_thread_exit) {break;	}
+				if (g_main_thread_exit) { break; }
 
 				startTime1 = clock();
 				setSignleColor(colorNum[index], 0, 0, 0);
-				
-				if (color == RED)
+
+				Sleep(g_Config.intervalTime);
+				printf("\nget_background_frame--------------\n");
+				//g_Index222 = index;
+				getFrame(internal_back);
+
+				DebugMode(imshow("background", internal_back));
+				DebugMode(waitKey(1));
 				{
-					setSignleColor(index, 255, 0, 0);
+					char name[128] = { 0 };
+					sprintf_s(name, 128, "%s/%s/%02d%02d_back.png", AgingFolder, aging.ppid(), color, index);
+					imwrite(name, internal_back);
 				}
-				else if (color == GREEN)
+
+				int r = rand() % 255;
+				printf("\nrandomShutDownLed--------------%d\n", r);
+				if (r >= g_Config.randomShutDownLed)
 				{
-					setSignleColor(index, 0, 255, 0);
-				}
-				else if (color == BLUE)
-				{
-					setSignleColor(index, 0, 0, 255);
-				}
-				else if (color == WHITE)
-				{
-					setSignleColor(index, 255, 255, 255);
+					if (color == RED)
+					{
+						setSignleColor(index, 255, 0, 0);
+					}
+					else if (color == GREEN)
+					{
+						setSignleColor(index, 0, 255, 0);
+					}
+					else if (color == BLUE)
+					{
+						setSignleColor(index, 0, 0, 255);
+					}
+					else if (color == WHITE)
+					{
+						setSignleColor(index, 255, 255, 255);
+					}
 				}
 				printf("\nsetSignleColor--------------\n");
 
@@ -529,12 +523,13 @@ int main()
 				g_Index = index;
 				g_wait = true;
 				getFrame(g_current_frame);
+				g_background_frame = internal_back.clone();
 				printf("\nindex = %d, g_Led = %d, time =%d", index, g_Led, clock() - startTime1);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
 			}
 			// 一个轮回保存一个灯色
-			if(1)
+			if (1)
 			{
 				//Sleep(200); // 等工作线程把事情做完
 				switch (color)
@@ -560,9 +555,9 @@ int main()
 				getFrame(frame);	// get current frame
 				char name[128] = { 0 };
 				sprintf_s(name, 128, "%s/%s/all_color_%02d.png", AgingFolder, aging.ppid(), g_Led);
-				putText(frame, aging.thisLedIsOK(color) ==  Pass ? "PASS":"FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 5);
+				putText(frame, aging.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 5);
 				imwrite(name, frame);
-				
+
 				//sprintf_s(name, 128, "%s_%02d.png", aging.ppid(), g_Led);
 				//imshow(name, frame);
 				//waitKey(1);
@@ -574,7 +569,7 @@ int main()
 
 		{
 			Mat fr = Mat::zeros(g_Config.frame, CV_8UC3);
-			putText(fr, aging.allLedIsOK() == Pass ? "PASS" : "FAIL", Point(0, fr.rows), FONT_HERSHEY_SIMPLEX, fr.cols/100, Scalar(0, 255, 255), 5);
+			putText(fr, aging.allLedIsOK() == Pass ? "PASS" : "FAIL", Point(0, fr.rows), FONT_HERSHEY_SIMPLEX, fr.cols / 100, Scalar(0, 255, 255), 5);
 			int sw = GetSystemMetrics(SM_CXSCREEN);
 			int sh = GetSystemMetrics(SM_CYSCREEN);
 			namedWindow("final_result");
@@ -592,234 +587,72 @@ int main()
 	t3.join();
 	//t4.join();
 	//t5.join();
-	aging.saveAgingLog();
-
-	printf("\nall time ==== %d\n", clock() - startTime);
-	delete[] colorNum;
-	waitKey();
-	return 0;
-}
-///////////////////////////////////////////////////////////////////////////////////////
-
-#if 0
-bool g_wait1 = false, g_wait2 = false;
-Mat g_frame1, g_frame2;
-std::mutex g_get_frame_mutex1, g_get_frame_mutex2;
-
-void getFrameA(Mat& f)
-{
-	//Sleep(110); // 保证camera 能够抓到正确的图
-	waitKey(33);
-	g_get_frame_mutex1.lock();
-	f = g_frame1.clone();
-	g_get_frame_mutex1.unlock();
-}
-
-
-void getFrameB(Mat& f)
-{
-	//waitKey(33);
-	g_get_frame_mutex2.lock();
-	f = g_frame2.clone();
-	g_get_frame_mutex2.unlock();
-}
-
-void autoGetCaptureFrameA(VideoCapture& capture)
-{
-	while (true)
-	{
-		if (g_main_thread_exit) {
-			break;
-		}
-		g_get_frame_mutex1.lock();
-		capture.read(g_frame1);
-		g_get_frame_mutex1.unlock();
-		imshow("aaaaa", g_frame1);
-
-		if (waitKey(33) == 0x1b)	// Esc 键
-		{
-			g_main_thread_exit = true;
-			break;
-		}
-	}
-}
-
-void autoGetCaptureFrameB(VideoCapture& capture)
-{
-	while (true)
-	{
-		if (g_main_thread_exit) {
-			break;
-		}
-		g_get_frame_mutex2.lock();
-		capture.read(g_frame2);
-		g_get_frame_mutex2.unlock();
-		imshow("bbbbb", g_frame2);
-
-		if (waitKey(33) == 0x1b)	// Esc 键
-		{
-			g_main_thread_exit = true;
-			break;
-		}
-	}
-}
-
-void findFrameContoursA()
-{
-	while (true)
-	{
-		if (g_main_thread_exit) {
-			break;
-		}
-		while (g_wait1)
-		{
-			Sleep(1);
-		}
-		//g_set_led_mutex.lock();
-		{
-			int currentColor = g_Led;
-			int currentIndex = g_Index;
-			printf("\ncurrentColor = %d, currentIndex = %d\n", currentColor, currentIndex);
-			Mat original_frame;
-			getFrameA(original_frame);	// get current frame
-			{
-				char name[128] = { 0 };
-				sprintf_s(name, 128, "%s/aaaaa_%02d%02d.png", AgingFolder, currentColor, currentIndex);
-				imwrite(name, original_frame);
-			}
-
-			g_wait1 = true;
-		}
-	}
-}
-
-void findFrameContoursB()
-{
-	while (true)
-	{
-		if (g_main_thread_exit) {
-			break;
-		}
-		while (g_wait2)
-		{
-			Sleep(1);
-		}
-		//g_set_led_mutex.lock();
-		{
-			int currentColor = g_Led;
-			int currentIndex = g_Index;
-			printf("\ncurrentColor = %d, currentIndex = %d\n", currentColor, currentIndex);
-			Mat original_frame;
-			getFrameB(original_frame);	// get current frame
-			{
-				char name[128] = { 0 };
-				sprintf_s(name, 128, "%s/bbbbb_%02d%02d.png", AgingFolder, currentColor, currentIndex);
-				imwrite(name, original_frame);
-			}
-
-			g_wait2 = true;
-		}
-	}
-}
-
-int main()
-{
-	initVGA();
-
-	//AgingLog aging(g_Config.ledCount);
-
-	VideoCapture capture_a(0), capture_b(1);
-	if (!capture_a.isOpened() || !capture_b.isOpened())
-	{
-		printf("error capture not open\n!");
-		return -1;
-	}
-	//capture.set(CAP_PROP_SETTINGS, 1);
-	capture_a.set(CAP_PROP_FPS, 30);
-	capture_a.set(CAP_PROP_FRAME_WIDTH, 1280);
-	capture_a.set(CAP_PROP_FRAME_HEIGHT, 720);
-
-	capture_b.set(CAP_PROP_FPS, 30);
-	capture_b.set(CAP_PROP_FRAME_WIDTH, 1280);
-	capture_b.set(CAP_PROP_FRAME_HEIGHT, 720);
-	
-
-	g_wait1 = true;
-	g_wait2 = true;
-	
-	std::thread t1(autoGetCaptureFrameA, std::ref(capture_a));
-	std::thread t2(autoGetCaptureFrameB, std::ref(capture_b));
-
-	std::thread t3(findFrameContoursA);
-	std::thread t4(findFrameContoursB);
-	
-
-	// 关闭所有灯
-	resetColor(g_Config.ledCount, 0, 0, 0);
-	Sleep(110);
-
-	u8 *colorNum = new u8[g_Config.ledCount]{ 0 };
-	for (u8 i = 1; i < g_Config.ledCount; i++)
-	{
-		colorNum[i] = i - 1;
-	}
-	colorNum[0] = g_Config.ledCount - 1;
-
-	clock_t startTime = clock(), startTime1;
-
-	//while (true)
-	{
-		//if (g_main_thread_exit) {break;}
-		//for (int color = g_Led_Color = WHITE; color < AllColor; g_Led_Color = ++color)
-		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
-		{
-			if (g_main_thread_exit) { break; }
-			g_Led = color;
-
-			for (size_t index = 0; index < g_Config.ledCount; index++)
-			{
-				if (g_main_thread_exit) { break; }
-
-				g_Index = index;
-				startTime1 = clock();
-				setSignleColor(colorNum[index], 0, 0, 0);
-
-				if (color == RED)
-				{
-					setSignleColor(index, 255, 0, 0);
-				}
-				else if (color == GREEN)
-				{
-					setSignleColor(index, 0, 255, 0);
-				}
-				else if (color == BLUE)
-				{
-					setSignleColor(index, 0, 0, 255);
-				}
-				else if (color == WHITE)
-				{
-					setSignleColor(index, 255, 255, 255);
-				}
-				Sleep(200);
-				//g_set_led_mutex.lock();
-				g_wait1 = false;
-				g_wait2 = false;
-				printf("\nindex = %d, g_Led = %d, time =%d", index, g_Led, clock() - startTime1);
-				//g_set_led_mutex.unlock();
-				Sleep(20);
-			}
-		}
-	}
-
-	g_main_thread_exit = true;
-	t1.join();
-	t2.join();
-	t3.join();
-	t4.join();
 	//aging.saveAgingLog();
 
 	printf("\nall time ==== %d\n", clock() - startTime);
 	delete[] colorNum;
+	//waitKey();
+	if (g_Config.shutdownTime > 0) 
+	{
+		char shutdown[128] = { 0 };
+		sprintf_s(shutdown, 128, "shutdown -s -t %d", g_Config.shutdownTime);
+		system(shutdown);
+	}
+	
 	return 0;
 }
-#endif
+
+
+int main899874()
+{
+	int w = 640;
+	int h = 480;
+	VideoCapture capture(1);
+	//capture.set(CAP_PROP_FPS, 30);
+	capture.set(CAP_PROP_FRAME_WIDTH, w);
+	capture.set(CAP_PROP_FRAME_HEIGHT, h);
+
+	Mat frame ;
+
+	int i = 0;
+	int j = 0;
+	int k = 0;
+
+	clock_t t = clock();
+	while (true)
+	{
+		capture.read(frame);
+		imshow("frame", frame);
+		if (waitKey(33) == 0x1b) { break; }// Esc 键
+		if ((clock() - t) > 10000)	// 跑10s
+			break;
+	}
+
+	t = clock();
+	while (true)
+	{
+		clock_t t3 = clock();
+		capture.read(frame);
+		printf("\ntest--------------%d\n", clock() - t3);
+
+		imshow("frame", frame);
+
+		if (waitKey(33) == 0x1b) { break; }// Esc 键
+		
+		if (true) {
+			clock_t t2 = clock();
+			char name[128] = { 0 };
+			sprintf_s(name, 128, "aging_rect_image/test/%d_%d.jpg", i, clock());
+			printf("\ngetFrame5--------------%d\n", clock() - t2);
+			t2 = clock();
+			imwrite(name, frame);
+			printf("\ngetFrame6--------------%d\n", clock() - t2);
+		}
+
+		if ((clock() - t) > 20000)
+			break;
+	}
+
+	printf("k - %d, i - %d, j - %d\n", k, i, j);
+	return 0; 
+}

@@ -4,7 +4,7 @@
 
 #include <time.h>
 #include <io.h>
-#include <direct.h>
+
 
 
 #define color_num (AllColor )
@@ -46,21 +46,12 @@ AgingLog::AgingLog(int led_count)
 	}
 
 	getVGAInfo(PPID, VGA_PPID_LENGTH);
+    time(&aging_time);
 	if (PPID[0] == 0)	// 获取不到PPID时， 用time() 来替代
 	{
-		time(&aging_time);
 		sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", aging_time);
 		reset_ppid = true;
 	}
-
-	if (0 != _access(AgingFolder, 0))
-	{
-		_mkdir(AgingFolder);   // 返回 0 表示创建成功，-1 表示失败		
-	}
-	char path[128] = { 0 };
-	sprintf_s(path, 128, "%s/%s", AgingFolder, PPID);
-	_mkdir(path);
-	
 }
 
 
@@ -153,17 +144,9 @@ void AgingLog::flushData()
 
 	memset(lpLed, 0, lpLedCount*color_num);
 
+    time(&aging_time);
 	if (reset_ppid)
 	{
-		time(&aging_time);
 		sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", aging_time);
-	}
-
-	if (0 != _access(AgingFolder, 0))
-	{
-		_mkdir(AgingFolder);   // 返回 0 表示创建成功，-1 表示失败		
-	}
-	char path[128] = { 0 };
-	sprintf_s(path, 128, "%s/%s", AgingFolder, PPID);
-	_mkdir(path);
+	}	
 }

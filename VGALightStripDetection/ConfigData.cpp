@@ -1,4 +1,4 @@
-#include "ConfigData.h"
+﻿#include "ConfigData.h"
 #include <Windows.h>
 
 #define SPRINTF(ARG) wsprintf(d, L"%d", ARG);
@@ -40,6 +40,9 @@ void ConfigData::saveConfigData()
 	SPRINTF(minContoursArea); WritePrivateProfileString(L"AgingSetting", L"MinContoursArea", d, lpPath);
 	SPRINTF(minContoursSpace); WritePrivateProfileString(L"AgingSetting", L"MinContoursSpace", d, lpPath);
 	SPRINTF(resetRect); WritePrivateProfileString(L"AgingSetting", L"ResetRectFrame", d, lpPath);
+    SPRINTF(randomShutDownLed); WritePrivateProfileString(L"AgingSetting", L"RandomShutDownLedNum", d, lpPath);
+	SPRINTF(shutdownTime); WritePrivateProfileString(L"AgingSetting", L"ShutDownDelayTime", 0, lpPath);
+
 
 	//[LED]
 	SPRINTF(ledCount); WritePrivateProfileString(L"LED", L"Count", d, lpPath);
@@ -118,6 +121,8 @@ void ConfigData::readConfigFile()
 	minContoursArea = GetPrivateProfileInt(L"AgingSetting", L"MinContoursArea", 200, lpPath);
 	minContoursSpace = GetPrivateProfileInt(L"AgingSetting", L"MinContoursSpace", 60, lpPath);
 	resetRect = GetPrivateProfileInt(L"AgingSetting", L"ResetRectFrame", 0, lpPath);
+    randomShutDownLed = GetPrivateProfileInt(L"AgingSetting", L"RandomShutDownLedNum", 200, lpPath);
+	shutdownTime = GetPrivateProfileInt(L"AgingSetting", L"ShutDownDelayTime", 0, lpPath);
 
 	//[LED]
 	ledCount = GetPrivateProfileInt(L"LED", L"Count", 22, lpPath);

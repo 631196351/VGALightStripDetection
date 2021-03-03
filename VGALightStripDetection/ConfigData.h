@@ -21,7 +21,7 @@ public:
 	int cameraIndex = 0;
 	int ledCount = 22;
 	int ledHalfCount = ledCount / 2;
-	int intervalTime = 100;		// µÆÖéÁÁÃğµÄ¼ä¸ôÊ±¼ä
+	int intervalTime = 100;		// ç¯ç äº®ç­çš„é—´éš”æ—¶é—´
 	int minContoursArea = 200;
 	int minContoursSpace = 60;
 	int g_tick = 50;
@@ -41,4 +41,7 @@ public:
 	bool showTrackBarWnd = true;
 	//bool agingSettingSaveRectImages = true;
 	unsigned agingTime = 1;
+	int randomShutDownLed = 200;// éšæœºç­ç¯
+	int shutdownTime = 0;   //è‡ªåŠ¨å…³æœºå»¶æ—¶
+
 };

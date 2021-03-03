@@ -3,6 +3,9 @@
 #include <tchar.h>
 #include "utility.h"
 #include <fstream>
+#include <io.h>
+#include <direct.h>
+#include "PreDefine.h"
 
 int getVGAInfo(char* ppid, size_t size)
 {
@@ -109,4 +112,15 @@ void resetColor(int count, BYTE r, BYTE g, BYTE b)
 	{
 		setSignleColor(i, r, g, b);
 	}
+}
+
+void createPPIDFolder(const char* ppid)
+{
+	if (0 != _access(AgingFolder, 0))
+	{
+		_mkdir(AgingFolder);   // 返回 0 表示创建成功，-1 表示失败		
+	}
+	char path[128] = { 0 };
+	sprintf_s(path, 128, "%s/%s", AgingFolder, ppid);
+	_mkdir(path);
 }
