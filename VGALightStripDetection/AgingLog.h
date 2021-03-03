@@ -2,7 +2,7 @@
 #include <fstream>
 
 #define VGA_PPID_LENGTH 20
-enum {	Pass = 0, Fail = 1};
+enum {	Pass = 0, Fail = 1, Fail_RandomShutDownLed = -1};
 
 class AgingLog
 {

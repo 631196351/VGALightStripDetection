@@ -4,8 +4,7 @@
 
 #include <time.h>
 #include <io.h>
-
-
+#include <cmath>
 
 #define color_num (AllColor )
 
@@ -57,8 +56,6 @@ AgingLog::AgingLog(int led_count)
 
 AgingLog::~AgingLog()
 {
-	//saveAgingLog();
-
 	aging_file.close();
 
 	if (lpLed != nullptr)
@@ -97,7 +94,8 @@ void AgingLog::saveAgingLog()
 		aging_file << PPID << "," << t <<",";
 		for (int i = 0; i < lpLedCount * color_num; i++)
 		{
-			r += lpLed[i];
+			// 随机灭灯时， 失败用 -1表示；正常失败时用 1表示；故最终结果取绝对值
+			r += abs(lpLed[i]);
 			aging_file << lpLed[i] << ",";
 		}
 
@@ -121,7 +119,7 @@ int AgingLog::thisLedIsOK(int color)
 	int j = lpLedCount * (color + 1);
 	for (; i < j; i++)
 	{
-		r += lpLed[i];
+		r += abs(lpLed[i]);
 	}
 
 	return (r > 0 ? Fail : Pass);
@@ -132,7 +130,7 @@ int AgingLog::allLedIsOK()
 	int r = 0;
 	for (int i = 0; i < lpLedCount * color_num; i++)
 	{
-		r += lpLed[i];
+		r += abs(lpLed[i]);
 	}
 
 	return (r > 0 ? Fail : Pass);

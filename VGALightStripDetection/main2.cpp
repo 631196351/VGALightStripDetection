@@ -32,7 +32,7 @@ int g_Index = 0;
 //int g_Index222 = 0;	// 为了测试getFrame获取到的frame是否准确
 bool g_wait = false;
 bool g_main_thread_exit = false;
-
+bool g_randomShutDownLed = false;
 //VideoCapture g_capture;
 //AgingLog* g_aging = nullptr;	// 为了在getFrame 中保存测试frame
 
@@ -399,7 +399,11 @@ void findFrameContours(AgingLog& aging)
 				if (empty_rect == boundRect.size())
 				{
 					putText(original_frame, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
-					aging.setSingleLedResult(currentIndex, currentColor, Fail);					
+					if(g_randomShutDownLed)
+						aging.setSingleLedResult(currentIndex, currentColor, Fail_RandomShutDownLed);
+					else
+						aging.setSingleLedResult(currentIndex, currentColor, Fail);
+
 				}
 				{
 					char name[128] = { 0 };
@@ -457,6 +461,7 @@ int main()
 		colorNum[i] = i - 1;
 	}
 	colorNum[0] = g_Config.ledCount - 1;
+	srand((unsigned)time(NULL));
 
 	clock_t startTime = clock(), startTime1;
 
@@ -524,6 +529,7 @@ int main()
 				g_wait = true;
 				getFrame(g_current_frame);
 				g_background_frame = internal_back.clone();
+				g_randomShutDownLed = (r >= g_Config.randomShutDownLed) ? false : true;
 				printf("\nindex = %d, g_Led = %d, time =%d", index, g_Led, clock() - startTime1);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
