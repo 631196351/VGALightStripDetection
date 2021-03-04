@@ -17,6 +17,7 @@ AgingLog::AgingLog(int led_count)
 	{
 		lpLedCount = led_count; // white 暂时不计
 		lpLed = new int[led_count * color_num] { 0 };
+		lpRandomShutDownLedCache = new int[led_count * color_num]{ 0 };
 	}
 	
 	aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
@@ -62,6 +63,11 @@ AgingLog::~AgingLog()
 	{
 		delete[] lpLed;
 	}
+
+	if (lpRandomShutDownLedCache != nullptr)
+	{
+		delete[] lpRandomShutDownLedCache;
+	}
 }
 
 void AgingLog::setPPID(char* ppid, int len)
@@ -79,23 +85,50 @@ void AgingLog::setSingleLedResult(int index, int color, int result)
 	}
 }
 
+void AgingLog::setSingleLedRandomShutDownResult(int index, int color, int result)
+{
+	int i = index + lpLedCount * (color);
+	if (i < lpLedCount * color_num)
+	{
+		lpRandomShutDownLedCache[i] = result;
+	}
+}
 
 void AgingLog::saveAgingLog()
 {
 	if (aging_file.is_open()) 
 	{
-
-		char buf[10] = { 0 };
 		int r = 0;
 		struct tm *p = localtime(&aging_time);
 		char t[128] = { 0 };
 		sprintf_s(t, 128, "%d%02d%02d%02d%02d%02d\t", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
 
+		////////////////////////////////////////////////////////////////////////////
 		aging_file << PPID << "," << t <<",";
 		for (int i = 0; i < lpLedCount * color_num; i++)
 		{
+			// 随机灭掉的灯用-1表示
+			r += lpRandomShutDownLedCache[i];
+			aging_file << lpRandomShutDownLedCache[i] << ",";
+		}
+
+		aging_file << r << ",";
+		if (r < 0)
+		{
+			aging_file << "Failure" << std::endl;
+		}
+		else
+		{
+			aging_file << "Pass" << std::endl;
+		}
+
+		////////////////////////////////////////////////////////////////////////////
+		r = 0;
+		aging_file << PPID << "," << t << ",";
+		for (int i = 0; i < lpLedCount * color_num; i++)
+		{
 			// 随机灭灯时， 失败用 -1表示；正常失败时用 1表示；故最终结果取绝对值
-			r += abs(lpLed[i]);
+			r += lpLed[i];
 			aging_file << lpLed[i] << ",";
 		}
 
@@ -120,6 +153,11 @@ int AgingLog::thisLedIsOK(int color)
 	for (; i < j; i++)
 	{
 		r += abs(lpLed[i]);
+
+		if (lpLed[i] != abs(lpRandomShutDownLedCache[i]))
+		{
+			return Fail;
+		}
 	}
 
 	return (r > 0 ? Fail : Pass);
@@ -131,6 +169,10 @@ int AgingLog::allLedIsOK()
 	for (int i = 0; i < lpLedCount * color_num; i++)
 	{
 		r += abs(lpLed[i]);
+		if (lpLed[i] != abs(lpRandomShutDownLedCache[i]))
+		{
+			return Fail;
+		}
 	}
 
 	return (r > 0 ? Fail : Pass);
@@ -141,6 +183,7 @@ void AgingLog::flushData()
 	saveAgingLog();
 
 	memset(lpLed, 0, lpLedCount*color_num);
+	memset(lpRandomShutDownLedCache, 0, lpLedCount*color_num);
 
     time(&aging_time);
 	if (reset_ppid)

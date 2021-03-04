@@ -17,6 +17,7 @@ using namespace cv;
 using namespace std;
 
 #define DebugMode(oper) if(g_Config.debugMode == true){oper;};
+#define IfDebugMode if(g_Config.debugMode == true)
 
 Mat g_frame;
 Mat g_current_frame;
@@ -32,7 +33,7 @@ int g_Index = 0;
 //int g_Index222 = 0;	// 为了测试getFrame获取到的frame是否准确
 bool g_wait = false;
 bool g_main_thread_exit = false;
-bool g_randomShutDownLed = false;
+int g_randomShutDownLed = 0;
 //VideoCapture g_capture;
 //AgingLog* g_aging = nullptr;	// 为了在getFrame 中保存测试frame
 
@@ -250,18 +251,44 @@ void findFrameContours(AgingLog& aging)
 				DebugMode(imshow("original_frame", frame));
 				DebugMode(imshow("background", back));
 												
-				if (currentColor == WHITE)
+				if (/*currentColor == WHITE*/true)
 				{
+					std::vector<Mat> frame_bgrs, back_bgrs;
 					Mat frame_gray, back_gray, temp;
-					cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
-					cvtColor(back, back_gray, COLOR_BGR2GRAY);
+					if (currentColor == WHITE) {
+						cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
+						cvtColor(back, back_gray, COLOR_BGR2GRAY);
+					}
+					else
+					{				
+						// b-> t=130
+						// g-> t=70
+						// r-> t=70
+						// w-> t=70
+						split(frame, frame_bgrs);
+						split(back, back_bgrs);
+						frame_gray = frame_bgrs[currentColor];
+						back_gray = back_bgrs[currentColor];
+					}
 
 					bitwise_xor(frame_gray, back_gray, temp);	// 取出两幅图所有的不同点，记为temp集合
 					DebugMode(imshow("bitwise_xor", temp));
+					IfDebugMode
+					{
+						char name[128] = { 0 };
+						sprintf_s(name, 128, "%s/%s/%02d%02d_bitwise_xor.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+						imwrite(name, temp);
+					}
 
 					//在 temp 集合中找ROI部分的点
 					bitwise_and(frame_gray, temp, mask);
 					DebugMode(imshow("bitwise_and", mask));
+					IfDebugMode
+					{
+						char name[128] = { 0 };
+						sprintf_s(name, 128, "%s/%s/%02d%02d_bitwise_and.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+						imwrite(name, mask);
+					}
 
 					medianBlur(mask, mask, 3);
 
@@ -325,7 +352,6 @@ void findFrameContours(AgingLog& aging)
 				}
 				
 				DebugMode(imshow("mask", mask));
-
 				{
 					char name[128] = { 0 };
 					sprintf_s(name, 128, "%s/%s/%02d%02d_mask.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
@@ -335,10 +361,9 @@ void findFrameContours(AgingLog& aging)
 				//存储边缘
 				vector<vector<Point> > contours;
 				vector<Vec4i> hierarchy;
-				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));//查找最顶层轮廓
+				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
 
 				Mat result = Mat::zeros(original_frame.size(), original_frame.type());
-				// 生成最小包围矩形
 				vector<Rect> boundRect;
 				for (int index = 0; index < contours.size(); index++)
 				{
@@ -346,9 +371,11 @@ void findFrameContours(AgingLog& aging)
 					Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
 					drawContours(result, contours, index, color, 1);
 
+					// 生成最小包围矩形
 					vector<Point> contours_poly;
 					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
 					Rect rect = boundingRect(contours_poly);
+					
 					boundRect.push_back(rect);
 				}
 
@@ -358,53 +385,88 @@ void findFrameContours(AgingLog& aging)
 					sprintf_s(name, 128, "%s/%s/%02d%02d_contours.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
 					imwrite(name, result);
 				}
-				
-				// 轮廓合并
+
 				for (int i = 0; i < boundRect.size(); i++)
 				{
 					Rect& rect = boundRect[i];
+					if (rect.area() == 0)
+						continue;
+
+					//printf("\ncontours1----------------[x:%d, y:%d, w:%d, h:%d]\n", rect.x, rect.y, rect.width, rect.height);
+					// 合并轮廓
+					// 在已有轮廓中找距离最近的那一个,并进行标记
+					int t = -1;
+					int min_gap = g_Config.minContoursSpace;	//用来记录离自己最近的距离
+
 					for (int j = 0; j < boundRect.size(); j++)
 					{
-						if (i == j)	// 跳过自己
+						if (i == j)     // 跳过自己
 							continue;
-						Rect& rect2 = boundRect[j];
-						int gap = min_distance_of_rectangles(rect, rect2);
-						//printf("(%d, %d) space (%d, %d) = %d\n", rect.x, rect.y, rect.x, rect.y, gap);
-						if (gap < g_Config.minContoursSpace)
+						if (boundRect[j].area() == 0)
+							continue;
+
+						int gap = min_distance_of_rectangles(rect, boundRect[j]);
+
+						if (gap <= g_Config.minContoursSpace)
 						{
-							Rect big_rect;
-							big_rect.x = min(rect.x, rect2.x);
-							big_rect.y = min(rect.y, rect2.y);
-							big_rect.width = max(rect.x + rect.width, rect2.x + rect2.width) - big_rect.x;
-							big_rect.height = max(rect.y + rect.height, rect2.y + rect2.height) - big_rect.y;
-							rect = big_rect;
-							rect2 = Rect();
+							if (gap <= min_gap)
+							{
+								min_gap = gap;
+								t = j;
+							}
 						}
+
+						//printf("\ncontours2-[x:%d, y:%d, w:%d, h:%d]-----[x:%d, y:%d, w:%d, h:%d]------gap:%d------min_gap:%d\n"
+						//	, rect.x, rect.y, rect.width, rect.height
+						//	, boundRect[j].x, boundRect[j].y, boundRect[j].width, boundRect[j].height
+						//	, gap, min_gap);
+					}
+
+					// 同距离自己最近的轮廓进行合并， 都离的远就自成一家
+					if (t >= 0)
+					{
+						Rect r = boundRect[t];
+						boundRect[t] |= rect;
+						//printf("\ncontours3-[x:%d, y:%d, w:%d, h:%d]-----[x:%d, y:%d, w:%d, h:%d]------min_gap:%d------t_index%d\n"
+						//	, rect.x, rect.y, rect.width, rect.height
+						//	, r.x, r.y, r.width, r.height
+						//	, min_gap, t);
+						rect = Rect();
+
 					}
 				}
-
+								
 				//得到灯的轮廓
-				size_t empty_rect = 0;
+				size_t unqualified_rect = 0;
 				for (int index = 0; index < boundRect.size(); index++)
 				{
-					if (boundRect[index].area() > 0)
+					const Rect& r = boundRect[index];
+					if (r.area() == 0)
+						continue;
+					printf("\ncontours4-[x:%d, y:%d, w:%d, h:%d, area:%d]\n", r.x, r.y, r.width, r.height, r.area());
+
+					// 合并轮廓时会将被合并轮廓抹掉
+					if (r.area() > g_Config.minContoursArea)
 					{
-						rectangle(original_frame, boundRect[index], Scalar(0, 255, 255), 3);
+						rectangle(original_frame, r, Scalar(0, 255, 255), 3);
 						aging.setSingleLedResult(currentIndex, currentColor, Pass);
 					}
-					else {
-						empty_rect++;
+					else
+					{
+						unqualified_rect++;
 					}
 				}
-				if (empty_rect == boundRect.size())
+
+				if (unqualified_rect == boundRect.size())
 				{
 					putText(original_frame, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
-					if(g_randomShutDownLed)
-						aging.setSingleLedResult(currentIndex, currentColor, Fail_RandomShutDownLed);
-					else
-						aging.setSingleLedResult(currentIndex, currentColor, Fail);
-
+					aging.setSingleLedResult(currentIndex, currentColor, Fail);
 				}
+
+
+				printf("\nrandomShutDownLed3--------------%02d%02d-%d\n", currentColor, currentIndex, g_randomShutDownLed);
+				aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, (g_randomShutDownLed < g_Config.randomShutDownLed) ? RandomShutDownLed : Pass);
+
 				{
 					char name[128] = { 0 };
 					sprintf_s(name, 128, "%s/%s/%02d%02d_original.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
@@ -466,6 +528,7 @@ int main()
 	clock_t startTime = clock(), startTime1;
 
 	Mat internal_back;	// 暂存back
+	RNG rng(time(NULL));
 	while (g_Config.agingTime > 0)
 	{
 		g_Config.agingTime--;
@@ -500,8 +563,8 @@ int main()
 					imwrite(name, internal_back);
 				}
 
-				int r = rand() % 255;
-				printf("\nrandomShutDownLed--------------%d\n", r);
+				int r = rng.uniform(0, 255);
+				printf("\nrandomShutDownLed--------------%02d%02d-%d\n", color, index, r);
 				if (r >= g_Config.randomShutDownLed)
 				{
 					if (color == RED)
@@ -529,8 +592,9 @@ int main()
 				g_wait = true;
 				getFrame(g_current_frame);
 				g_background_frame = internal_back.clone();
-				g_randomShutDownLed = (r >= g_Config.randomShutDownLed) ? false : true;
-				printf("\nindex = %d, g_Led = %d, time =%d", index, g_Led, clock() - startTime1);
+				g_randomShutDownLed = r;
+				printf("\nrandomShutDownLed2--------------%02d%02d-%d\n", color, index, g_randomShutDownLed);
+				printf("\nindex = %d, g_Led = %d, time =%d\n", index, g_Led, clock() - startTime1);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
 			}
@@ -561,12 +625,9 @@ int main()
 				getFrame(frame);	// get current frame
 				char name[128] = { 0 };
 				sprintf_s(name, 128, "%s/%s/all_color_%02d.png", AgingFolder, aging.ppid(), g_Led);
-				putText(frame, aging.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 5);
+				putText(frame, aging.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
 				imwrite(name, frame);
 
-				//sprintf_s(name, 128, "%s_%02d.png", aging.ppid(), g_Led);
-				//imshow(name, frame);
-				//waitKey(1);
 				resetColor(g_Config.ledCount, 0, 0, 0);
 				Sleep(g_Config.intervalTime);
 			}
@@ -591,14 +652,12 @@ int main()
 	t1.join();
 	t2.join();
 	t3.join();
-	//t4.join();
-	//t5.join();
-	//aging.saveAgingLog();
+	delete[] colorNum;
+
 
 	printf("\nall time ==== %d\n", clock() - startTime);
-	delete[] colorNum;
-	//waitKey();
-	if (g_Config.shutdownTime > 0) 
+
+	if (g_Config.shutdownTime >= 0) 
 	{
 		char shutdown[128] = { 0 };
 		sprintf_s(shutdown, 128, "shutdown -s -t %d", g_Config.shutdownTime);

@@ -2,13 +2,14 @@
 #include <fstream>
 
 #define VGA_PPID_LENGTH 20
-enum {	Pass = 0, Fail = 1, Fail_RandomShutDownLed = -1};
+enum {	Pass = 0, Fail = 1, RandomShutDownLed = -1};
 
 class AgingLog
 {
 
 	char PPID[VGA_PPID_LENGTH] = { 1 };
 	int* lpLed = nullptr;
+	int* lpRandomShutDownLedCache = nullptr;
 	int lpLedCount = 0;
 	int startColor = 0;
 	int stopColor = 0;
@@ -24,6 +25,8 @@ public:
 	inline char* ppid() { return PPID; }
 
 	void setSingleLedResult(int index, int color, int result);
+
+	void setSingleLedRandomShutDownResult(int index, int color, int result);
 
 	void saveAgingLog();
 
