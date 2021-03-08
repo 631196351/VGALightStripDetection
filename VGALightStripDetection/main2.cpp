@@ -18,6 +18,7 @@ using namespace std;
 
 #define DebugMode(oper) if(g_Config.debugMode == true){oper;};
 #define IfDebugMode if(g_Config.debugMode == true)
+#define MainThreadIsExit if (g_main_thread_exit >= eExit) { break; }
 
 Mat g_frame;
 Mat g_current_frame;
@@ -32,7 +33,7 @@ int g_Led = BLUE;
 int g_Index = 0;
 //int g_Index222 = 0;	// 为了测试getFrame获取到的frame是否准确
 bool g_wait = false;
-bool g_main_thread_exit = false;
+int g_main_thread_exit = eNotExit;
 int g_randomShutDownLed = 0;
 //VideoCapture g_capture;
 //AgingLog* g_aging = nullptr;	// 为了在getFrame 中保存测试frame
@@ -91,55 +92,53 @@ void renderTrackbarThread()
 	Mat empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
 	namedWindow("Toolkit");
 	imshow("Toolkit", empty);
-	int hl = 0, sl = 0, vl = 0;
-	int hh = 0, sh = 0, vh = 0;
+	//int hl = 0, sl = 0, vl = 0;
+	//int hh = 0, sh = 0, vh = 0;
 
 	//Mat empty2 = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
 	//namedWindow("Toolkit_RGB");
 	//imshow("Toolkit_RGB", empty2);
 
-	char buf[128] = { 0 };
+	//char buf[128] = { 0 };
 	while (true)
 	{
-		if (g_main_thread_exit) {
-			break;
-		}
+		MainThreadIsExit;
+
 		if (g_Led >= AllColor)// 防止越界
 			continue;
 
-		HsvColor& hsv = g_Config.hsvColor[g_Led];
-		createTrackbar("lowHue", "Toolkit", &hsv.h[5], hsv.h[4]);
-		createTrackbar("higHue", "Toolkit", &hsv.h[6], hsv.h[4]);
-
-		createTrackbar("lowSat", "Toolkit", &hsv.s[5], hsv.s[4]);
-		createTrackbar("higSat", "Toolkit", &hsv.s[6], hsv.s[4]);
-
-		createTrackbar("lowVal", "Toolkit", &hsv.v[5], hsv.v[4]);
-		createTrackbar("higVal", "Toolkit", &hsv.v[6], hsv.v[4]);
-
+		//HsvColor& hsv = g_Config.hsvColor[g_Led];
+		//createTrackbar("lowHue", "Toolkit", &hsv.h[5], hsv.h[4]);
+		//createTrackbar("higHue", "Toolkit", &hsv.h[6], hsv.h[4]);
+		//
+		//createTrackbar("lowSat", "Toolkit", &hsv.s[5], hsv.s[4]);
+		//createTrackbar("higSat", "Toolkit", &hsv.s[6], hsv.s[4]);
+		//
+		//createTrackbar("lowVal", "Toolkit", &hsv.v[5], hsv.v[4]);
+		//createTrackbar("higVal", "Toolkit", &hsv.v[6], hsv.v[4]);
+		//
 		int& thresold = g_Config.bgrColorThres[g_Led];
 		createTrackbar("thresold", "Toolkit", &thresold, 255);
-
-		hl = hsv.h[0] + hsv.h[5];
-		sl = hsv.s[0] + hsv.s[5];
-		vl = hsv.v[0] + hsv.v[5];
-
-		hh = hsv.h[0] + hsv.h[6];
-		sh = hsv.s[0] + hsv.s[6];
-		vh = hsv.v[0] + hsv.v[6];
-
-		sprintf_s(buf, 128, "lowHSV < higHSV !!!");
-		putText(empty, buf, Point(0, empty.rows / 4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
-
-		sprintf_s(buf, 128, "Real Low HSV (%d, %d, %d)", hl, sl, vl);
-		putText(empty, buf, Point(0, empty.rows / 4 * 2), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
-
-		sprintf_s(buf, 128, "Real High HSV (%d, %d, %d)", hh, sh, vh);
-		putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+		//
+		//hl = hsv.h[0] + hsv.h[5];
+		//sl = hsv.s[0] + hsv.s[5];
+		//vl = hsv.v[0] + hsv.v[5];
+		//
+		//hh = hsv.h[0] + hsv.h[6];
+		//sh = hsv.s[0] + hsv.s[6];
+		//vh = hsv.v[0] + hsv.v[6];
+		//
+		//sprintf_s(buf, 128, "lowHSV < higHSV !!!");
+		//putText(empty, buf, Point(0, empty.rows / 4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+		//
+		//sprintf_s(buf, 128, "Real Low HSV (%d, %d, %d)", hl, sl, vl);
+		//putText(empty, buf, Point(0, empty.rows / 4 * 2), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+		//
+		//sprintf_s(buf, 128, "Real High HSV (%d, %d, %d)", hh, sh, vh);
+		//putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		imshow("Toolkit", empty);
 		empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
 		
-
 		waitKey(30);
 	}
 }
@@ -173,9 +172,8 @@ void autoGetCaptureFrame(VideoCapture& capture)
 	Mat camera;
 	while (true)
 	{
-		if (g_main_thread_exit) {
-			break;
-		}
+		MainThreadIsExit;
+
 		g_get_frame_mutex.lock();
 		capture.read(g_frame);
 		g_get_frame_mutex.unlock();
@@ -186,7 +184,7 @@ void autoGetCaptureFrame(VideoCapture& capture)
 
 		if (cv::waitKey(33) == 0x1b)	// Esc 键
 		{
-			g_main_thread_exit = true;			
+			g_main_thread_exit = eExitWithKey;
 		}
 	}
 }
@@ -216,9 +214,7 @@ void findFrameContours(AgingLog& aging)
 	clock_t startTime0 = clock(), startTime = clock();
 	while (true)
 	{
-		if (g_main_thread_exit) {
-			break;
-		}
+		MainThreadIsExit;
 
 		g_set_led_mutex.lock();
 		if(g_wait)
@@ -245,13 +241,13 @@ void findFrameContours(AgingLog& aging)
 					return;
 				}
 								
-				int lowhsv[3] = { 0 };
-				int highsv[3] = { 0 };				
+				//int lowhsv[3] = { 0 };
+				//int highsv[3] = { 0 };
 
 				DebugMode(imshow("original_frame", frame));
 				DebugMode(imshow("background", back));
-												
-				if (/*currentColor == WHITE*/true)
+				
+				if (currentColor == WHITE)
 				{
 					std::vector<Mat> frame_bgrs, back_bgrs;
 					Mat frame_gray, back_gray, temp;
@@ -275,8 +271,8 @@ void findFrameContours(AgingLog& aging)
 					DebugMode(imshow("bitwise_xor", temp));
 					IfDebugMode
 					{
-						char name[128] = { 0 };
-						sprintf_s(name, 128, "%s/%s/%02d%02d_bitwise_xor.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+						char name[_MAX_PATH] = { 0 };
+						sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_bitwise_xor.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
 						imwrite(name, temp);
 					}
 
@@ -285,8 +281,8 @@ void findFrameContours(AgingLog& aging)
 					DebugMode(imshow("bitwise_and", mask));
 					IfDebugMode
 					{
-						char name[128] = { 0 };
-						sprintf_s(name, 128, "%s/%s/%02d%02d_bitwise_and.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+						char name[_MAX_PATH] = { 0 };
+						sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_bitwise_and.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
 						imwrite(name, mask);
 					}
 
@@ -330,31 +326,33 @@ void findFrameContours(AgingLog& aging)
 					printf("3--------------%d\n", clock() - startTime);
 					startTime = clock();
 
-					const HsvColor& hsv = g_Config.hsvColor[currentColor];
-					lowhsv[0] = hsv.h[0] + hsv.h[5];
-					lowhsv[1] = hsv.s[0] + hsv.s[5];
-					lowhsv[2] = hsv.v[0] + hsv.v[5];
-
-					highsv[0] = hsv.h[0] + hsv.h[6];
-					highsv[1] = hsv.s[0] + hsv.s[6];
-					highsv[2] = hsv.v[0] + hsv.v[6];
+					//const HsvColor& hsv = g_Config.hsvColor[currentColor];
+					//lowhsv[0] = hsv.h[0] + hsv.h[5];
+					//lowhsv[1] = hsv.s[0] + hsv.s[5];
+					//lowhsv[2] = hsv.v[0] + hsv.v[5];
+					//
+					//highsv[0] = hsv.h[0] + hsv.h[6];
+					//highsv[1] = hsv.s[0] + hsv.s[6];
+					//highsv[2] = hsv.v[0] + hsv.v[6];
 
 					//均值滤波
 					medianBlur(frame, frame, 3);
-					printf("4--------------%d\n", clock() - startTime);
-					startTime = clock();
-
-					cvtColor(frame, frame, COLOR_BGR2HSV);
-					inRange(frame, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), mask);
+					cvtColor(frame, mask, COLOR_BGR2GRAY);
 					
-					printf("5--------------%d\n", clock() - startTime);
-					startTime = clock();
+					//printf("4--------------%d\n", clock() - startTime);
+					//startTime = clock();
+					//
+					//cvtColor(frame, frame, COLOR_BGR2HSV);
+					//inRange(frame, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), mask);
+					//
+					//printf("5--------------%d\n", clock() - startTime);
+					//startTime = clock();
 				}
-				
+
 				DebugMode(imshow("mask", mask));
 				{
-					char name[128] = { 0 };
-					sprintf_s(name, 128, "%s/%s/%02d%02d_mask.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+					char name[_MAX_PATH] = { 0 };
+					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_mask.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
 					imwrite(name, mask);
 				}
 
@@ -367,22 +365,24 @@ void findFrameContours(AgingLog& aging)
 				vector<Rect> boundRect;
 				for (int index = 0; index < contours.size(); index++)
 				{
-					// 绘制各自小轮廓
-					Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
-					drawContours(result, contours, index, color, 1);
-
 					// 生成最小包围矩形
 					vector<Point> contours_poly;
 					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
 					Rect rect = boundingRect(contours_poly);
-					
-					boundRect.push_back(rect);
+
+					if (rect.area() >= g_Config.minContoursArea) {
+						boundRect.push_back(rect);
+
+						// 绘制各自小轮廓
+						Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
+						drawContours(result, contours, index, color, 1);
+					}
 				}
 
 				DebugMode(imshow("contours", result));
 				{
-					char name[128] = { 0 };
-					sprintf_s(name, 128, "%s/%s/%02d%02d_contours.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+					char name[_MAX_PATH] = { 0 };
+					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_contours.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
 					imwrite(name, result);
 				}
 
@@ -463,13 +463,12 @@ void findFrameContours(AgingLog& aging)
 					aging.setSingleLedResult(currentIndex, currentColor, Fail);
 				}
 
-
-				printf("\nrandomShutDownLed3--------------%02d%02d-%d\n", currentColor, currentIndex, g_randomShutDownLed);
+				//printf("\nrandomShutDownLed3--------------%02d%02d-%d\n", currentColor, currentIndex, g_randomShutDownLed);
 				aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, (g_randomShutDownLed < g_Config.randomShutDownLed) ? RandomShutDownLed : Pass);
 
 				{
-					char name[128] = { 0 };
-					sprintf_s(name, 128, "%s/%s/%02d%02d_original.png", AgingFolder, aging.ppid(), currentColor, currentIndex);
+					char name[_MAX_PATH] = { 0 };
+					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_original.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
 					imwrite(name, original_frame);
 				}
 
@@ -501,10 +500,11 @@ int main()
 	capture.set(CAP_PROP_FPS, 30);
 	capture.set(CAP_PROP_FRAME_WIDTH, g_Config.frame.width);
 	capture.set(CAP_PROP_FRAME_HEIGHT, g_Config.frame.height);
+	capture.set(CAP_PROP_EXPOSURE, g_Config.exposure);
 
 	//g_capture = capture;
 	g_wait = false;
-	g_main_thread_exit = false;
+	g_main_thread_exit = eNotExit;
 	std::thread t1(autoGetCaptureFrame, std::ref(capture));
 
 	// 获取PPID的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
@@ -523,48 +523,47 @@ int main()
 		colorNum[i] = i - 1;
 	}
 	colorNum[0] = g_Config.ledCount - 1;
-	srand((unsigned)time(NULL));
+	//srand((unsigned)time(NULL));
 
 	clock_t startTime = clock(), startTime1;
-
 	Mat internal_back;	// 暂存back
 	RNG rng(time(NULL));
+
 	while (g_Config.agingTime > 0)
 	{
+		printf("\n-------------Start Work-------------\n");
 		g_Config.agingTime--;
 		// 关闭所有灯
 		resetColor(g_Config.ledCount, 0, 0, 0);
 
-		createPPIDFolder(aging.ppid());
+		createPPIDFolder(aging.targetFolder());
 
-		if (g_main_thread_exit) { break; }
+		MainThreadIsExit;
 		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
 		{
-			if (g_main_thread_exit) { break; }
+			MainThreadIsExit;
 			g_Led = color;
 
 			for (size_t index = 0; index < g_Config.ledCount; index++)
 			{
-				if (g_main_thread_exit) { break; }
+				MainThreadIsExit;
 
 				startTime1 = clock();
-				setSignleColor(colorNum[index], 0, 0, 0);
 
+				setSignleColor(colorNum[index], 0, 0, 0);
 				Sleep(g_Config.intervalTime);
 				printf("\nget_background_frame--------------\n");
-				//g_Index222 = index;
 				getFrame(internal_back);
 
 				DebugMode(imshow("background", internal_back));
 				DebugMode(waitKey(1));
 				{
-					char name[128] = { 0 };
-					sprintf_s(name, 128, "%s/%s/%02d%02d_back.png", AgingFolder, aging.ppid(), color, index);
+					char name[_MAX_PATH] = { 0 };
+					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_back.png", AgingFolder, aging.targetFolder(), color, index);
 					imwrite(name, internal_back);
 				}
 
 				int r = rng.uniform(0, 255);
-				printf("\nrandomShutDownLed--------------%02d%02d-%d\n", color, index, r);
 				if (r >= g_Config.randomShutDownLed)
 				{
 					if (color == RED)
@@ -593,7 +592,6 @@ int main()
 				getFrame(g_current_frame);
 				g_background_frame = internal_back.clone();
 				g_randomShutDownLed = r;
-				printf("\nrandomShutDownLed2--------------%02d%02d-%d\n", color, index, g_randomShutDownLed);
 				printf("\nindex = %d, g_Led = %d, time =%d\n", index, g_Led, clock() - startTime1);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
@@ -623,8 +621,8 @@ int main()
 
 				Mat frame;
 				getFrame(frame);	// get current frame
-				char name[128] = { 0 };
-				sprintf_s(name, 128, "%s/%s/all_color_%02d.png", AgingFolder, aging.ppid(), g_Led);
+				char name[_MAX_PATH] = { 0 };
+				sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, aging.targetFolder(), g_Led);
 				putText(frame, aging.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
 				imwrite(name, frame);
 
@@ -648,16 +646,20 @@ int main()
 		aging.flushData();
 	}
 
-	g_main_thread_exit = true;
+	if (g_Config.agingTime == 0)	//任务完成，正常退出
+	{
+		g_main_thread_exit = eExit;
+	}
+
 	t1.join();
 	t2.join();
 	t3.join();
 	delete[] colorNum;
 
-
 	printf("\nall time ==== %d\n", clock() - startTime);
 
-	if (g_Config.shutdownTime >= 0) 
+	// 只有在任务完成且关机时间>=0时才会自动关机
+	if (g_Config.shutdownTime >= 0 && g_main_thread_exit ==  eExit)
 	{
 		char shutdown[128] = { 0 };
 		sprintf_s(shutdown, 128, "shutdown -s -t %d", g_Config.shutdownTime);

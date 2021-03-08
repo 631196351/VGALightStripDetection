@@ -18,4 +18,11 @@ enum
 	B_Threshold = 250
 };
 
-#define AgingFolder "./aging_rect_image"
+#define AgingFolder "aging_rect_image"
+
+enum
+{
+	eNotExit = 0,	//未侦测到退出指令
+	eExit = 1,		//执行完毕，正常退出指令
+	eExitWithKey = 2	//侦测到退出指令
+};

@@ -21,6 +21,7 @@ void ConfigData::saveConfigData()
 	TCHAR d[128] = { 0 };
 	//[Camera]
 	SPRINTF(cameraIndex); WritePrivateProfileString(L"Camera", L"Index", d, lpPath);
+	SPRINTF(exposure); WritePrivateProfileString(L"Camera", L"Exposure", d, lpPath);
 
 	//[Frame]
 	SPRINTF(frame.width); WritePrivateProfileString(L"Frame", L"Width", d, lpPath);
@@ -41,7 +42,7 @@ void ConfigData::saveConfigData()
 	SPRINTF(minContoursSpace); WritePrivateProfileString(L"AgingSetting", L"MinContoursSpace", d, lpPath);
 	SPRINTF(resetRect); WritePrivateProfileString(L"AgingSetting", L"ResetRectFrame", d, lpPath);
     SPRINTF(randomShutDownLed); WritePrivateProfileString(L"AgingSetting", L"RandomShutDownLedNum", d, lpPath);
-	SPRINTF(shutdownTime); WritePrivateProfileString(L"AgingSetting", L"ShutDownDelayTime", 0, lpPath);
+	SPRINTF(shutdownTime); WritePrivateProfileString(L"AgingSetting", L"ShutDownDelayTime", d, lpPath);
 
 
 	//[LED]
@@ -101,7 +102,8 @@ void ConfigData::readConfigFile()
 	wcscpy_s(lpPath, MAX_PATH, L"./3c.ini");
 
 	//[Camera]
-	cameraIndex = GetPrivateProfileInt(L"Camera", L"Index", 0, lpPath);
+	cameraIndex = GetPrivateProfileInt(L"Camera", L"Index", cameraIndex, lpPath);
+	exposure = GetPrivateProfileInt(L"Camera", L"Exposure", exposure, lpPath);
 
 	//[Frame]
 	frame.width = GetPrivateProfileInt(L"Frame", L"Width", 1280, lpPath);

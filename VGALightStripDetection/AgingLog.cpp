@@ -8,7 +8,7 @@
 
 #define color_num (AllColor )
 
-static bool reset_ppid = false;
+//static bool reset_ppid = false;
 time_t aging_time;
 
 AgingLog::AgingLog(int led_count)
@@ -47,11 +47,14 @@ AgingLog::AgingLog(int led_count)
 
 	getVGAInfo(PPID, VGA_PPID_LENGTH);
     time(&aging_time);
+	struct tm *p = localtime(&aging_time);
+
 	if (PPID[0] == 0)	// 获取不到PPID时， 用time() 来替代
 	{
-		sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", aging_time);
-		reset_ppid = true;
+		sprintf_s(PPID, VGA_PPID_LENGTH, "x%d%02d%02d%02d%02d%02d", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
 	}
+
+	sprintf_s(lpTargetFolder, _MAX_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, PPID);
 }
 
 
@@ -186,8 +189,7 @@ void AgingLog::flushData()
 	memset(lpRandomShutDownLedCache, 0, lpLedCount*color_num);
 
     time(&aging_time);
-	if (reset_ppid)
-	{
-		sprintf_s(PPID, VGA_PPID_LENGTH, "%ld", aging_time);
-	}	
+	struct tm *p = localtime(&aging_time);
+
+	sprintf_s(lpTargetFolder, _MAX_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, PPID);
 }

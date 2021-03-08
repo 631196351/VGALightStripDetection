@@ -27,7 +27,8 @@ public:
 	int g_tick = 50;
 
 
-	cv::Size frame = cv::Size(1280, 780);
+	cv::Size frame = cv::Size(640, 480);
+	int exposure = -3;	//相机曝光
 	cv::Rect rect = cv::Rect(200, 240, 900, 200);
 	
 	//char PPID[VGA_PPID_LENGTH] = { 0 };

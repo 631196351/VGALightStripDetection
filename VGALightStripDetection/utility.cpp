@@ -116,11 +116,21 @@ void resetColor(int count, BYTE r, BYTE g, BYTE b)
 
 void createPPIDFolder(const char* ppid)
 {
+	int ret = 0;
 	if (0 != _access(AgingFolder, 0))
 	{
-		_mkdir(AgingFolder);   // 返回 0 表示创建成功，-1 表示失败		
+		ret = _mkdir(AgingFolder);   // 返回 0 表示创建成功，-1 表示失败	
+		if (ret != 0)
+		{
+			printf("\ncreate %s dir fail-%ld\n", AgingFolder, GetLastError());
+		}
 	}
 	char path[128] = { 0 };
 	sprintf_s(path, 128, "%s/%s", AgingFolder, ppid);
-	_mkdir(path);
+	ret = _mkdir(path);
+	if (ret != 0)
+	{
+		printf("\ncreate %s dir fail-%ld\n", path, GetLastError());
+
+	}
 }
