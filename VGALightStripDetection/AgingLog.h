@@ -8,7 +8,7 @@ enum { Pass = 0, Fail = 1, RandomShutDownLed = -1 };
 class AgingLog
 {
 
-	char PPID[VGA_PPID_LENGTH] = { 1 };
+	char PPID[VGA_PPID_LENGTH] = { 0 };
 	char lpTargetFolder[_MAX_PATH] = { 0 };
 	int* lpLed = nullptr;
 	int* lpRandomShutDownLedCache = nullptr;

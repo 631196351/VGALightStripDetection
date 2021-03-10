@@ -31,12 +31,9 @@ ConfigData g_Config;
 
 int g_Led = BLUE;
 int g_Index = 0;
-//int g_Index222 = 0;	// 为了测试getFrame获取到的frame是否准确
 bool g_wait = false;
 int g_main_thread_exit = eNotExit;
 int g_randomShutDownLed = 0;
-//VideoCapture g_capture;
-//AgingLog* g_aging = nullptr;	// 为了在getFrame 中保存测试frame
 
 int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
@@ -99,7 +96,44 @@ void renderTrackbarThread()
 	//namedWindow("Toolkit_RGB");
 	//imshow("Toolkit_RGB", empty2);
 
-	//char buf[128] = { 0 };
+	char buf[128] = { 0 };
+
+	int thresoldC = 39;
+	int thresoldBlockSize = 101;
+	auto func_c = [](int pos, void* userdata) -> void {
+
+		int t = pos - 50;
+
+		if (g_Config.thresoldC < t && t % 2 == 0)
+		{
+			g_Config.thresoldC = t + 1;
+		}
+		else if (g_Config.thresoldC > t && t % 2 == 0)
+		{
+			g_Config.thresoldC = t - 1;
+		}
+		else
+		{
+			g_Config.thresoldC = t;
+		}
+	};
+
+	auto func_block_size = [](int pos, void* userdata) -> void {
+		if (pos < 3)
+			pos = 3;
+		if (pos % 2 == 0)
+		{
+			g_Config.thresoldBlockSize = pos + 1;
+		}
+		else
+		{
+			g_Config.thresoldBlockSize = pos;
+		}
+	};
+
+	func_c(thresoldC, NULL);
+	func_block_size(thresoldBlockSize, NULL);
+
 	while (true)
 	{
 		MainThreadIsExit;
@@ -117,8 +151,13 @@ void renderTrackbarThread()
 		//createTrackbar("lowVal", "Toolkit", &hsv.v[5], hsv.v[4]);
 		//createTrackbar("higVal", "Toolkit", &hsv.v[6], hsv.v[4]);
 		//
-		int& thresold = g_Config.bgrColorThres[g_Led];
-		createTrackbar("thresold", "Toolkit", &thresold, 255);
+		//int& thresold = g_Config.bgrColorThres[g_Led];
+		//cv::createTrackbar("thresold", "Toolkit", &thresold, 255);
+
+		cv::createTrackbar("AdaptiveThresholdArgBlockSize", "Toolkit", &thresoldBlockSize, 255, func_block_size);
+
+		cv::createTrackbar("AdaptiveThresholdArgC", "Toolkit", &thresoldC, 100, func_c);
+				
 		//
 		//hl = hsv.h[0] + hsv.h[5];
 		//sl = hsv.s[0] + hsv.s[5];
@@ -136,6 +175,12 @@ void renderTrackbarThread()
 		//
 		//sprintf_s(buf, 128, "Real High HSV (%d, %d, %d)", hh, sh, vh);
 		//putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+
+		sprintf_s(buf, 128, "AdaptiveThresholdArgBlockSize = %d", g_Config.thresoldBlockSize);
+		putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
+
+		sprintf_s(buf, 128, "AdaptiveThresholdArgC = %d", g_Config.thresoldC);
+		putText(empty, buf, Point(0, empty.rows / 4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		imshow("Toolkit", empty);
 		empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
 		
@@ -181,7 +226,7 @@ void autoGetCaptureFrame(VideoCapture& capture)
 		camera = g_frame.clone();
 		rectangle(camera, g_Config.rect, Scalar(0, 255, 255), 5);
 		imshow("camera", camera);
-
+		
 		if (cv::waitKey(33) == 0x1b)	// Esc 键
 		{
 			g_main_thread_exit = eExitWithKey;
@@ -201,14 +246,6 @@ void getSelectROI(VideoCapture& capture)
 	g_Config.saveConfigData();
 }
 
-//void getPPIDThread(AgingLog& aging)
-//{
-//	char ppid[VGA_PPID_LENGTH] = { 0 };
-//	getVGAInfo(ppid, VGA_PPID_LENGTH);
-//
-//	aging.setPPID(ppid, VGA_PPID_LENGTH);
-//}
-
 void findFrameContours(AgingLog& aging)
 {	
 	clock_t startTime0 = clock(), startTime = clock();
@@ -224,7 +261,11 @@ void findFrameContours(AgingLog& aging)
 			int currentColor = g_Led;
 			int currentIndex = g_Index;
 			printf("\ncurrentColor = %d, currentIndex = %d\n", currentColor, currentIndex);
-			
+			if (currentColor == g_Config.startColor && currentIndex == 0)
+			{
+				createPPIDFolder(aging.targetFolder());
+			}
+
 			{				
 				Mat original_frame, frame, mask, back;
 
@@ -240,115 +281,44 @@ void findFrameContours(AgingLog& aging)
 					printf("current frame empty !\n");
 					return;
 				}
-								
-				//int lowhsv[3] = { 0 };
-				//int highsv[3] = { 0 };
 
 				DebugMode(imshow("original_frame", frame));
 				DebugMode(imshow("background", back));
+				{
+					char name[_MAX_PATH] = { 0 };
+					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_original.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
+					imwrite(name, original_frame);
+
+					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_background.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
+					imwrite(name, back);
+				}
 				
-				if (currentColor == WHITE)
-				{
-					std::vector<Mat> frame_bgrs, back_bgrs;
-					Mat frame_gray, back_gray, temp;
-					if (currentColor == WHITE) {
-						cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
-						cvtColor(back, back_gray, COLOR_BGR2GRAY);
-					}
-					else
-					{				
-						// b-> t=130
-						// g-> t=70
-						// r-> t=70
-						// w-> t=70
-						split(frame, frame_bgrs);
-						split(back, back_bgrs);
-						frame_gray = frame_bgrs[currentColor];
-						back_gray = back_bgrs[currentColor];
-					}
-
-					bitwise_xor(frame_gray, back_gray, temp);	// 取出两幅图所有的不同点，记为temp集合
-					DebugMode(imshow("bitwise_xor", temp));
-					IfDebugMode
-					{
-						char name[_MAX_PATH] = { 0 };
-						sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_bitwise_xor.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
-						imwrite(name, temp);
-					}
-
-					//在 temp 集合中找ROI部分的点
-					bitwise_and(frame_gray, temp, mask);
-					DebugMode(imshow("bitwise_and", mask));
-					IfDebugMode
-					{
-						char name[_MAX_PATH] = { 0 };
-						sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_bitwise_and.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
-						imwrite(name, mask);
-					}
-
-					medianBlur(mask, mask, 3);
-
-					threshold(mask, mask, g_Config.bgrColorThres[currentColor], 255, THRESH_TOZERO);
+				std::vector<Mat> frame_bgrs, back_bgrs;
+				Mat frame_gray, back_gray, temp;
+				if (currentColor == WHITE) {
+					cv::cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
+					cv::cvtColor(back, back_gray, COLOR_BGR2GRAY);
 				}
-				else 
+				else
 				{
-					for (int i = 0; i < frame.rows; i++)
-					{
-						for (int j = 0; j < frame.cols; j++)
-						{
-							const uchar* lpback = back.ptr<uchar>(i, j);
-							uchar* lpframe = frame.ptr<uchar>(i, j);
-
-							switch (currentColor)
-							{
-							case RED:
-								if ((lpframe[2] - lpback[2] < g_Config.bgrColorThres[currentColor]))
-								{
-									lpframe[0] = lpframe[1] = lpframe[2] = 0;
-								}
-								break;
-							case GREEN:
-								if ((lpframe[1] - lpback[1] < g_Config.bgrColorThres[currentColor]))
-								{
-									lpframe[0] = lpframe[1] = lpframe[2] = 0;
-								}
-								break;
-							case BLUE:
-								if ((lpframe[0] - lpback[0] < g_Config.bgrColorThres[currentColor]))
-								{
-									lpframe[0] = lpframe[1] = lpframe[2] = 0;
-								}
-								break;
-							}
-						}
-					}
-
-					printf("3--------------%d\n", clock() - startTime);
-					startTime = clock();
-
-					//const HsvColor& hsv = g_Config.hsvColor[currentColor];
-					//lowhsv[0] = hsv.h[0] + hsv.h[5];
-					//lowhsv[1] = hsv.s[0] + hsv.s[5];
-					//lowhsv[2] = hsv.v[0] + hsv.v[5];
-					//
-					//highsv[0] = hsv.h[0] + hsv.h[6];
-					//highsv[1] = hsv.s[0] + hsv.s[6];
-					//highsv[2] = hsv.v[0] + hsv.v[6];
-
-					//均值滤波
-					medianBlur(frame, frame, 3);
-					cvtColor(frame, mask, COLOR_BGR2GRAY);
-					
-					//printf("4--------------%d\n", clock() - startTime);
-					//startTime = clock();
-					//
-					//cvtColor(frame, frame, COLOR_BGR2HSV);
-					//inRange(frame, Scalar(lowhsv[0], lowhsv[1], lowhsv[2]), Scalar(highsv[0], highsv[1], highsv[2]), mask);
-					//
-					//printf("5--------------%d\n", clock() - startTime);
-					//startTime = clock();
+					split(frame, frame_bgrs);
+					split(back, back_bgrs);
+					frame_gray = frame_bgrs[currentColor];
+					back_gray = back_bgrs[currentColor];
 				}
+				subtract(frame_gray, back_gray, mask);
 
+				//cv::threshold(mask, mask, 0, 255, THRESH_BINARY | THRESH_OTSU);
+				cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, g_Config.thresoldBlockSize, g_Config.thresoldC);
+
+				//GaussianBlur(mask, mask, Size(5, 5), 0);
+
+				//形态学处理
+				Mat kernel = getStructuringElement(MORPH_CROSS, Size(3, 3));
+				morphologyEx(mask, mask, MORPH_OPEN, kernel);
+
+				cv::medianBlur(mask, mask, 3);
+			
 				DebugMode(imshow("mask", mask));
 				{
 					char name[_MAX_PATH] = { 0 };
@@ -415,11 +385,6 @@ void findFrameContours(AgingLog& aging)
 								t = j;
 							}
 						}
-
-						//printf("\ncontours2-[x:%d, y:%d, w:%d, h:%d]-----[x:%d, y:%d, w:%d, h:%d]------gap:%d------min_gap:%d\n"
-						//	, rect.x, rect.y, rect.width, rect.height
-						//	, boundRect[j].x, boundRect[j].y, boundRect[j].width, boundRect[j].height
-						//	, gap, min_gap);
 					}
 
 					// 同距离自己最近的轮廓进行合并， 都离的远就自成一家
@@ -427,12 +392,7 @@ void findFrameContours(AgingLog& aging)
 					{
 						Rect r = boundRect[t];
 						boundRect[t] |= rect;
-						//printf("\ncontours3-[x:%d, y:%d, w:%d, h:%d]-----[x:%d, y:%d, w:%d, h:%d]------min_gap:%d------t_index%d\n"
-						//	, rect.x, rect.y, rect.width, rect.height
-						//	, r.x, r.y, r.width, r.height
-						//	, min_gap, t);
 						rect = Rect();
-
 					}
 				}
 								
@@ -463,7 +423,6 @@ void findFrameContours(AgingLog& aging)
 					aging.setSingleLedResult(currentIndex, currentColor, Fail);
 				}
 
-				//printf("\nrandomShutDownLed3--------------%02d%02d-%d\n", currentColor, currentIndex, g_randomShutDownLed);
 				aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, (g_randomShutDownLed < g_Config.randomShutDownLed) ? RandomShutDownLed : Pass);
 
 				{
@@ -487,6 +446,9 @@ void findFrameContours(AgingLog& aging)
 int main()
 {
 	initVGA();
+
+	// 避免亮光影响相机初始化
+	resetColor(g_Config.ledCount, 0, 0, 0);
 
 	VideoCapture capture;
 	do
@@ -535,9 +497,7 @@ int main()
 		g_Config.agingTime--;
 		// 关闭所有灯
 		resetColor(g_Config.ledCount, 0, 0, 0);
-
-		createPPIDFolder(aging.targetFolder());
-
+		
 		MainThreadIsExit;
 		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
 		{
@@ -549,20 +509,12 @@ int main()
 				MainThreadIsExit;
 
 				startTime1 = clock();
-
+				
 				setSignleColor(colorNum[index], 0, 0, 0);
 				Sleep(g_Config.intervalTime);
 				printf("\nget_background_frame--------------\n");
 				getFrame(internal_back);
-
-				DebugMode(imshow("background", internal_back));
-				DebugMode(waitKey(1));
-				{
-					char name[_MAX_PATH] = { 0 };
-					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_back.png", AgingFolder, aging.targetFolder(), color, index);
-					imwrite(name, internal_back);
-				}
-
+				
 				int r = rng.uniform(0, 255);
 				if (r >= g_Config.randomShutDownLed)
 				{
@@ -586,6 +538,7 @@ int main()
 				printf("\nsetSignleColor--------------\n");
 
 				Sleep(g_Config.intervalTime);
+				
 				g_set_led_mutex.lock();
 				g_Index = index;
 				g_wait = true;
@@ -595,7 +548,18 @@ int main()
 				printf("\nindex = %d, g_Led = %d, time =%d\n", index, g_Led, clock() - startTime1);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
-			}
+
+				// 让上一轮测试结果显示一会再关闭
+				destroyWindow("final_result");
+			}	
+
+		}
+
+		resetColor(g_Config.ledCount, 0, 0, 0);
+
+		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
+		{
+			MainThreadIsExit;
 			// 一个轮回保存一个灯色
 			if (1)
 			{
@@ -629,12 +593,18 @@ int main()
 				resetColor(g_Config.ledCount, 0, 0, 0);
 				Sleep(g_Config.intervalTime);
 			}
-
 		}
 
 		{
 			Mat fr = Mat::zeros(g_Config.frame, CV_8UC3);
-			putText(fr, aging.allLedIsOK() == Pass ? "PASS" : "FAIL", Point(0, fr.rows), FONT_HERSHEY_SIMPLEX, fr.cols / 100, Scalar(0, 255, 255), 5);
+			if (aging.allLedIsOK() == Pass)
+			{
+				putText(fr, "PASS", Point(0, fr.rows/2), FONT_HERSHEY_SIMPLEX, fr.cols / 100, Scalar(0, 255, 255), 5);
+			}
+			else
+			{
+				putText(fr, "FAIL", Point(0, fr.rows/2), FONT_HERSHEY_SIMPLEX, fr.cols / 100, Scalar(0, 255, 255), 5);
+			}
 			int sw = GetSystemMetrics(SM_CXSCREEN);
 			int sh = GetSystemMetrics(SM_CYSCREEN);
 			namedWindow("final_result");
@@ -659,6 +629,7 @@ int main()
 	printf("\nall time ==== %d\n", clock() - startTime);
 
 	// 只有在任务完成且关机时间>=0时才会自动关机
+	// 通过Esc按键退出时不关机
 	if (g_Config.shutdownTime >= 0 && g_main_thread_exit ==  eExit)
 	{
 		char shutdown[128] = { 0 };
@@ -669,57 +640,3 @@ int main()
 	return 0;
 }
 
-
-int main899874()
-{
-	int w = 640;
-	int h = 480;
-	VideoCapture capture(1);
-	//capture.set(CAP_PROP_FPS, 30);
-	capture.set(CAP_PROP_FRAME_WIDTH, w);
-	capture.set(CAP_PROP_FRAME_HEIGHT, h);
-
-	Mat frame ;
-
-	int i = 0;
-	int j = 0;
-	int k = 0;
-
-	clock_t t = clock();
-	while (true)
-	{
-		capture.read(frame);
-		imshow("frame", frame);
-		if (waitKey(33) == 0x1b) { break; }// Esc 键
-		if ((clock() - t) > 10000)	// 跑10s
-			break;
-	}
-
-	t = clock();
-	while (true)
-	{
-		clock_t t3 = clock();
-		capture.read(frame);
-		printf("\ntest--------------%d\n", clock() - t3);
-
-		imshow("frame", frame);
-
-		if (waitKey(33) == 0x1b) { break; }// Esc 键
-		
-		if (true) {
-			clock_t t2 = clock();
-			char name[128] = { 0 };
-			sprintf_s(name, 128, "aging_rect_image/test/%d_%d.jpg", i, clock());
-			printf("\ngetFrame5--------------%d\n", clock() - t2);
-			t2 = clock();
-			imwrite(name, frame);
-			printf("\ngetFrame6--------------%d\n", clock() - t2);
-		}
-
-		if ((clock() - t) > 20000)
-			break;
-	}
-
-	printf("k - %d, i - %d, j - %d\n", k, i, j);
-	return 0; 
-}

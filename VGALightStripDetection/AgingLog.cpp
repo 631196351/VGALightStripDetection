@@ -150,35 +150,68 @@ void AgingLog::saveAgingLog()
 
 int AgingLog::thisLedIsOK(int color)
 {
-	int r = 0;
+	int r1 = 0, r2 = 0;
 	int i = lpLedCount * (color);
 	int j = lpLedCount * (color + 1);
 	for (; i < j; i++)
 	{
-		r += abs(lpLed[i]);
+		// 随机灭灯的结果同实际测出来的结果不匹配， 发生了误判
+		//if (lpLed[i] != abs(lpRandomShutDownLedCache[i]))
+		//{
+		//	return Fail;
+		//}
 
-		if (lpLed[i] != abs(lpRandomShutDownLedCache[i]))
-		{
-			return Fail;
-		}
+		// 随机灭灯结果要实际测试结果相抵为0，才算pass
+		// 若r != 0, 即产生误判
+		// r < 0, 本应该判定灭灯却误判成亮灯
+		// r > 0, 未灭灯却判定灭灯，即轮廓不足， 导致误判成灭灯
+		//r += (lpLed[i] + lpRandomShutDownLedCache[i]);
+
+		r1 += lpLed[i];
+		r2 += lpRandomShutDownLedCache[i];
 	}
 
-	return (r > 0 ? Fail : Pass);
+#ifdef DEBUG
+	if (r1 > 0 || r2 < 0)
+		return Fail;
+	return Pass;
+#else
+	if (r1 > 0)
+		return Fail;
+	return Pass;
+#endif
+
 }
 
 int AgingLog::allLedIsOK()
 {
-	int r = 0;
+	int r1 = 0, r2 = 0;
 	for (int i = 0; i < lpLedCount * color_num; i++)
 	{
-		r += abs(lpLed[i]);
-		if (lpLed[i] != abs(lpRandomShutDownLedCache[i]))
-		{
-			return Fail;
-		}
-	}
+		r1 += lpLed[i];
+		r2 += lpRandomShutDownLedCache[i];
+		// 随机灭灯的结果同实际测出来的结果不匹配， 发生了误判
+		//if (lpLed[i] != abs(lpRandomShutDownLedCache[i]))
+		//{
+		//	return Fail;
+		//}
 
-	return (r > 0 ? Fail : Pass);
+		// 随机灭灯结果要实际测试结果相抵为0，才算pass
+		// 若r != 0, 即产生误判
+		// r < 0, 本应该判定灭灯却误判成亮灯
+		// r > 0, 未灭灯却判定灭灯，即轮廓不足， 导致误判成灭灯
+		//r += (lpLed[i] + lpRandomShutDownLedCache[i]);
+	}
+#ifdef DEBUG
+	if (r1 > 0 || r2 < 0)
+		return Fail;
+	return Pass;
+#else
+	if (r1 > 0)
+		return Fail;
+	return Pass;
+#endif
+	
 }
 
 void AgingLog::flushData()

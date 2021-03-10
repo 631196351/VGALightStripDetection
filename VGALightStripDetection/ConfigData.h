@@ -31,7 +31,6 @@ public:
 	int exposure = -3;	//相机曝光
 	cv::Rect rect = cv::Rect(200, 240, 900, 200);
 	
-	//char PPID[VGA_PPID_LENGTH] = { 0 };
 	int bgrColorThres[AllColor];
 	HsvColor hsvColor[AllColor];
 
@@ -40,9 +39,11 @@ public:
 
 	/*************** Aging Setting ***************/
 	bool showTrackBarWnd = true;
-	//bool agingSettingSaveRectImages = true;
 	unsigned agingTime = 1;
 	int randomShutDownLed = 200;// 随机灭灯
 	int shutdownTime = 0;   //自动关机延时
 
+	int thresoldBlockSize = 101;
+	int thresoldC = -9;
+	
 };

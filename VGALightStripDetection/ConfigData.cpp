@@ -43,6 +43,8 @@ void ConfigData::saveConfigData()
 	SPRINTF(resetRect); WritePrivateProfileString(L"AgingSetting", L"ResetRectFrame", d, lpPath);
     SPRINTF(randomShutDownLed); WritePrivateProfileString(L"AgingSetting", L"RandomShutDownLedNum", d, lpPath);
 	SPRINTF(shutdownTime); WritePrivateProfileString(L"AgingSetting", L"ShutDownDelayTime", d, lpPath);
+	SPRINTF(thresoldBlockSize);  WritePrivateProfileString(L"AgingSetting", L"AdaptiveThresholdArgBlockSize", d, lpPath);
+	SPRINTF(thresoldC);  WritePrivateProfileString(L"AgingSetting", L"AdaptiveThresholdArgC", d, lpPath);
 
 
 	//[LED]
@@ -125,6 +127,8 @@ void ConfigData::readConfigFile()
 	resetRect = GetPrivateProfileInt(L"AgingSetting", L"ResetRectFrame", 0, lpPath);
     randomShutDownLed = GetPrivateProfileInt(L"AgingSetting", L"RandomShutDownLedNum", 200, lpPath);
 	shutdownTime = GetPrivateProfileInt(L"AgingSetting", L"ShutDownDelayTime", 0, lpPath);
+	thresoldBlockSize = GetPrivateProfileInt(L"AgingSetting", L"AdaptiveThresholdArgBlockSize", 101, lpPath);
+	thresoldC = GetPrivateProfileInt(L"AgingSetting", L"AdaptiveThresholdArgC", -9, lpPath);
 
 	//[LED]
 	ledCount = GetPrivateProfileInt(L"LED", L"Count", 22, lpPath);
