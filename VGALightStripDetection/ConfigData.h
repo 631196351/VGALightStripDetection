@@ -29,7 +29,8 @@ public:
 	int exposure = -5;	//相机曝光
 	cv::Rect rect = cv::Rect(200, 240, 900, 200);
 	
-	int bgrColorThres[AllColor];
+	int bgrColorThres[AllColor] = {50, 50, 50, 50};
+	double bgrColorPercentage[AllColor] = {0.45, 0.45, 0.45, 0.45};
 	HsvColor hsvColor[AllColor];
 
 	LEDColor startColor = BLUE;

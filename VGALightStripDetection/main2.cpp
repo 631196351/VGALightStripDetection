@@ -6,7 +6,7 @@
 #include <thread>
 #include <mutex>
 #include <fstream>
-//#include <spdlog/spdlog.h>
+#include <spdlog/spdlog.h>
 
 #include "ConfigData.h"
 //#include "main.h"
@@ -17,7 +17,7 @@
 
 using namespace cv;
 using namespace std;
-//using namespace spdlog;
+using namespace spdlog;
 
 #define DebugMode(oper) if(g_Config.debugMode == true){oper;};
 #define IfDebugMode if(g_Config.debugMode == true)
@@ -38,6 +38,8 @@ bool g_wait = false;
 int g_main_thread_exit = eNotExit;
 int g_randomShutDownLed = 0;
 int g_recheckFaileLedTime = 0;
+spdlog::logger g_logger("multi_sink");
+
 
 int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
@@ -278,7 +280,7 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 		{
 			double d = b / (b + g + r);
 			// 亮bule时，b通道要占多数，其他情况一律抹掉该轮廓
-			if (b > 50.0 && b > g && b > r && d > 0.45) {
+			if (b > g_Config.bgrColorThres[BLUE] && b > g && b > r && d > g_Config.bgrColorPercentage[BLUE]) {
 				colorCorrect = true;
 			}
 			else if ((1.0 - d) < 0.02) {
@@ -293,7 +295,7 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 		{
 			double d = g / (b + g + r);
 
-			if (g > 50.0 && g > b && g > r && d > 0.45) {
+			if (g > g_Config.bgrColorThres[GREEN] && g > b && g > r && d > g_Config.bgrColorPercentage[GREEN]) {
 				colorCorrect = true;
 			}
 			else if ((1.0 - d) < 0.02) {
@@ -306,7 +308,7 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 		else if (currentColor == RED)
 		{
 			double d = r / (b + g + r);
-			if (r > 50.0 && r > b && r > g && d > 0.45) {
+			if (r > g_Config.bgrColorThres[RED] && r > b && r > g && d > g_Config.bgrColorPercentage[RED]) {
 				colorCorrect = true;
 			}
 			else if ((1.0 - d) < 0.02) {
@@ -720,9 +722,25 @@ void saveSingleColorResult(AgingLog& aging)
 	}
 }
 
+#if _SPDLOG
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
+void initSpdlog()
+{
+	auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+	console_sink->set_level(spdlog::level::warn);
+	console_sink->set_pattern("[multi_sink_example] [%^%l%$] %v");
+
+	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/multisink.txt", true);
+	file_sink->set_level(spdlog::level::trace);
+
+	g_logger.sinks() = std::vector<sink_ptr>({ console_sink, file_sink });
+}
+#endif
+
 int main()
 {
-	printf("\n-------------version 20210315-------------\n");
+	printf("\n-------------version 0.2.0.1-------------\n");
 	initVGA();
 
 	// 避免亮光影响相机初始化

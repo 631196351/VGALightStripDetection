@@ -60,6 +60,11 @@ void ConfigData::saveConfigData()
 	SPRINTF(bgrColorThres[RED]); WritePrivateProfileString(L"ThresholdR", L"t", d, lpPath);
 	SPRINTF(bgrColorThres[WHITE]); WritePrivateProfileString(L"ThresholdW", L"t", d, lpPath);
 
+	SPRINTF((int)(bgrColorPercentage[BLUE] * 100)); WritePrivateProfileString(L"ThresholdB", L"p", d, lpPath);
+	SPRINTF((int)(bgrColorPercentage[GREEN] * 100)); WritePrivateProfileString(L"ThresholdG", L"p", d, lpPath);
+	SPRINTF((int)(bgrColorPercentage[RED] * 100)); WritePrivateProfileString(L"ThresholdR", L"p", d, lpPath);
+	SPRINTF((int)(bgrColorPercentage[WHITE] * 100)); WritePrivateProfileString(L"ThresholdW", L"p", d, lpPath);
+
 	//[RedThreshold]
 	//{156, 180, 159, 180, 43, 255, 149, 255, 46, 255, 148, 255} // Red
 	SPRINTF(hsvColor[RED].h[2]); WritePrivateProfileString(L"RedThreshold", L"Lh", d, lpPath);
@@ -139,10 +144,15 @@ void ConfigData::readConfigFile()
 	//[TrackBarWindow]
 	showTrackBarWnd = GetPrivateProfileInt(L"TrackBarWindow", L"IsShow", showTrackBarWnd, lpPath);
 
-	bgrColorThres[BLUE] = GetPrivateProfileInt(L"ThresholdB", L"t", 150, lpPath);
-	bgrColorThres[GREEN] = GetPrivateProfileInt(L"ThresholdG", L"t", 150, lpPath);
-	bgrColorThres[RED] = GetPrivateProfileInt(L"ThresholdR", L"t", 150, lpPath);
-	bgrColorThres[WHITE] = GetPrivateProfileInt(L"ThresholdW", L"t", 50, lpPath);
+	bgrColorThres[BLUE] = GetPrivateProfileInt(L"ThresholdB", L"t", bgrColorThres[BLUE], lpPath);
+	bgrColorThres[GREEN] = GetPrivateProfileInt(L"ThresholdG", L"t", bgrColorThres[GREEN], lpPath);
+	bgrColorThres[RED] = GetPrivateProfileInt(L"ThresholdR", L"t", bgrColorThres[RED], lpPath);
+	bgrColorThres[WHITE] = GetPrivateProfileInt(L"ThresholdW", L"t", bgrColorThres[WHITE], lpPath);
+
+	bgrColorPercentage[BLUE] = GetPrivateProfileInt(L"ThresholdB", L"p", 45, lpPath) / 100.0;
+	bgrColorPercentage[GREEN] = GetPrivateProfileInt(L"ThresholdG", L"p", 45, lpPath) / 100.0;
+	bgrColorPercentage[RED] = GetPrivateProfileInt(L"ThresholdR", L"p", 45, lpPath) / 100.0;
+	bgrColorPercentage[WHITE] = GetPrivateProfileInt(L"ThresholdW", L"p", 45, lpPath) / 100.0;
 
 	//[RedThreshold]
 	//{156, 180, 159, 180, 43, 255, 149, 255, 46, 255, 148, 255} // Red
