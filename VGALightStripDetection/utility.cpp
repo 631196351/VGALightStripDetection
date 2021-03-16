@@ -79,31 +79,32 @@ void initVGA()
 
 void setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 {
+	bool result = false;
 	//Set Start Address
 	uOffset[0] = 0x81;
 	uOffset[1] = REG[led];
-	VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
 
 	uOffset[0] = 3;	//rgb size
 	uOffset[1] = r;
 	uOffset[2] = b;
 	uOffset[3] = g;
 	//(UCHAR ucAddress, UCHAR reg_address, UCHAR *rData, UINT iCardNumber, Ul32 ulDDCPort, UCHAR regSize, UCHAR DataSize, Ul32 flags)
-	VGA_WRITE_IC_I2C((BYTE)0xCE, (BYTE)0x03, (BYTE*)uOffset, 0, 1, 1, 4, 1);
+	result = VGA_WRITE_IC_I2C((BYTE)0xCE, (BYTE)0x03, (BYTE*)uOffset, 0, 1, 1, 4, 1);
 
 	uOffset[0] = 0x80;
 	uOffset[1] = 0x21;
-	VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
 
 	uOffset[0] = 0x01;
-	VGA_WRITE_IC_I2C(0xCE, 0x1, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
+	result = VGA_WRITE_IC_I2C(0xCE, 0x1, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
 
 	uOffset[0] = 0x80;
 	uOffset[1] = 0x2F;
-	VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
 
 	uOffset[0] = 0x01;
-	VGA_WRITE_IC_I2C(0xCE, 0x01, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
+	result = VGA_WRITE_IC_I2C(0xCE, 0x01, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
 }
 
 void resetColor(int count, BYTE r, BYTE g, BYTE b)

@@ -12,14 +12,17 @@ class AgingLog
 	char lpTargetFolder[_MAX_PATH] = { 0 };
 	int* lpLed = nullptr;
 	int* lpRandomShutDownLedCache = nullptr;
+	int* lpRetest = nullptr;
 	int lpLedCount = 0;
 	int startColor = 0;
 	int stopColor = 0;
 
+	bool retest = false;
+	bool randomLightDown = false;
 	std::fstream aging_file;
 
 public:
-	AgingLog(int led_count);
+	AgingLog(int led_count, bool randomLightDown = false, bool retest = false);
 	~AgingLog();
 
 	void setPPID(char* ppit, int len);
@@ -30,9 +33,17 @@ public:
 
 	void setSingleLedRandomShutDownResult(int index, int color, int result);
 
+	void setSingleLedRetestResult(int index, int color, int result);
+
+	void syncSingLedResult2RetestResult();
+
 	void saveAgingLog();
 
 	int thisLedIsOK(int color);
+
+	int getSingleLedResult(int index, int color);
+
+	int getSingleLedRetestResult(int index, int color);
 
 	int allLedIsOK();
 

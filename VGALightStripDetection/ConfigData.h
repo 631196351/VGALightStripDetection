@@ -22,13 +22,11 @@ public:
 	int ledCount = 22;
 	int ledHalfCount = ledCount / 2;
 	int intervalTime = 100;		// 灯珠亮灭的间隔时间
-	int minContoursArea = 200;
-	int minContoursSpace = 60;
-	int g_tick = 50;
-
+	int minContoursArea = 50;
+	int minContoursSpace = 50;
 
 	cv::Size frame = cv::Size(640, 480);
-	int exposure = -3;	//相机曝光
+	int exposure = -5;	//相机曝光
 	cv::Rect rect = cv::Rect(200, 240, 900, 200);
 	
 	int bgrColorThres[AllColor];
@@ -38,12 +36,13 @@ public:
 	LEDColor stopColor = AllColor;
 
 	/*************** Aging Setting ***************/
-	bool showTrackBarWnd = true;
+	bool showTrackBarWnd = false;
 	unsigned agingTime = 1;
-	int randomShutDownLed = 200;// 随机灭灯
-	int shutdownTime = 0;   //自动关机延时
+	int randomShutDownLed = 0;// 随机灭灯
+	int shutdownTime = eNotPowerOff;   //自动关机延时
 
 	int thresoldBlockSize = 101;
 	int thresoldC = -9;
 	
+	int recheckFaileLedTime = 0;	// 侦测到某个灯Faile后， 再重复测几次
 };

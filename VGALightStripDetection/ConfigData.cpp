@@ -45,7 +45,7 @@ void ConfigData::saveConfigData()
 	SPRINTF(shutdownTime); WritePrivateProfileString(L"AgingSetting", L"ShutDownDelayTime", d, lpPath);
 	SPRINTF(thresoldBlockSize);  WritePrivateProfileString(L"AgingSetting", L"AdaptiveThresholdArgBlockSize", d, lpPath);
 	SPRINTF(thresoldC);  WritePrivateProfileString(L"AgingSetting", L"AdaptiveThresholdArgC", d, lpPath);
-
+	SPRINTF(recheckFaileLedTime); WritePrivateProfileString(L"AgingSetting", L"RecheckFaileLedTime", d, lpPath);
 
 	//[LED]
 	SPRINTF(ledCount); WritePrivateProfileString(L"LED", L"Count", d, lpPath);
@@ -108,35 +108,36 @@ void ConfigData::readConfigFile()
 	exposure = GetPrivateProfileInt(L"Camera", L"Exposure", exposure, lpPath);
 
 	//[Frame]
-	frame.width = GetPrivateProfileInt(L"Frame", L"Width", 1280, lpPath);
-	frame.height = GetPrivateProfileInt(L"Frame", L"Hight", 780, lpPath);
+	frame.width = GetPrivateProfileInt(L"Frame", L"Width", frame.width, lpPath);
+	frame.height = GetPrivateProfileInt(L"Frame", L"Hight", frame.height, lpPath);
 
 	//[RectFrame]
-	rect.x = GetPrivateProfileInt(L"RectFrame", L"X", 200, lpPath);
-	rect.y = GetPrivateProfileInt(L"RectFrame", L"Y", 240, lpPath);
-	rect.width = GetPrivateProfileInt(L"RectFrame", L"Width", 900, lpPath);
-	rect.height = GetPrivateProfileInt(L"RectFrame", L"Hight", 200, lpPath);
+	rect.x = GetPrivateProfileInt(L"RectFrame", L"X", rect.x, lpPath);
+	rect.y = GetPrivateProfileInt(L"RectFrame", L"Y", rect.y, lpPath);
+	rect.width = GetPrivateProfileInt(L"RectFrame", L"Width", rect.width, lpPath);
+	rect.height = GetPrivateProfileInt(L"RectFrame", L"Hight", rect.height, lpPath);
 
 	//[AgingSetting]
-	debugMode = GetPrivateProfileInt(L"AgingSetting", L"DebugMode ", 0, lpPath);
+	debugMode = GetPrivateProfileInt(L"AgingSetting", L"DebugMode ", debugMode, lpPath);
 	//agingSettingSaveRectImages = GetPrivateProfileInt(L"AgingSetting", L"SaveRectImages ", 1, lpPath);
-	agingTime = GetPrivateProfileInt(L"AgingSetting", L"AgingTime ", 1, lpPath);
-	intervalTime = GetPrivateProfileInt(L"AgingSetting", L"IntervalTime", 100, lpPath);
-	minContoursArea = GetPrivateProfileInt(L"AgingSetting", L"MinContoursArea", 200, lpPath);
-	minContoursSpace = GetPrivateProfileInt(L"AgingSetting", L"MinContoursSpace", 60, lpPath);
-	resetRect = GetPrivateProfileInt(L"AgingSetting", L"ResetRectFrame", 0, lpPath);
-    randomShutDownLed = GetPrivateProfileInt(L"AgingSetting", L"RandomShutDownLedNum", 200, lpPath);
-	shutdownTime = GetPrivateProfileInt(L"AgingSetting", L"ShutDownDelayTime", 0, lpPath);
-	thresoldBlockSize = GetPrivateProfileInt(L"AgingSetting", L"AdaptiveThresholdArgBlockSize", 101, lpPath);
-	thresoldC = GetPrivateProfileInt(L"AgingSetting", L"AdaptiveThresholdArgC", -9, lpPath);
+	agingTime = GetPrivateProfileInt(L"AgingSetting", L"AgingTime ", agingTime, lpPath);
+	intervalTime = GetPrivateProfileInt(L"AgingSetting", L"IntervalTime", intervalTime, lpPath);
+	minContoursArea = GetPrivateProfileInt(L"AgingSetting", L"MinContoursArea", minContoursArea, lpPath);
+	minContoursSpace = GetPrivateProfileInt(L"AgingSetting", L"MinContoursSpace", minContoursSpace, lpPath);
+	resetRect = GetPrivateProfileInt(L"AgingSetting", L"ResetRectFrame", resetRect, lpPath);
+    randomShutDownLed = GetPrivateProfileInt(L"AgingSetting", L"RandomShutDownLedNum", randomShutDownLed, lpPath);
+	shutdownTime = GetPrivateProfileInt(L"AgingSetting", L"ShutDownDelayTime", shutdownTime, lpPath);
+	thresoldBlockSize = GetPrivateProfileInt(L"AgingSetting", L"AdaptiveThresholdArgBlockSize", thresoldBlockSize, lpPath);
+	thresoldC = GetPrivateProfileInt(L"AgingSetting", L"AdaptiveThresholdArgC", thresoldC, lpPath);
+	recheckFaileLedTime = GetPrivateProfileInt(L"AgingSetting", L"RecheckFaileLedTime", recheckFaileLedTime, lpPath);
 
 	//[LED]
-	ledCount = GetPrivateProfileInt(L"LED", L"Count", 22, lpPath);
-	startColor = (LEDColor)GetPrivateProfileInt(L"LED", L"StartColor", 0, lpPath);
-	stopColor = (LEDColor)GetPrivateProfileInt(L"LED", L"StopColor", 4, lpPath);
+	ledCount = GetPrivateProfileInt(L"LED", L"Count", ledCount, lpPath);
+	startColor = (LEDColor)GetPrivateProfileInt(L"LED", L"StartColor", startColor, lpPath);
+	stopColor = (LEDColor)GetPrivateProfileInt(L"LED", L"StopColor", stopColor, lpPath);
 
 	//[TrackBarWindow]
-	showTrackBarWnd = GetPrivateProfileInt(L"TrackBarWindow", L"IsShow", 1, lpPath);
+	showTrackBarWnd = GetPrivateProfileInt(L"TrackBarWindow", L"IsShow", showTrackBarWnd, lpPath);
 
 	bgrColorThres[BLUE] = GetPrivateProfileInt(L"ThresholdB", L"t", 150, lpPath);
 	bgrColorThres[GREEN] = GetPrivateProfileInt(L"ThresholdG", L"t", 150, lpPath);

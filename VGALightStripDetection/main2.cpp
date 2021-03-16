@@ -1,3 +1,4 @@
+#if 1
 #include <opencv2/opencv.hpp>
 #include <stdio.h>
 #include <vector>
@@ -5,6 +6,7 @@
 #include <thread>
 #include <mutex>
 #include <fstream>
+//#include <spdlog/spdlog.h>
 
 #include "ConfigData.h"
 //#include "main.h"
@@ -15,6 +17,7 @@
 
 using namespace cv;
 using namespace std;
+//using namespace spdlog;
 
 #define DebugMode(oper) if(g_Config.debugMode == true){oper;};
 #define IfDebugMode if(g_Config.debugMode == true)
@@ -34,6 +37,7 @@ int g_Index = 0;
 bool g_wait = false;
 int g_main_thread_exit = eNotExit;
 int g_randomShutDownLed = 0;
+int g_recheckFaileLedTime = 0;
 
 int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
@@ -79,6 +83,15 @@ int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 	}
 
 	return min_dist;
+}
+
+void saveDebugROIImg(Mat& f, AgingLog& aging, int currentColor, int currentIndex, const char* lpSuffix)
+{
+	char name[_MAX_PATH] = { 0 };
+
+	sprintf_s(name, _MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, aging.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
+
+	cv::imwrite(name, f);
 }
 
 void renderTrackbarThread()
@@ -157,8 +170,8 @@ void renderTrackbarThread()
 		cv::createTrackbar("AdaptiveThresholdArgBlockSize", "Toolkit", &thresoldBlockSize, 255, func_block_size);
 
 		cv::createTrackbar("AdaptiveThresholdArgC", "Toolkit", &thresoldC, 100, func_c);
-				
-		//
+		
+		
 		//hl = hsv.h[0] + hsv.h[5];
 		//sl = hsv.s[0] + hsv.s[5];
 		//vl = hsv.v[0] + hsv.v[5];
@@ -193,22 +206,10 @@ void getFrame(Mat& f)
 	for (int i = 0; i < 4; i++) 
 	{
 		cv::waitKey(33);
-
 		g_get_frame_mutex.lock();
 		f = g_frame.clone();
 		g_get_frame_mutex.unlock();
-
 		f = f(g_Config.rect);
-
-		/*{
-			clock_t t2 = clock();
-			char name[128] = { 0 };
-			sprintf_s(name, 128, "%s/%s/%02d%02d_getFrame_%d.jpg", AgingFolder, g_aging->ppid(), g_Led, g_Index222, clock());
-			printf("\ngetFrame5--------------%d\n", clock() - t2);
-			t2 = clock();
-			imwrite(name, f);
-			printf("\ngetFrame6--------------%d\n", clock() - t2);
-		}*/
 	}
 }
 
@@ -246,9 +247,89 @@ void getSelectROI(VideoCapture& capture)
 	g_Config.saveConfigData();
 }
 
+void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vector<vector<Point> >& contours, vector<Rect>& boundRect)
+{
+	//std::vector<double> b_means, g_means, r_means;
+	for (int index = 0; index < contours.size(); index++)
+	{
+		// 生成最小包围矩形
+		vector<Point> contours_poly;
+		approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
+		Rect rect = boundingRect(contours_poly);
+
+		// 轮廓面积校验
+		if (rect.area() < g_Config.minContoursArea)
+			continue;
+
+		// 校验轮廓颜色
+		Mat mask_cell = mask(rect).clone();
+		Mat frame_cell = frame(rect).clone();
+		
+		// 计算各通道均值
+		bool colorCorrect = false;
+		Scalar means;
+		means = mean(frame_cell, mask_cell);
+
+		double b = means[0];
+		double g = means[1];
+		double r = means[2];
+
+		if (currentColor == BLUE)
+		{
+			double d = b / (b + g + r);
+			// 亮bule时，b通道要占多数，其他情况一律抹掉该轮廓
+			if (b > 50.0 && b > g && b > r && d > 0.45) {
+				colorCorrect = true;
+			}
+			else if ((1.0 - d) < 0.02) {
+				// b 通道独占80%，即便是亮度很低的情况下也近乎纯蓝色
+				colorCorrect = true;
+			}
+			else {
+				rect = Rect();
+			}
+		}
+		else if (currentColor == GREEN)
+		{
+			double d = g / (b + g + r);
+
+			if (g > 50.0 && g > b && g > r && d > 0.45) {
+				colorCorrect = true;
+			}
+			else if ((1.0 - d) < 0.02) {
+				colorCorrect = true;
+			}
+			else {
+				rect = Rect();
+			}
+		}
+		else if (currentColor == RED)
+		{
+			double d = r / (b + g + r);
+			if (r > 50.0 && r > b && r > g && d > 0.45) {
+				colorCorrect = true;
+			}
+			else if ((1.0 - d) < 0.02) {
+				colorCorrect = true;
+			}
+			else {
+				rect = Rect();
+			}
+		}
+
+		if (colorCorrect)
+		{
+			boundRect.push_back(rect);
+			// 绘制各自小轮廓
+			Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
+			drawContours(result, contours, index, color, 1);
+		}
+	}
+}
+
 void findFrameContours(AgingLog& aging)
 {	
-	clock_t startTime0 = clock(), startTime = clock();
+	clock_t startTime = clock();
 	while (true)
 	{
 		MainThreadIsExit;
@@ -256,7 +337,7 @@ void findFrameContours(AgingLog& aging)
 		g_set_led_mutex.lock();
 		if(g_wait)
 		{
-			startTime0 = clock(), startTime = clock();
+			startTime = clock();
 
 			int currentColor = g_Led;
 			int currentIndex = g_Index;
@@ -266,15 +347,12 @@ void findFrameContours(AgingLog& aging)
 				createPPIDFolder(aging.targetFolder());
 			}
 
-			{				
+			{
 				Mat original_frame, frame, mask, back;
 
 				original_frame = g_current_frame.clone();
 				frame = original_frame.clone();
 				back = g_background_frame.clone();
-				
-				printf("\n2--------------%d\n", clock() - startTime);
-				startTime = clock();
 
 				if (original_frame.empty())
 				{
@@ -285,14 +363,11 @@ void findFrameContours(AgingLog& aging)
 				DebugMode(imshow("original_frame", frame));
 				DebugMode(imshow("background", back));
 				{
-					char name[_MAX_PATH] = { 0 };
-					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_original.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
-					imwrite(name, original_frame);
+					saveDebugROIImg(original_frame, aging, currentColor, currentIndex, "original");
 
-					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_background.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
-					imwrite(name, back);
+					saveDebugROIImg(back, aging, currentColor, currentIndex, "background");
 				}
-				
+
 				std::vector<Mat> frame_bgrs, back_bgrs;
 				Mat frame_gray, back_gray, temp;
 				if (currentColor == WHITE) {
@@ -318,42 +393,24 @@ void findFrameContours(AgingLog& aging)
 				morphologyEx(mask, mask, MORPH_OPEN, kernel);
 
 				cv::medianBlur(mask, mask, 3);
-			
+
 				DebugMode(imshow("mask", mask));
 				{
-					char name[_MAX_PATH] = { 0 };
-					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_mask.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
-					imwrite(name, mask);
+					saveDebugROIImg(mask, aging, currentColor, currentIndex, "mask");
 				}
 
 				//存储边缘
 				vector<vector<Point> > contours;
+				vector<Rect> boundRect;
 				vector<Vec4i> hierarchy;
+				Mat result = Mat::zeros(frame.size(), frame.type());
 				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
 
-				Mat result = Mat::zeros(original_frame.size(), original_frame.type());
-				vector<Rect> boundRect;
-				for (int index = 0; index < contours.size(); index++)
-				{
-					// 生成最小包围矩形
-					vector<Point> contours_poly;
-					approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
-					Rect rect = boundingRect(contours_poly);
-
-					if (rect.area() >= g_Config.minContoursArea) {
-						boundRect.push_back(rect);
-
-						// 绘制各自小轮廓
-						Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
-						drawContours(result, contours, index, color, 1);
-					}
-				}
+				checkContoursColor(frame, mask, result, currentColor, contours, boundRect);
 
 				DebugMode(imshow("contours", result));
 				{
-					char name[_MAX_PATH] = { 0 };
-					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_contours.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
-					imwrite(name, result);
+					saveDebugROIImg(result, aging, currentColor, currentIndex, "contours");
 				}
 
 				for (int i = 0; i < boundRect.size(); i++)
@@ -395,7 +452,14 @@ void findFrameContours(AgingLog& aging)
 						rect = Rect();
 					}
 				}
-								
+
+
+				for (auto it = boundRect.begin(); it != boundRect.end();)
+				{
+					if (it->area() == 0) { it = boundRect.erase(it); }
+					else { it++; }
+				}
+
 				//得到灯的轮廓
 				size_t unqualified_rect = 0;
 				for (int index = 0; index < boundRect.size(); index++)
@@ -403,13 +467,17 @@ void findFrameContours(AgingLog& aging)
 					const Rect& r = boundRect[index];
 					if (r.area() == 0)
 						continue;
-					printf("\ncontours4-[x:%d, y:%d, w:%d, h:%d, area:%d]\n", r.x, r.y, r.width, r.height, r.area());
+					//printf("\ncontours4-[x:%d, y:%d, w:%d, h:%d, area:%d]\n", r.x, r.y, r.width, r.height, r.area());
 
 					// 合并轮廓时会将被合并轮廓抹掉
 					if (r.area() > g_Config.minContoursArea)
 					{
 						rectangle(original_frame, r, Scalar(0, 255, 255), 3);
-						aging.setSingleLedResult(currentIndex, currentColor, Pass);
+						// 第一遍测试结果和复测结果分开
+						if (g_recheckFaileLedTime == 0)
+							aging.setSingleLedResult(currentIndex, currentColor, Pass);
+						else
+							aging.setSingleLedRetestResult(currentIndex, currentColor, Pass);
 					}
 					else
 					{
@@ -420,22 +488,29 @@ void findFrameContours(AgingLog& aging)
 				if (unqualified_rect == boundRect.size())
 				{
 					putText(original_frame, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
-					aging.setSingleLedResult(currentIndex, currentColor, Fail);
+					// 第一遍测试结果和复测结果分开
+					if (g_recheckFaileLedTime == 0)
+						aging.setSingleLedResult(currentIndex, currentColor, Fail);
+					else
+						aging.setSingleLedRetestResult(currentIndex, currentColor, Fail);
 				}
 
-				aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, (g_randomShutDownLed < g_Config.randomShutDownLed) ? RandomShutDownLed : Pass);
-
+				if (g_randomShutDownLed >= g_Config.randomShutDownLed)
 				{
-					char name[_MAX_PATH] = { 0 };
-					sprintf_s(name, _MAX_PATH, "%s/%s/%02d%02d_original.png", AgingFolder, aging.targetFolder(), currentColor, currentIndex);
-					imwrite(name, original_frame);
+					aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
 				}
+				else 
+				{
+					aging.setSingleLedRandomShutDownResult(currentIndex, currentColor, RandomShutDownLed);
+				}
+
+				saveDebugROIImg(original_frame, aging, currentColor, currentIndex, "result");
+
 
 				imshow("result", original_frame);
 				waitKey(1);
 
-				printf("6--------------%d\n", clock() - startTime);
-				printf("7--------------%d\n", clock() - startTime0);
+				printf("findFrameContours--------------%d\n", clock() - startTime);
 			}
 			g_wait = false;
 		}
@@ -443,8 +518,211 @@ void findFrameContours(AgingLog& aging)
 	}
 }
 
+void mainLightingControl()
+{
+	clock_t startTime = clock(), startTime1 = clock();
+	Mat internal_back;	// 暂存back
+	RNG rng(time(NULL));
+	std::vector<u8> colorNum(g_Config.ledCount);
+	for (u8 i = 1; i < g_Config.ledCount; i++)
+	{
+		colorNum[i] = i - 1;
+	}
+	colorNum[0] = g_Config.ledCount - 1;
+
+	// 关闭所有灯
+	resetColor(g_Config.ledCount, 0, 0, 0);
+
+	for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
+	{
+		MainThreadIsExit;
+		g_Led = color;
+
+		for (size_t index = 0; index < g_Config.ledCount; index++)
+		{
+			MainThreadIsExit;
+			startTime1 = clock();
+
+			setSignleColor(colorNum[index], 0, 0, 0);
+			Sleep(g_Config.intervalTime);
+			printf("\nget_background_frame--------------\n");
+			getFrame(internal_back);
+
+			int r = rng.uniform(0, 255);
+			if (r >= g_Config.randomShutDownLed)
+			{
+				if (color == RED)
+				{
+					setSignleColor(index, 255, 0, 0);
+				}
+				else if (color == GREEN)
+				{
+					setSignleColor(index, 0, 255, 0);
+				}
+				else if (color == BLUE)
+				{
+					setSignleColor(index, 0, 0, 255);
+				}
+				else if (color == WHITE)
+				{
+					setSignleColor(index, 255, 255, 255);
+				}
+			}
+			//else
+			//{
+			//	// 亮随机灯
+			//	setSignleColor(index, rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+			//}
+			printf("\nsetSignleColor--------------\n");
+
+			Sleep(g_Config.intervalTime);
+
+			g_set_led_mutex.lock();
+			g_Index = index;
+			g_wait = true;
+			getFrame(g_current_frame);
+			g_background_frame = internal_back.clone();
+			g_randomShutDownLed = r;
+			printf("\nindex = %d, g_Led = %d, time =%d\n", index, g_Led, clock() - startTime1);
+			g_set_led_mutex.unlock();
+			Sleep(10); // 让出CPU时间
+
+			// 让上一轮测试结果显示一会再关闭
+			destroyWindow("final_result");
+		}
+
+	}
+
+	resetColor(g_Config.ledCount, 0, 0, 0);
+}
+
+void checkTheFailLedAgain(AgingLog& aging)
+{
+	if (g_Config.recheckFaileLedTime <= 0)
+		return;
+	//int g_recheckFaileLedTime = g_Config.recheckFaileLedTime;
+	Mat internal_back;	// 暂存back
+	//RNG rng(time(NULL));
+	std::vector<u8> colorNum(g_Config.ledCount);
+	for (u8 i = 1; i < g_Config.ledCount; i++)
+	{
+		colorNum[i] = i - 1;
+	}
+	colorNum[0] = g_Config.ledCount - 1;
+	aging.syncSingLedResult2RetestResult();
+
+	while (g_recheckFaileLedTime <= g_Config.recheckFaileLedTime)
+	{		
+		g_set_led_mutex.lock();
+		g_recheckFaileLedTime++;
+		g_set_led_mutex.unlock();
+
+		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
+		{
+			MainThreadIsExit;
+			g_Led = color;
+
+			for (size_t index = 0; index < g_Config.ledCount; index++)
+			{
+				MainThreadIsExit;
+
+				if (aging.getSingleLedRetestResult(index, color) == Fail)
+				{
+					// 关闭所有灯
+					resetColor(g_Config.ledCount, 0, 0, 0);
+					Sleep(g_Config.intervalTime);
+					printf("\nget_background_frame--------------\n");
+					getFrame(internal_back);
+
+					//int r = rng.uniform(0, 255);
+					//if (r >= g_Config.randomShutDownLed)
+					{
+						if (color == RED)
+						{
+							setSignleColor(index, 255, 0, 0);
+						}
+						else if (color == GREEN)
+						{
+							setSignleColor(index, 0, 255, 0);
+						}
+						else if (color == BLUE)
+						{
+							setSignleColor(index, 0, 0, 255);
+						}
+						else if (color == WHITE)
+						{
+							setSignleColor(index, 255, 255, 255);
+						}
+					}
+					printf("\nsetSignleColor--------------\n");
+
+					Sleep(g_Config.intervalTime);
+
+					g_set_led_mutex.lock();
+					g_Index = index;
+					g_wait = true;
+					getFrame(g_current_frame);
+					g_background_frame = internal_back.clone();
+					g_randomShutDownLed = 0;
+					g_set_led_mutex.unlock();
+					Sleep(10); // 让出CPU时间
+
+					// 让上一轮测试结果显示一会再关闭
+					//destroyWindow("final_result");
+				}
+			}
+		}
+	}
+
+	resetColor(g_Config.ledCount, 0, 0, 0);
+	// 等最后一颗灯复测完再++, 复测完毕后还原数据，准备下一轮测试
+	g_set_led_mutex.lock();
+	g_recheckFaileLedTime = 0;
+	g_set_led_mutex.unlock();
+}
+
+void saveSingleColorResult(AgingLog& aging)
+{
+	if (1)
+	{
+		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
+		{
+			MainThreadIsExit;
+			// 一个轮回保存一个灯色
+			switch (color)
+			{
+			case BLUE:
+				resetColor(g_Config.ledCount, 0, 0, 255);
+				break;
+			case GREEN:
+				resetColor(g_Config.ledCount, 0, 255, 0);
+				break;
+			case RED:
+				resetColor(g_Config.ledCount, 255, 0, 0);
+				break;
+			case WHITE:
+				resetColor(g_Config.ledCount, 255, 255, 255);
+				break;
+			}
+
+			Sleep(g_Config.intervalTime);
+
+			Mat frame;
+			getFrame(frame);	// get current frame
+			char name[_MAX_PATH] = { 0 };
+			sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, aging.targetFolder(), color);
+			putText(frame, aging.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
+			imwrite(name, frame);
+			
+			resetColor(g_Config.ledCount, 0, 0, 0);
+			Sleep(g_Config.intervalTime);
+		}
+	}
+}
+
 int main()
 {
+	printf("\n-------------version 20210315-------------\n");
 	initVGA();
 
 	// 避免亮光影响相机初始化
@@ -464,14 +742,12 @@ int main()
 	capture.set(CAP_PROP_FRAME_HEIGHT, g_Config.frame.height);
 	capture.set(CAP_PROP_EXPOSURE, g_Config.exposure);
 
-	//g_capture = capture;
 	g_wait = false;
 	g_main_thread_exit = eNotExit;
 	std::thread t1(autoGetCaptureFrame, std::ref(capture));
 
 	// 获取PPID的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
-	AgingLog aging(g_Config.ledCount);
-	//g_aging = &aging;
+	AgingLog aging(g_Config.ledCount, g_Config.randomShutDownLed > 0, g_Config.recheckFaileLedTime > 0);
 	
 	if (g_Config.resetRect)
 		getSelectROI(capture);
@@ -479,121 +755,19 @@ int main()
 	std::thread t2(findFrameContours, std::ref(aging));
 	std::thread t3(renderTrackbarThread);
 
-	u8 *colorNum = new u8[g_Config.ledCount]{ 0 };
-	for (u8 i = 1; i < g_Config.ledCount; i++)
-	{
-		colorNum[i] = i - 1;
-	}
-	colorNum[0] = g_Config.ledCount - 1;
-	//srand((unsigned)time(NULL));
-
-	clock_t startTime = clock(), startTime1;
-	Mat internal_back;	// 暂存back
-	RNG rng(time(NULL));
 
 	while (g_Config.agingTime > 0)
 	{
 		printf("\n-------------Start Work-------------\n");
 		g_Config.agingTime--;
-		// 关闭所有灯
-		resetColor(g_Config.ledCount, 0, 0, 0);
-		
+
 		MainThreadIsExit;
-		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
-		{
-			MainThreadIsExit;
-			g_Led = color;
 
-			for (size_t index = 0; index < g_Config.ledCount; index++)
-			{
-				MainThreadIsExit;
+		mainLightingControl();
 
-				startTime1 = clock();
-				
-				setSignleColor(colorNum[index], 0, 0, 0);
-				Sleep(g_Config.intervalTime);
-				printf("\nget_background_frame--------------\n");
-				getFrame(internal_back);
-				
-				int r = rng.uniform(0, 255);
-				if (r >= g_Config.randomShutDownLed)
-				{
-					if (color == RED)
-					{
-						setSignleColor(index, 255, 0, 0);
-					}
-					else if (color == GREEN)
-					{
-						setSignleColor(index, 0, 255, 0);
-					}
-					else if (color == BLUE)
-					{
-						setSignleColor(index, 0, 0, 255);
-					}
-					else if (color == WHITE)
-					{
-						setSignleColor(index, 255, 255, 255);
-					}
-				}
-				printf("\nsetSignleColor--------------\n");
+		checkTheFailLedAgain(aging);
 
-				Sleep(g_Config.intervalTime);
-				
-				g_set_led_mutex.lock();
-				g_Index = index;
-				g_wait = true;
-				getFrame(g_current_frame);
-				g_background_frame = internal_back.clone();
-				g_randomShutDownLed = r;
-				printf("\nindex = %d, g_Led = %d, time =%d\n", index, g_Led, clock() - startTime1);
-				g_set_led_mutex.unlock();
-				Sleep(10); // 让出CPU时间
-
-				// 让上一轮测试结果显示一会再关闭
-				destroyWindow("final_result");
-			}	
-
-		}
-
-		resetColor(g_Config.ledCount, 0, 0, 0);
-
-		for (int color = g_Config.startColor; color < g_Config.stopColor; ++color)
-		{
-			MainThreadIsExit;
-			// 一个轮回保存一个灯色
-			if (1)
-			{
-				//Sleep(200); // 等工作线程把事情做完
-				switch (color)
-				{
-				case BLUE:
-					resetColor(g_Config.ledCount, 0, 0, 255);
-					break;
-				case GREEN:
-					resetColor(g_Config.ledCount, 0, 255, 0);
-					break;
-				case RED:
-					resetColor(g_Config.ledCount, 255, 0, 0);
-					break;
-				case WHITE:
-					resetColor(g_Config.ledCount, 255, 255, 255);
-					break;
-				}
-				printf("resetColor--------------%d\n", __LINE__);
-
-				Sleep(g_Config.intervalTime);
-
-				Mat frame;
-				getFrame(frame);	// get current frame
-				char name[_MAX_PATH] = { 0 };
-				sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, aging.targetFolder(), g_Led);
-				putText(frame, aging.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
-				imwrite(name, frame);
-
-				resetColor(g_Config.ledCount, 0, 0, 0);
-				Sleep(g_Config.intervalTime);
-			}
-		}
+		saveSingleColorResult(aging);
 
 		{
 			Mat fr = Mat::zeros(g_Config.frame, CV_8UC3);
@@ -624,19 +798,29 @@ int main()
 	t1.join();
 	t2.join();
 	t3.join();
-	delete[] colorNum;
-
-	printf("\nall time ==== %d\n", clock() - startTime);
 
 	// 只有在任务完成且关机时间>=0时才会自动关机
 	// 通过Esc按键退出时不关机
-	if (g_Config.shutdownTime >= 0 && g_main_thread_exit ==  eExit)
+	if (g_Config.shutdownTime >= ePowerOff && g_main_thread_exit ==  eExit)
 	{
 		char shutdown[128] = { 0 };
 		sprintf_s(shutdown, 128, "shutdown -s -t %d", g_Config.shutdownTime);
 		system(shutdown);
 	}
-	
+	else if (g_Config.shutdownTime == eReStart)
+	{
+		char shutdown[128] = { 0 };
+		sprintf_s(shutdown, 128, "shutdown -r -t 2");
+		system(shutdown);
+	}
+	else if (g_Config.shutdownTime == eNotPowerOff)
+	{
+		;
+	}
 	return 0;
 }
+#endif
 
+
+///Opencv——目标跟踪Tracker
+///https://blog.csdn.net/qq_43587345/article/details/102833753
