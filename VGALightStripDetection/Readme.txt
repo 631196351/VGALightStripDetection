@@ -30,3 +30,12 @@ Version Log
 [v2.0.0.3]
 1. 接入Spdlog日志库
 2. 解掉复测时无法保存绿色和红色的图片的bug
+
+[v2.0.0.4]
+1. 正式程序里只测1次，如果需要测试N次，用批处理进行调用
+2. (g_Config.shutdownTime >= ePowerOff && g_main_thread_exit == eExit) 这里的退出逻辑需要调整，有点问题
+    这部分现在调整为 只认 g_Config.shutdownTime 状态信息
+3. PPID 传参给main - 暂时未接
+4. 程序中添加ErrorCode，通过抛出异常来处理
+5. 自动获取灯带整体轮廓区域
+6. 开始测试后，键入 0 表示本次测试完不关机

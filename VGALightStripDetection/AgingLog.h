@@ -22,7 +22,9 @@ class AgingLog
 	std::fstream aging_file;
 
 public:
+	AgingLog();
 	AgingLog(int led_count, bool randomLightDown = false, bool retest = false);
+	void initAgingLog(int led_count, bool randomLightDown = false, bool retest = false);
 	~AgingLog();
 
 	void setPPID(char* ppit, int len);

@@ -98,6 +98,7 @@
       <ConformanceMode>false</ConformanceMode>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +145,7 @@
     <ClCompile Include="AgingLog.cpp" />
     <ClCompile Include="CommonColor.cpp" />
     <ClCompile Include="ConfigData.cpp" />
+    <ClCompile Include="ErrorCode.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main2.cpp" />
     <ClCompile Include="PreDefine.cpp" />
@@ -154,6 +156,7 @@
     <ClInclude Include="AgingLog.h" />
     <ClInclude Include="CommonColor.h" />
     <ClInclude Include="ConfigData.h" />
+    <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="nvapi.h" />
     <ClInclude Include="PreDefine.h" />

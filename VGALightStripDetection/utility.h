@@ -42,8 +42,12 @@ void initVGA();
 // 隔离硬件平台, 设置led灯光
 void setSignleColor(int led, BYTE r, BYTE g, BYTE b);
 
+void setSignleColor(int led, int color);
+
 // 重置为特定颜色
 void resetColor(int count, BYTE r, BYTE g, BYTE b);
+
+void resetColor(int count, int color);
 #endif
 
 void createPPIDFolder(const char* ppid);

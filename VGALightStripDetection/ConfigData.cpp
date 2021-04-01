@@ -205,9 +205,5 @@ void ConfigData::readConfigFile()
 void ConfigData::setROIRect(cv::Rect& r)
 {
 	/// 检查ROI区域是否超出画面宽高
-	rect = r;
-	int w = r.x + r.width;
-	int h = r.y + r.height;
-	rect.width = w > frame.width ? frame.width - r.x : r.width;
-	rect.height = h > frame.height ? frame.height - r.y : r.height;
+	rect = r & cv::Rect(0, 0, frame.width, frame.height);
 }

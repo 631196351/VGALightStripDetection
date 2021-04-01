@@ -6,7 +6,8 @@ enum LEDColor
 	GREEN,
 	RED,
 	WHITE,
-	AllColor
+	AllColor,
+	BLACK,
 };
 
 // 用来过滤像素点的阈值
@@ -24,7 +25,8 @@ enum
 {
 	eNotExit = 0,	//未侦测到退出指令
 	eExit = 1,		//执行完毕，正常退出指令
-	eExitWithKey = 2	//侦测到退出指令
+	eExitWithKey = 2,	//侦测到退出指令
+	eExitWithException = 3	// 异常退出
 };
 
 enum
@@ -33,5 +35,3 @@ enum
 	eNotPowerOff = -1,
 	eReStart = -2
 };
-
-//#define _SPDLOG_MULTIPLE_SINKS
