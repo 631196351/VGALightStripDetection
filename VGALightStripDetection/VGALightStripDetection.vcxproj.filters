@@ -42,6 +42,15 @@
     <ClCompile Include="ErrorCode.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="I2CWrap.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Minefield.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="VideoCard.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nvapi.h">
@@ -69,6 +78,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ErrorCode.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="I2CWrap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Minefield.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="VideoCard.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

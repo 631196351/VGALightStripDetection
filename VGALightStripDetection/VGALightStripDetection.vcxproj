@@ -146,9 +146,12 @@
     <ClCompile Include="CommonColor.cpp" />
     <ClCompile Include="ConfigData.cpp" />
     <ClCompile Include="ErrorCode.cpp" />
+    <ClCompile Include="I2CWrap.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main2.cpp" />
+    <ClCompile Include="Minefield.cpp" />
     <ClCompile Include="PreDefine.cpp" />
+    <ClCompile Include="VideoCard.cpp" />
     <ClCompile Include="SpdMultipleSinks.cpp" />
     <ClCompile Include="utility.cpp" />
   </ItemGroup>
@@ -157,9 +160,12 @@
     <ClInclude Include="CommonColor.h" />
     <ClInclude Include="ConfigData.h" />
     <ClInclude Include="ErrorCode.h" />
+    <ClInclude Include="I2CWrap.h" />
     <ClInclude Include="main.h" />
+    <ClInclude Include="Minefield.h" />
     <ClInclude Include="nvapi.h" />
     <ClInclude Include="PreDefine.h" />
+    <ClInclude Include="VideoCard.h" />
     <ClInclude Include="SpdMultipleSinks.h" />
     <ClInclude Include="utility.h" />
   </ItemGroup>

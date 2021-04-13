@@ -18,6 +18,8 @@ public:
 	void pushBasicFileSinkMT(const char* path);
 	void popupLastBasicFileSinkMT();
 
+	void addPPID2FileSinkMT(const char* ppid);
+
 	static SpdMultipleSinks& sinks();	
 
 private:

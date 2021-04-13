@@ -7,22 +7,22 @@
 #include "ErrorCode.h"
 
 using namespace spdlog;
-static SpdMultipleSinks g_sinks;
 
 const char* lpatten = "[%Y-%m-%d %H:%M:%S %e] [thread %t] [%^%l - %#%$] [%o] %v";
 
 SpdMultipleSinks::SpdMultipleSinks():_logger("LOG")
 {
 	auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+	_logger.sinks().push_back(console_sink);
 
 	// Create a file rotating logger with 5mb size max and 3 rotated files
-	auto rotating_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("logs/rotating.txt", 1024 * 1024 * 5, 3);
+	//auto rotating_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("logs/rotating.txt", 1024 * 1024 * 5, 3);
+	//_logger.sinks().push_back(rotating_sink);
 
+#ifdef  _DEBUG
 	auto mscv_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-
-	_logger.sinks().push_back(console_sink);
 	_logger.sinks().push_back(mscv_sink);
-	_logger.sinks().push_back(rotating_sink);
+#endif
 
 	_logger.set_pattern(lpatten);
 	_logger.set_level(spdlog::level::trace);
@@ -52,7 +52,13 @@ void SpdMultipleSinks::popupLastBasicFileSinkMT()
 	_logger.sinks().pop_back();
 }
 
+void SpdMultipleSinks::addPPID2FileSinkMT(const char* ppid)
+{
+	pushBasicFileSinkMT(ppid);
+}
+
 SpdMultipleSinks& SpdMultipleSinks::sinks()
 {
+	static SpdMultipleSinks g_sinks;
 	return g_sinks;
 }

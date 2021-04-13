@@ -16,7 +16,7 @@ enum eError
 	ERR_CANT_OPEN_CAMERA,			// 打开相机异常
 	ERR_LOAD_I2C_FAILURE,			// I2C载入异常
 	ERR_RUN_I2C_FAILURE,			// I2C执行异常
-
+	ERR_INCOMPLETE_ARGS,				// 参数不全
 
 	ERR_CRITICAL_LEVEL_1 = 2000,	// NOT Terminate AP 
 	ERR_ORIGIN_FRAME_EMPTY_EXCEPTION,	//当前帧空帧异常	

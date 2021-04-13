@@ -6,7 +6,9 @@ enum LEDColor
 	GREEN,
 	RED,
 	WHITE,
+	BGR = WHITE,
 	AllColor,
+	BGRW = AllColor,
 	BLACK,
 };
 

@@ -8,6 +8,7 @@
 #include "PreDefine.h"
 #include "SpdMultipleSinks.h"
 #include "ErrorCode.h"
+#include "I2CWrap.h"
 
 int getVGAInfo(char* ppid, size_t size)
 {
@@ -55,112 +56,6 @@ int getVGAInfo(char* ppid, size_t size)
 	return exitCode;
 }
 
-typedef int(*lpLoadVenderDLL)();
-typedef bool(*lpVGA_Read_IC_I2C)(UCHAR ucAddress, UCHAR reg_address, BYTE &rData, UINT iCardNumber, Ul32 ulDDCPort, UCHAR regSize, UCHAR DataSize, Ul32 flags);
-typedef bool(*lpVGA_Write_IC_I2C)(UCHAR ucAddress, UCHAR reg_address, UCHAR *rData, UINT iCardNumber, Ul32 ulDDCPort, UCHAR regSize, UCHAR DataSize, Ul32 flags);
-
-lpLoadVenderDLL  LOAD_VENDOR_DLL;
-lpVGA_Read_IC_I2C    VGA_READ_IC_I2C;
-lpVGA_Write_IC_I2C   VGA_WRITE_IC_I2C;
-
-// LED 灯的地址
-BYTE REG[22] = { 0x60, 0x63, 0x66, 0x69, 0x6c, 0x6f, 0x72, 0x75, 0x78, 0x7b, 0x7e
-				, 0x81, 0x84, 0x87, 0x8a, 0x8d, 0x90, 0x93, 0x96, 0x99, 0x9c, 0x9f };
-
-BYTE uOffset[12] = { 0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00 };
-
-void initVGA()
-{
-	HINSTANCE hDLL;		// Handle to DLL
-	hDLL = LoadLibrary(L"VGA_Extra_x64.dll");
-	hDLL == NULL ? throw ErrorCodeEx(ERR_LOAD_I2C_FAILURE, "Load VGA_Extra_x64.dll Failure") : (void)0;
-
-	LOAD_VENDOR_DLL = (lpLoadVenderDLL)GetProcAddress(hDLL, "LoadVenderDLL");
-	VGA_READ_IC_I2C = (lpVGA_Read_IC_I2C)GetProcAddress(hDLL, "VGA_Read_IC_I2C");
-	VGA_WRITE_IC_I2C = (lpVGA_Write_IC_I2C)GetProcAddress(hDLL, "VGA_Write_IC_I2C");
-	SPDLOG_SINKS_DEBUG("LOAD_VENDOR_DLL:{}", LOAD_VENDOR_DLL == NULL ? "NULL" : "NOT NULL");
-	SPDLOG_SINKS_DEBUG("VGA_READ_IC_I2C:{}", VGA_READ_IC_I2C == NULL ? "NULL" : "NOT NULL");
-	SPDLOG_SINKS_DEBUG("VGA_WRITE_IC_I2C:{}", VGA_WRITE_IC_I2C == NULL ? "NULL" : "NOT NULL");
-	// 载入dll
-	if (LOAD_VENDOR_DLL != NULL)
-		LOAD_VENDOR_DLL();
-	else
-		throw ErrorCodeEx(ERR_LOAD_I2C_FAILURE, "Load VGA_Extra_x64.dll Failure");
-}
-
-void setSignleColor(int led, BYTE r, BYTE g, BYTE b)
-{
-	bool result = false;
-	//Set Start Address
-	uOffset[0] = 0x81;
-	uOffset[1] = REG[led];
-	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address	
-	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
-
-	uOffset[0] = 3;	//rgb size
-	uOffset[1] = r;
-	uOffset[2] = b;
-	uOffset[3] = g;
-	//(UCHAR ucAddress, UCHAR reg_address, UCHAR *rData, UINT iCardNumber, Ul32 ulDDCPort, UCHAR regSize, UCHAR DataSize, Ul32 flags)
-	result = VGA_WRITE_IC_I2C((BYTE)0xCE, (BYTE)0x03, (BYTE*)uOffset, 0, 1, 1, 4, 1);
-	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
-
-	uOffset[0] = 0x80;
-	uOffset[1] = 0x21;
-	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
-	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
-
-	uOffset[0] = 0x01;
-	result = VGA_WRITE_IC_I2C(0xCE, 0x1, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
-	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
-
-	uOffset[0] = 0x80;
-	uOffset[1] = 0x2F;
-	result = VGA_WRITE_IC_I2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
-	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
-
-	uOffset[0] = 0x01;
-	result = VGA_WRITE_IC_I2C(0xCE, 0x01, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
-	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
-}
-
-void setSignleColor(int led, int color)
-{
-	switch (color)
-	{
-	case BLUE:
-		setSignleColor(led, 0, 0, 255);
-		break;
-	case GREEN:
-		setSignleColor(led, 0, 255, 0);
-		break;
-	case RED:
-		setSignleColor(led, 255, 0, 0);
-		break;
-	case WHITE:
-		setSignleColor(led, 255, 255, 255);
-	case BLACK:
-		setSignleColor(led, 0, 0, 0);
-		break;
-	}
-}
-
-void resetColor(int count, BYTE r, BYTE g, BYTE b)
-{
-	for (int i = 0; i < count; i++)
-	{
-		setSignleColor(i, r, g, b);
-	}
-}
-
-void resetColor(int count, int color)
-{
-	for (int i = 0; i < count; i++)
-	{
-		setSignleColor(i, color);
-	}
-}
-
 void createPPIDFolder(const char* ppid)
 {
 	int ret = 0;
@@ -182,16 +77,3 @@ void createPPIDFolder(const char* ppid)
 	}
 }
 
-void createFakePPID(char* ppid, unsigned int len)
-{
-	GUID guid;
-	CoCreateGuid(&guid);
-
-	snprintf(ppid, len, "%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X", 
-		guid.Data1, guid.Data2, guid.Data3,
-		guid.Data4[0], guid.Data4[1],
-		guid.Data4[2], guid.Data4[3],
-		guid.Data4[4], guid.Data4[5],
-		guid.Data4[6], guid.Data4[7]);
-	return;
-}
