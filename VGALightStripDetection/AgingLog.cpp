@@ -1,13 +1,15 @@
-#include "AgingLog.h"
-#include "PreDefine.h"
-#include "utility.h"
 
+#include <regex>
 #include <time.h>
 #include <io.h>
 #include <cmath>
+#include "AgingLog.h"
+#include "PreDefine.h"
+//#include "utility.h"
 #include "SpdMultipleSinks.h"
 #include "ErrorCode.h"
 #include "VideoCard.h"
+#include "ConfigData.h"
 
 #define color_num (BGR)
 
@@ -23,7 +25,7 @@ AgingLog::AgingLog()
 //	initAgingLog(led_count, randomLightDown, retest);
 //}
 
-void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
+void AgingLog::initAgingLog(int led_count, bool retest)
 {
 	try 
 	{
@@ -34,12 +36,12 @@ void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
 			std::fill_n(lpLed, led_count * color_num, Fail);
 		}
 
-		if (randomLightDown)
-		{
-			this->randomLightDown = randomLightDown;
-			lpRandomShutDownLedCache = new int[led_count * color_num];
-			std::fill_n(lpRandomShutDownLedCache, led_count * color_num, Fail);
-		}
+		//if (randomLightDown)
+		//{
+		//	this->randomLightDown = randomLightDown;
+		//	lpRandomShutDownLedCache = new int[led_count * color_num];
+		//	std::fill_n(lpRandomShutDownLedCache, led_count * color_num, Fail);
+		//}
 
 		if (retest)
 		{
@@ -48,7 +50,7 @@ void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
 			std::fill_n(lpRetest, led_count * color_num, Fail);
 		}
 
-		SPDLOG_SINKS_DEBUG("AgingLog Init led_count:{}, randomLightDown:{}, retest:{}", led_count, randomLightDown, retest);
+		SPDLOG_SINKS_DEBUG("AgingLog Init led_count:{}, retest:{}", led_count, retest);
 
 		aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
 		if (aging_file.is_open())
@@ -90,7 +92,7 @@ AgingLog& AgingLog::aging()
 
 AgingLog::~AgingLog()
 {
-	saveAgingLog();
+	//saveAgingLog();
 
 	aging_file.close();
 
@@ -185,7 +187,7 @@ void AgingLog::saveAgingLog()
 			aging_file << r << ",";
 			if (r < 0)
 			{
-				aging_file << "Failure" << std::endl;
+				aging_file << "Fail" << std::endl;
 			}
 			else
 			{
@@ -206,7 +208,7 @@ void AgingLog::saveAgingLog()
 		aging_file << r << ",";
 		if (r > 0)
 		{
-			aging_file << "Failure" << std::endl;
+			aging_file << "Fail" << std::endl;
 		}
 		else
 		{
@@ -229,7 +231,7 @@ void AgingLog::saveAgingLog()
 			aging_file << r << ",";
 			if (r > 0)
 			{
-				aging_file << "Failure" << std::endl;
+				aging_file << "Fail" << std::endl;
 			}
 			else
 			{
@@ -237,6 +239,8 @@ void AgingLog::saveAgingLog()
 			}
 			SPDLOG_SINKS_DEBUG("AgingLog Save reset PPID:{},t:{},r:{}", VideoCardIns.PPID(), t, r);
 		}
+
+		aging_file.flush();
 	}
 }
 
@@ -292,14 +296,15 @@ int AgingLog::thisLedIsOK(int color)
 
 int AgingLog::allLedIsOK()
 {
-	int r1 = 0, r2 = 0, r3 = 0;
-	for (int i = 0; i < lpLedCount * color_num; i++)
+	int r1 = 0, /*r2 = 0,*/ r3 = 0;
+	int c = lpLedCount * color_num;
+	for (int i = 0; i < c; i++)
 	{
 		r1 += lpLed[i];
-		if (randomLightDown)
-		{
-			r2 += lpRandomShutDownLedCache[i];
-		}
+		//if (randomLightDown)
+		//{
+		//	r2 += lpRandomShutDownLedCache[i];
+		//}
 
 		if (retest)
 		{
@@ -380,3 +385,69 @@ int AgingLog::getSingleLedRetestResult(int index, int color)
 //	//sprintf_s(lpTargetFolder, _MAX_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, PPID);	
 //	//SPDLOG_SINKS_DEBUG("AgingLog Create Target Folder:{}", lpTargetFolder);
 //}
+
+//设定随机灭灯状态, 设定手动关灯列表
+void AgingLog::setRandomLitOffState(int probability, std::string manualset)
+{
+	SPDLOG_SINKS_DEBUG("RandomLitOffState probability:{}, manualset:{}", probability, manualset);
+
+	if (probability > 0 && !manualset.empty())
+	{
+		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
+		throw ErrorCodeEx(ERR_COMMAND_LINE_ARGS, "Random lit-off parameter configuration is repeated");
+	}
+
+	if (probability > 0 || !manualset.empty())
+	{
+		randomLightDown = true;
+	}
+	SPDLOG_SINKS_DEBUG("RandomLitOffState randomLightDown:{}", randomLightDown);
+
+	if (randomLightDown)
+	{
+		this->randomLightDown = randomLightDown;
+		lpRandomShutDownLedCache = new int[lpLedCount * color_num];
+		std::fill_n(lpRandomShutDownLedCache, lpLedCount * color_num, Fail);
+	}
+
+	if (!manualset.empty())
+	{
+		std::regex reg(",");		// 匹配split
+		std::sregex_token_iterator pos(manualset.begin(), manualset.end(), reg, -1);
+		decltype(pos) end;              // 自动推导类型 
+		for (; pos != end; ++pos)
+		{
+			auto it = rand_set.insert(atoi(pos->str().c_str()));
+			SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led", *it.first);
+		}
+	}
+
+	// 直接在这里初始化好每颗灯的命运
+	// eg: 22颗灯里面有【3,4,7,10,15】这几颗灯会随机灭掉，BGR都会灭掉
+	if (probability > 0)
+	{
+		cv::RNG rng(time(NULL));
+		for (int i = 0; i < lpLedCount; i++)
+		{
+			int r = rng.uniform(0, 101);	//[0, 101)
+			if (r >= cfg.randomLitOffProbability())
+			{
+				auto it = rand_set.insert(i);
+				SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led", *it.first);
+			}
+		}
+	}
+}
+
+//当前灯是否需要关掉
+bool AgingLog::getThisLedLitOffState(int currentIndex)
+{
+	//手动随机灭灯情况下
+	if (rand_set.find(currentIndex) != rand_set.end())
+	{
+		SPDLOG_SINKS_DEBUG("The {}th need Lit-Off", currentIndex);
+		return false;	//此灯要随机灭灯
+	}
+	SPDLOG_SINKS_DEBUG("The {}th needn't Lit-Off", currentIndex);
+	return true;	//此灯不进行随机灭灯
+}

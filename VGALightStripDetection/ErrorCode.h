@@ -5,23 +5,24 @@
 enum eError
 {
 	ERR_All_IS_WELL,				// IT'S OK
-	ERR_SOME_LED_FAILURE,			// ����LED���޷��ҵ�����
+	ERR_SOME_LED_FAILURE,			// 部分LED灯无法找到轮廓
 	ERR_CRITICAL_LEVEL_0 = 1000,	// Terminate AP
 
 
-	ERR_STD_EXCEPTION,				// C++ ��׼�쳣
-	ERR_SPDLOG_EXCEPTION,			// Spdlog �쳣
-	ERR_OPENCV_RUNTIME_EXCEPTION,	// Opencv Runtime�쳣
+	ERR_STD_EXCEPTION,				// C++ 标准异常
+	ERR_SPDLOG_EXCEPTION,			// Spdlog 异常
+	ERR_OPENCV_RUNTIME_EXCEPTION,	// Opencv Runtime异常
 
-	ERR_CANT_OPEN_CAMERA,			// ������쳣
-	ERR_LOAD_I2C_FAILURE,			// I2C�����쳣
-	ERR_RUN_I2C_FAILURE,			// I2Cִ���쳣
-	ERR_INCOMPLETE_ARGS,				// ������ȫ
+	ERR_CANT_OPEN_CAMERA,			// 打开相机异常
+	ERR_LOAD_I2C_FAILURE,			// I2C载入异常
+	ERR_RUN_I2C_FAILURE,			// I2C执行异常
+	ERR_INCOMPLETE_ARGS,				// 参数不全
+	ERR_COMMAND_LINE_ARGS,			// 命令行参数异常
 
 	ERR_CRITICAL_LEVEL_1 = 2000,	// NOT Terminate AP 
-	ERR_ORIGIN_FRAME_EMPTY_EXCEPTION,	//��ǰ֡��֡�쳣	
-	ERR_LED_STRIPE_BLOCKED,			// �Զ���ȡROIʱ�����ֵƴ����ڵ�
-	ERR_POSTRUE_CORRECTION_ERROR,	// ������Կ�λ��ƫ�룬��Ҫ���µ�����̬
+	ERR_ORIGIN_FRAME_EMPTY_EXCEPTION,	//当前帧空帧异常	
+	ERR_LED_STRIPE_BLOCKED,			// 自动获取ROI时，发现灯带被遮挡
+	ERR_POSTRUE_CORRECTION_ERROR,	// 相机或显卡位置偏离，需要重新调整姿态
 };
 
 class ErrorCode : public std::exception

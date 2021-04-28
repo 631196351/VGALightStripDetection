@@ -107,6 +107,7 @@ void I2CWrap::setSignleColor(int led, int color)
 		break;
 	case WHITE:
 		setSignleColor(led, 255, 255, 255);
+		break;
 	case BLACK:
 		setSignleColor(led, 0, 0, 0);
 		break;

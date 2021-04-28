@@ -33,7 +33,15 @@ enum
 
 enum
 {
-	ePowerOff = 0,	
+	ePowerOff = 0,
 	eNotPowerOff = -1,
 	eReStart = -2
+};
+
+enum
+{
+	VersionMajor = 2,
+	VersionSec = 0,
+	VersionThi = 0,
+	VersionMin = 7
 };

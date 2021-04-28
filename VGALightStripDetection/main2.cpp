@@ -1,6 +1,6 @@
 #if 1
 #include <opencv2/opencv.hpp>
-#include <stdio.h>
+//#include <stdio.h>
 #include <vector>
 #include <Windows.h>
 #include <thread>
@@ -9,7 +9,7 @@
 
 #include "ConfigData.h"
 //#include "nvbase.h"
-#include "utility.h"
+//#include "utility.h"
 #include "AgingLog.h"
 #include "SpdMultipleSinks.h"
 #include "ErrorCode.h"
@@ -27,9 +27,10 @@ using namespace std;
 #define DEBUG_DETAILS false
 
 const char* argkeys =
-"{help h ?|| Print help message.}"
-"{@ppid p  |<none>| Graphics card Video: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}"
-"{@name n  |<none>| Graphics card Name: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}";
+"{help h ?|<none>| Print help message.}"
+"{@ppid p  |<none>| Video card PPID: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}"
+"{@name n  |<none>| Video card Name: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}"
+"{lit-off lo|| Manually lit off the lights randomly eg: --lo='1,2,3,4,5'}";
 
 //Mat g_frame;
 Mat g_current_frame;
@@ -39,16 +40,12 @@ VideoCapture capture;
 //std::mutex g_get_frame_mutex;
 std::mutex g_set_led_mutex;
 
-//ConfigData cfg;
-//std::fstream aging_hander;
-//bool aging_hander_switch = false;
-
 int g_Led = BLUE;
 int g_Index = 0;
 bool g_wait = false;
 bool g_wait_capture = false;
 int g_main_thread_exit = eNotExit;
-int g_randomShutDownLed = 0;
+//int g_randomShutDownLed = 0;
 int g_recheckFaileLedTime = 0;
 ErrorCode g_error = ErrorCode(ERR_All_IS_WELL, "All is well");
 
@@ -120,6 +117,7 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 		throw e;
 	}
 }
+
 #if false
 void renderTrackbarThread()
 {
@@ -322,107 +320,6 @@ void autoGetCaptureFrame()
 	}
 }
 
-#if 0
-void getSelectROI(VideoCapture& capture)
-{
-	try 
-	{
-		SPDLOG_SINKS_DEBUG("Select ROI Start");
-		capture.set(CAP_PROP_FRAME_WIDTH, cfg.frame.width);
-		capture.set(CAP_PROP_FRAME_HEIGHT, cfg.frame.height);
-		capture.set(CAP_PROP_EXPOSURE, 0);
-		capture.set(CAP_PROP_SATURATION, 65);
-
-		Mat roi;
-		struct ROIData { Point p; Rect r; bool startROI = false; };
-
-		ROIData data;
-		data.r = cfg.rect;
-		SPDLOG_SINKS_DEBUG("Before ROI:({},{}), width:{}, height:{}", data.r.x, data.r.y, data.r.width, data.r.height);
-
-		auto onMouseEvent = [](int event, int x, int y, int flags, void* userdata) -> void
-		{
-			ROIData* d = ((ROIData*)userdata);
-			if (event == EVENT_LBUTTONDOWN)
-			{
-				d->p = Point(x, y);
-				d->startROI = true;
-				d->r = Rect();
-				SPDLOG_SINKS_DEBUG("EVENT_LBUTTONDOWN:({},{})", d->p.x, d->p.y);
-
-			}
-			else if (event == EVENT_MOUSEMOVE && flags == EVENT_FLAG_LBUTTON)
-			{
-				if (d->startROI)
-				{
-					d->r = Rect(d->p, Point(x, y));
-					SPDLOG_SINKS_DEBUG("EVENT_MOUSEMOVE:({},{}), width:{}, height:{}", d->r.x, d->r.y, d->r.width, d->r.height);
-				}
-			}
-			else if (event == EVENT_LBUTTONUP)
-			{
-				d->startROI = false;
-				SPDLOG_SINKS_DEBUG("EVENT_LBUTTONUP");
-
-			}
-		};
-
-		cv::namedWindow("frame");
-		cv::setMouseCallback("frame", onMouseEvent, &data);
-		int key = 0;
-		while (true)
-		{
-			capture.read(roi);
-
-			rectangle(roi, data.r, Scalar(0, 255, 255), 5);
-
-			imshow("frame", roi);
-
-			key = cv::waitKey(33);
-			if (key == 0x1b)	// Esc 键
-			{
-				// 放弃重置RIO, 使用旧的ROI设定区域
-				SPDLOG_SINKS_DEBUG("Give up reset ROI");
-				cv::destroyWindow("frame");
-
-				cfg.resetRect = false;	// 关闭重置按钮
-				cfg.saveConfigData();
-				break;
-			}
-			else if (key == 0x0d)	// 回车键
-			{
-				//std::cout << "rectangle :" << data.r << std::endl;
-				//cfg.rect = data.r;
-				cfg.setROIRect(data.r);
-				SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", cfg.rect.x, cfg.rect.y, cfg.rect.width, cfg.rect.height);
-				cfg.resetRect = false;
-				cfg.saveConfigData();
-				cv::destroyWindow("frame");
-				break;
-			}
-
-		}
-
-		SPDLOG_SINKS_DEBUG("Select ROI End");
-	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-}
-#endif
-
 void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vector<vector<Point> >& contours, vector<Rect>& boundRect)
 {
 	try
@@ -487,6 +384,11 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 					colorCorrect = true;
 				}
 			}
+			//else if(currentColor == WHITE)
+			//{
+			//
+			//	colorCorrect = true;
+			//}
 
 			if (colorCorrect)
 			{
@@ -495,11 +397,11 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 				Scalar color = Scalar(0, 255, 255);
 				drawContours(result, contours, index, color, 1);
 
-				SPDLOG_SINKS_DEBUG("Contour {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> yes", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
+				SPDLOG_SINKS_DEBUG("CheckContoursColor {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> yes", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
 			}
 			else
 			{
-				SPDLOG_SINKS_DEBUG("Contour {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> no", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
+				SPDLOG_SINKS_DEBUG("CheckContoursColor {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> no", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
 				rect = Rect();
 			}
 		}
@@ -533,16 +435,12 @@ void findFrameContours()
 		{
 			try
 			{
+				cv::TickMeter t;
+				t.start();
 				SPDLOG_SINKS_DEBUG("****************FindFrameContours****************");
 				int currentColor = g_Led;
 				int currentIndex = g_Index;
 				SPDLOG_SINKS_DEBUG("CurrentColor = {}, CurrentIndex = {}", currentColor, currentIndex);
-
-				//if (currentColor == cfg.startColor && currentIndex == 0)
-				//{
-				//	SPDLOG_SINKS_DEBUG("Create Video Folder {}", aging.targetFolder());
-				//	createPPIDFolder(aging.targetFolder());
-				//}
 
 				Mat original_frame, frame, mask, back;
 
@@ -697,7 +595,7 @@ void findFrameContours()
 
 				if (unqualified_rect == boundRect.size())
 				{
-					cv::putText(original_frame, "Failure", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
+					cv::putText(original_frame, "Fail", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
 					// 第一遍测试结果和复测结果分开
 					if (g_recheckFaileLedTime == 0)
 						AgingInstance.setSingleLedResult(currentIndex, currentColor, Fail);
@@ -708,9 +606,10 @@ void findFrameContours()
 				}
 
 				// 首次侦测且开启随机灭灯情况进入
-				if (cfg.randomShutDownLed() > 0 && g_recheckFaileLedTime == 0)
+				if (/*cfg.randomLitOffProbability() > 0*/AgingInstance.getRandomLitOffState() && g_recheckFaileLedTime == 0)
 				{
-					if (g_randomShutDownLed >= cfg.randomShutDownLed())
+					//if (g_randomShutDownLed >= cfg.randomLitOffProbability())
+					if(AgingInstance.getThisLedLitOffState(currentIndex))
 						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
 					else
 						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, RandomShutDownLed);
@@ -719,6 +618,9 @@ void findFrameContours()
 				saveDebugROIImg(original_frame, currentColor, currentIndex, "result");
 				cv::imshow("result", original_frame);
 				cv::waitKey(1);
+
+				t.stop();
+				SPDLOG_SINKS_INFO("Tick Time: {}, {}", t.getTimeSec(), t.getTimeTicks());
 			}
 			catch (cv::Exception& e)
 			{
@@ -735,7 +637,8 @@ void findFrameContours()
 				SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
 				showErrorCode(ErrorCode(e, ERR_STD_EXCEPTION));
 			}
-			g_wait = false;
+			g_wait = false;	// !important
+			
 		}
 
 		g_set_led_mutex.unlock();
@@ -749,6 +652,8 @@ void mainLightingControl()
 	try
 	{
 		SPDLOG_SINKS_DEBUG("--------MainLightingControl--------");
+		cv::TickMeter t;
+		t.start();
 		Mat internal_back;	// 暂存back
 		RNG rng(time(NULL));
 		std::vector<int> colorNum(I2C.getLedCount());
@@ -763,7 +668,6 @@ void mainLightingControl()
 		for (int color = cfg.c1(); color < cfg.c2(); ++color)
 		{
 			MainThreadIsExit;
-			g_Led = color;
 
 			for (int index = 0; index < I2C.getLedCount(); index++)
 			{
@@ -776,9 +680,10 @@ void mainLightingControl()
 				getFrame(internal_back);
 				SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 
-				int r = rng.uniform(0, 101);	//[0, 101)
-				SPDLOG_SINKS_DEBUG("The random number generated is {} ,RandomShutDownLedNum is {}", r, cfg.randomShutDownLed());
-				if (r >= cfg.randomShutDownLed())
+				//int r = rng.uniform(0, 101);	//[0, 101)
+				//SPDLOG_SINKS_DEBUG("The random number generated is {} ,RandomShutDownLedNum is {}", r, cfg.randomLitOffProbability());
+				//if (r >= cfg.randomLitOffProbability())
+				if(AgingInstance.getThisLedLitOffState(index))
 				{
 					I2C.setSignleColor(index, color);
 					SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
@@ -789,11 +694,12 @@ void mainLightingControl()
 
 				g_set_led_mutex.lock();
 				g_Index = index;
+				g_Led = color;
 				g_wait = true;
 				getFrame(g_current_frame);
 				SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 				g_background_frame = internal_back.clone();
-				g_randomShutDownLed = r;
+				//g_randomShutDownLed = r;
 				SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
@@ -806,6 +712,8 @@ void mainLightingControl()
 
 		I2C.resetColor(0, 0, 0);
 		SPDLOG_SINKS_DEBUG("Turn off {} Led", I2C.getLedCount());
+		t.stop();
+		SPDLOG_SINKS_INFO("Tick Time: {}, {}", t.getTimeSec(), t.getTimeTicks());
 	}
 	catch (cv::Exception& e)
 	{
@@ -854,7 +762,6 @@ void checkTheFailLedAgain()
 			for (int color = cfg.c1(); color < cfg.c2(); ++color)
 			{
 				MainThreadIsExit;
-				g_Led = color;
 
 				for (int index = 0; index < I2C.getLedCount(); index++)
 				{
@@ -871,24 +778,22 @@ void checkTheFailLedAgain()
 
 						getFrame(internal_back);
 						SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
-						//int r = rng.uniform(0, 255);
-						//if (r >= cfg.randomShutDownLed)
-						{
-							I2C.setSignleColor(index, color);
-							SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
-						}
+						
+						I2C.setSignleColor(index, color);
+						SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
 
-						Sleep(cfg.intervalTime());
-						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+						//Sleep(cfg.intervalTime());
+						//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 
 						g_set_led_mutex.lock();
 						g_Index = index;
+						g_Led = color;
 						g_wait = true;
 						getFrame(g_current_frame);
 						SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 
 						g_background_frame = internal_back.clone();
-						g_randomShutDownLed = 0;
+						//g_randomShutDownLed = 0;
 						SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 						g_set_led_mutex.unlock();
 						Sleep(10); // 让出CPU时间
@@ -943,19 +848,19 @@ void saveSingleColorResult()
 				// 一个轮回保存一个灯色
 				I2C.resetColor(color);
 				SPDLOG_SINKS_DEBUG("Turn on all {} led, color {}", I2C.getLedCount(), color);
-				Sleep(cfg.intervalTime());
-				SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+				//Sleep(cfg.intervalTime());
+				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 
 				Mat frame;
 				getFrame(frame);	// get current frame
 				char name[_MAX_PATH] = { 0 };
 				sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
 				cv::putText(frame, AgingInstance.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
-				SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 				imwrite(name, frame);
 
-				I2C.resetColor(0, 0, 0);
-				Sleep(cfg.intervalTime());
+				//I2C.resetColor(0, 0, 0);
+				//Sleep(cfg.intervalTime());
 			}
 		}
 		catch (cv::Exception& e)
@@ -1122,6 +1027,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 	}
 }
 
+#if 0
 void frameDiff2ROI(const Mat& back, const Mat& fore, int color, const Rect& roi)
 {
 	try
@@ -1411,6 +1317,7 @@ void autoCaptureROI()
 		}
 	}
 }
+#endif
 
 void autoCaptureROI2()
 {
@@ -1418,7 +1325,8 @@ void autoCaptureROI2()
 	Rect roi[BGR];
 	int key = 0;
 	int correctLoopTime = 0;	// 被算法验证过 N 次没问题就可以认为找到恰当的轮廓了
-	int color = cfg.c1();
+	//int color = cfg.c1();
+	int color = BLUE;
 	Minefield mine(cfg.frame());
 
 	while (true)
@@ -1522,55 +1430,76 @@ int showErrorCode(ErrorCode& e)
 
 int showPassorFail()
 {
-	int key = 0;
-	int sw = GetSystemMetrics(SM_CXSCREEN);
-	int sh = GetSystemMetrics(SM_CYSCREEN);
-	int wait_time = 1;	// Pass 是就一闪而过， Fail 时就waitkey(0) 卡住
-	Mat fr = Mat::zeros(cfg.frame(), CV_8UC3);
+	auto pass_msg = []() 
+	{
+		SPDLOG_SINKS_INFO("");
+		SPDLOG_SINKS_INFO("");
+		SPDLOG_SINKS_INFO("PPPPPPPP          AAA            SSSSS            SSSSS");
+		SPDLOG_SINKS_INFO("PPPPPPPPPP       AAAAA         SSSSSSSSSS       SSSSSSSSSS");
+		SPDLOG_SINKS_INFO("PPP     PPP     AAA AAA       SSS     SSSS     SSS     SSSS");
+		SPDLOG_SINKS_INFO("PPP     PPP    AAA   AAA      SSS              SSS");
+		SPDLOG_SINKS_INFO("PPPPPPPPPP    AAA     AAA      SSS              SSS");
+		SPDLOG_SINKS_INFO("PPPPPPPP      AAA     AAA        SSSS             SSSS");
+		SPDLOG_SINKS_INFO("PPP           AAA     AAA          SSSS             SSSS");
+		SPDLOG_SINKS_INFO("PPP           AAAAAAAAAAA            SSSS             SSSS");
+		SPDLOG_SINKS_INFO("PPP           AAAAAAAAAAA              SSS              SSS");
+		SPDLOG_SINKS_INFO("PPP           AAA     AAA     SSSS     SSS     SSSS     SSS");
+		SPDLOG_SINKS_INFO("PPP           AAA     AAA      SSSSSSSSSS       SSSSSSSSSS");
+		SPDLOG_SINKS_INFO("PPP           AAA     AAA         SSSSS            SSSSS");
+		SPDLOG_SINKS_INFO("");
+		SPDLOG_SINKS_INFO("");
+	};
+
+	auto fail_msg = []()
+	{
+		SPDLOG_SINKS_ERROR("");
+		SPDLOG_SINKS_ERROR("");
+		SPDLOG_SINKS_ERROR("FFFFFFFFF         AAA         IIIIIIIII     LLL");
+		SPDLOG_SINKS_ERROR("FFFFFFFFF        AAAAA        IIIIIIIII     LLL");
+		SPDLOG_SINKS_ERROR("FFF             AAA AAA          III        LLL");
+		SPDLOG_SINKS_ERROR("FFF            AAA   AAA         III        LLL");
+		SPDLOG_SINKS_ERROR("FFF           AAA     AAA        III        LLL");
+		SPDLOG_SINKS_ERROR("FFFFFFFF      AAA     AAA        III        LLL");
+		SPDLOG_SINKS_ERROR("FFFFFFFF      AAA     AAA        III        LLL");
+		SPDLOG_SINKS_ERROR("FFF           AAAAAAAAAAA        III        LLL");
+		SPDLOG_SINKS_ERROR("FFF           AAAAAAAAAAA        III        LLL");
+		SPDLOG_SINKS_ERROR("FFF           AAA     AAA        III        LLL");
+		SPDLOG_SINKS_ERROR("FFF           AAA     AAA     IIIIIIIII     LLLLLLLLLLL");
+		SPDLOG_SINKS_ERROR("FFF           AAA     AAA     IIIIIIIII     LLLLLLLLLLL");
+		SPDLOG_SINKS_ERROR("");
+		SPDLOG_SINKS_ERROR("");
+		SPDLOG_SINKS_ERROR("{}", g_error.what());
+
+		if (AgingInstance.getRandomLitOffState())
+		{
+			// 要是随即灭灯开了，就说明处于测试阶段，直接过
+		}	
+		else
+		{
+			// 没有开启随机灭灯，但出现了fail，直接卡住
+			system("pause");
+		}	
+	};
 
 	if (g_error.error() == ERR_All_IS_WELL)
 	{
+		// 未发生异常
 		if (AgingInstance.allLedIsOK() == Pass)
 		{
-			SPDLOG_SINKS_DEBUG("ALL LED IS OK");
-			putText(fr, "PASS", Point(0, (fr.rows / 8) * 2), FONT_HERSHEY_TRIPLEX, 5, Scalar(0, 255, 255), 5);
+			pass_msg();
 		}
 		else
 		{
-			g_error = ErrorCode(ERR_SOME_LED_FAILURE, "SOME LED FAILE");
-			SPDLOG_SINKS_ERROR(g_error.what());
-			cv::putText(fr, "FAIL", Point(0, (fr.rows / 8) * 2), FONT_HERSHEY_TRIPLEX, 5, Scalar(0, 255, 255), 5);
-
-			char err[MAXBYTE] = { 0 };
-			sprintf_s(err, MAXBYTE, "error code %d", g_error.error());
-			SPDLOG_SINKS_ERROR(err);
-			SPDLOG_SINKS_ERROR(g_error.what());
-			cv::putText(fr, err, Point(0, (fr.rows / 8) * 4), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255));
-			if (cfg.randomShutDownLed() > 0)
-				wait_time = 1;	// 要是随即灭灯开了，就说明处于测试阶段，直接过
-			else
-				wait_time = 0;	// 目前先让它通过，正式后就需要卡住
+			g_error = ErrorCodeEx(ERR_SOME_LED_FAILURE, "some led fail");
+			fail_msg();
 		}
 	}
 	else
 	{
-		cv::putText(fr, "FAIL", Point(0, (fr.rows / 8) * 2), FONT_HERSHEY_TRIPLEX, 5, Scalar(0, 255, 255), 5);
-
-		char err[MAXBYTE] = { 0 };
-		sprintf_s(err, MAXBYTE, "error code %d", g_error.error());
-		SPDLOG_SINKS_ERROR(err);
-		SPDLOG_SINKS_ERROR(g_error.what());
-
-		cv::putText(fr, err, Point(0, (fr.rows / 8) * 4), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255));
-		wait_time = 0;
+		// 发生了异常
+		fail_msg();
 	}
 	
-	cv::namedWindow("final_result", WINDOW_AUTOSIZE);
-	cv::moveWindow("final_result", (sw/2 - cfg.frame().width/2), (sh / 2 - cfg.frame().height / 2));
-	//cv::setWindowProperty("final_result", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
-	cv::imshow("final_result", fr);
-	key = cv::waitKey(wait_time);
-	SPDLOG_SINKS_DEBUG("The key {} is entered in the final_result window", key);
 	return g_error.error();
 }
 
@@ -1592,7 +1521,7 @@ int main(int argc, char* argv[])
 	try
 	{
 		cfg;
-
+		
 		if (parser.has("@ppid") && parser.has("@name"))
 		{
 			VideoCardIns.PPID(parser.get<std::string>("@ppid"));
@@ -1606,7 +1535,7 @@ int main(int argc, char* argv[])
 		}
 
 
-		SPDLOG_SINKS_INFO("-------------version 2.0.0.5-------------");
+		SPDLOG_SINKS_INFO("-------------version {}.{}.{}.{}-------------", VersionMajor, VersionSec, VersionThi, VersionMin);
 		
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
@@ -1634,9 +1563,14 @@ int main(int argc, char* argv[])
 		autoCaptureROI2();
 
 		// 获取Video的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
-		AgingInstance.initAgingLog(I2C.getLedCount(), cfg.randomShutDownLed() > 0, cfg.recheckFaileLedTime() > 0);
+		AgingInstance.initAgingLog(I2C.getLedCount(), cfg.recheckFaileLedTime() > 0);
 
-		//if (g_main_thread_exit == eNotExit)
+		AgingInstance.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
+
+#if DEBUG_DETAILS
+		int v = 50;
+		for(int i = 0; i < v; i++)
+#endif
 		{
 			//SinkInstance.pushBasicFileSinkMT(aging.targetFolder());
 
@@ -1680,6 +1614,9 @@ int main(int argc, char* argv[])
 	t2.join();
 	//t3.join();
 	SPDLOG_SINKS_DEBUG("wait for thread join end");
+
+	// 优先保证测试日志可以写入
+	AgingInstance.saveAgingLog();
 
 	showPassorFail();
 

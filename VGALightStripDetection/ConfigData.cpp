@@ -103,13 +103,13 @@ void ConfigData::rect(cv::Rect& r)
 {
 	/// 检查ROI区域是否超出画面宽高
 	_rect = r & cv::Rect(0, 0, _frame.width, _frame.height);
-	_dirty = true;
+	//_dirty = true;
 }
 
 void ConfigData::shutdownTime(int t)
 {
 	_shutdownTime = t;
-	_dirty = true;
+	//_dirty = true;
 }
 
 ConfigData& ConfigData::instance()

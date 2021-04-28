@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <set>
 
 #define VGA_PPID_LENGTH 64
 
@@ -21,10 +22,12 @@ class AgingLog
 	bool randomLightDown = false;
 	std::fstream aging_file;
 
+	std::set<int> rand_set;
+
 public:
 	AgingLog();
 	//AgingLog(int led_count, bool randomLightDown = false, bool retest = false);
-	void initAgingLog(int led_count, bool randomLightDown = false, bool retest = false);
+	void initAgingLog(int led_count, bool retest = false);
 	~AgingLog();
 
 	//void setPPID(char* ppit, int len);
@@ -55,6 +58,17 @@ public:
 
 	/// 获取一个CurrentTime_PPID 的字符串，来作为图片的保存文件夹名
 	//inline const char* targetFolder() { return lpTargetFolder; }
+
+	
+	//设定随机灭灯状态, 设定手动关灯列表
+	void setRandomLitOffState(int probability, std::string manualset);
+
+	//是否开启了随机灭灯
+	inline bool getRandomLitOffState() const { return randomLightDown; }
+
+	//当前灯是否需要关掉
+	bool getThisLedLitOffState(int currentIndex);
+
 
 	static AgingLog& aging();
 };

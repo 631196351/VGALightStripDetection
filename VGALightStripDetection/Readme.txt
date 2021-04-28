@@ -47,3 +47,10 @@ Version Log
 7. 调整3c.ini配置档结构，删除无用部分
 8. 自動抓取燈帶ROI 兼容TUF卡
 
+[v2.0.0.6] - 2021.04.26
+1.应Brack要求，设置命令行参数--lit-off，来进行手动随机灭灯。在此基础上将原有随机灭灯逻辑同该手动随机灭灯逻辑整合到AgingLog中
+2.修正设置ConfigData::_rect 和ConfigData::_shutdownTime 会修改掉3c.ini配置文件的bug
+
+[v2.0.0.7] - 2021.04.28
+1.优先保证程序在退出前保存aging.csv
+2.弃用使用opencv窗口来显示最终的PASS/FAIL, 专用控制台等待输入来卡住进程

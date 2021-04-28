@@ -66,7 +66,7 @@ public:
 	inline double bgrPercentage(int c) const { return _bgrColorPercentage[c]; }
 	inline LEDColor c1() const { return _startColor; }
 	inline LEDColor c2() const { return _stopColor; }
-	inline int randomShutDownLed() const { return _randomShutDownLed; }
+	inline int randomLitOffProbability() const { return _randomShutDownLed; }
 	inline int shutdownTime() const { return _shutdownTime; }
 	inline int thresoldBlockSize() const { return _thresoldBlockSize; }
 	inline int thresoldC() const { return _thresoldC; }

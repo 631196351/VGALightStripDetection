@@ -1,4 +1,4 @@
-#include "SpdMultipleSinks.h"
+#include "SpdMultipleSinks.h"	// 需要放置在第一行
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>
@@ -8,7 +8,7 @@
 
 using namespace spdlog;
 
-const char* lpatten = "[%Y-%m-%d %H:%M:%S %e] [thread %t] [%^%l - %#%$] [%o] %v";
+const char* lpatten = "%^[%Y-%m-%d %H:%M:%S %e] [thread %t] [%l - %#] [%o] %v%$";
 
 SpdMultipleSinks::SpdMultipleSinks():_logger("LOG")
 {

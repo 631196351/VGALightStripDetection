@@ -4,7 +4,7 @@
 
 ErrorCode::ErrorCode(int code, const std::string& err):_code(code),_error(err)
 {
-
+	formatErrorMsg();
 }
 
 //ErrorCode::ErrorCode(int error, std::string msg) : _code(error), _msg(msg)
@@ -49,13 +49,13 @@ ErrorCode::~ErrorCode()
 
 void ErrorCode::formatErrorMsg()
 {
-	_msg = "error code : ";
+	_msg = "Error code : ";
 	_msg += std::to_string(_code);
 	_msg += ". ";
 	_msg += _error;
 	if (!_func.empty()) 
 	{
-		_msg += ", func : ";
+		_msg += ", Func : ";
 		_msg += _func;
 		_msg += ": ";
 		_msg += std::to_string(_line);
