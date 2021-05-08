@@ -651,7 +651,7 @@ void mainLightingControl()
 	OnExitFlagReturn;
 	try
 	{
-		SPDLOG_SINKS_DEBUG("--------MainLightingControl--------");
+		SPDLOG_SINKS_DEBUG("---------------- MainLightingControl ----------------");
 		cv::TickMeter t;
 		t.start();
 		Mat internal_back;	// 暂存back
@@ -705,15 +705,20 @@ void mainLightingControl()
 				Sleep(10); // 让出CPU时间
 
 				// 让上一轮测试结果显示一会再关闭
-				destroyWindow("final_result");
+				//destroyWindow("final_result");
 			}
 
 		}
 
 		I2C.resetColor(0, 0, 0);
 		SPDLOG_SINKS_DEBUG("Turn off {} Led", I2C.getLedCount());
+
+		// 等待工作线程完成后继续
+		g_set_led_mutex.lock();
 		t.stop();
-		SPDLOG_SINKS_INFO("Tick Time: {}, {}", t.getTimeSec(), t.getTimeTicks());
+		g_set_led_mutex.unlock();
+		SPDLOG_SINKS_INFO("----------------MainLightingControl---------------- Tick Time: {}, {}", t.getTimeSec(), t.getTimeTicks());
+
 	}
 	catch (cv::Exception& e)
 	{
@@ -739,7 +744,7 @@ void checkTheFailLedAgain()
 		return;
 	try
 	{
-		SPDLOG_SINKS_DEBUG(">>>>>>>>>>>>>>>>Check the Failed Led Again>>>>>>>>>>>>>>>>");
+		SPDLOG_SINKS_DEBUG("---------------- Check the Failed Led Again 1 ----------------");
 
 		//int g_recheckFaileLedTime = cfg.recheckFaileLedTime;
 		Mat internal_back;	// 暂存back
@@ -812,6 +817,7 @@ void checkTheFailLedAgain()
 		g_recheckFaileLedTime = 0;
 		g_set_led_mutex.unlock();
 		SPDLOG_SINKS_DEBUG("Reset RecheckFaileLedTime to {}", g_recheckFaileLedTime);
+		SPDLOG_SINKS_DEBUG("---------------- Check the Failed Led Again 2 ----------------");
 	}
 	catch (cv::Exception& e)
 	{
@@ -842,6 +848,8 @@ void saveSingleColorResult()
 	{
 		try 
 		{
+			SPDLOG_SINKS_DEBUG("---------------- save single led color 1 -----------------");
+
 			for (int color = cfg.c1(); color < cfg.c2(); ++color)
 			{
 				MainThreadIsExit;
@@ -862,6 +870,9 @@ void saveSingleColorResult()
 				//I2C.resetColor(0, 0, 0);
 				//Sleep(cfg.intervalTime());
 			}
+			I2C.resetColor(0, 0, 0);	//确保结束后灯是灭的
+			SPDLOG_SINKS_DEBUG("---------------- save single led color 2 -----------------");
+
 		}
 		catch (cv::Exception& e)
 		{
@@ -1505,6 +1516,18 @@ int showPassorFail()
 
 int main(int argc, char* argv[])
 {
+	//屏蔽控制台关闭按钮
+	HWND hwnd = GetConsoleWindow();
+	HMENU hmenu = GetSystemMenu(hwnd, false);
+	RemoveMenu(hmenu, SC_CLOSE, MF_BYCOMMAND);
+	//LONG style = GetWindowLong(hwnd, GWL_STYLE);
+	//style &= ~(WS_MINIMIZEBOX);
+	//SetWindowLong(hwnd, GWL_STYLE, style);
+	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	ShowWindow(hwnd, SW_SHOWNORMAL);
+	DestroyMenu(hmenu);
+	ReleaseDC(hwnd, NULL);
+
 	cv::CommandLineParser parser(argc, argv, argkeys);
 	if (parser.has("help"))
 	{

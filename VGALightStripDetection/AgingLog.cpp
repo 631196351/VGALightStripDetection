@@ -430,10 +430,10 @@ void AgingLog::setRandomLitOffState(int probability, std::string manualset)
 		for (int i = 0; i < lpLedCount; i++)
 		{
 			int r = rng.uniform(0, 101);	//[0, 101)
-			if (r >= cfg.randomLitOffProbability())
+			if (probability >= r)
 			{
 				auto it = rand_set.insert(i);
-				SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led", *it.first);
+				SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led, RNG {}", *it.first, r);
 			}
 		}
 	}

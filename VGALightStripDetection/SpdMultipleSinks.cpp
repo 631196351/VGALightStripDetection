@@ -30,6 +30,10 @@ SpdMultipleSinks::SpdMultipleSinks():_logger("LOG")
 	_logger.set_error_handler([](const std::string& msg) {		
 		throw ErrorCodeEx(ERR_SPDLOG_EXCEPTION, msg);
 	});
+
+	// 及时flush 数据到log中
+	// 避免程序一开始跑就被abort后，出现 log 文件为空的情况
+	_logger.flush_on(spdlog::level::trace);
 }
 
 SpdMultipleSinks::~SpdMultipleSinks()
