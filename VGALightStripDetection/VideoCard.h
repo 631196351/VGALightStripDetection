@@ -15,7 +15,7 @@ public:
 	void PPID(std::string ppid);
 	void Name(std::string name);
 	inline std::string Name() const { return _name; }
-	std::string PPID() const;
+	inline std::string PPID() const { return _ppid; }
 	std::string getPPIDFolder() const;
 	inline const char* targetFolder() const { return _ppid_time.c_str(); }
 	inline tm* getTimestamp() const { return localtime(&_time);}

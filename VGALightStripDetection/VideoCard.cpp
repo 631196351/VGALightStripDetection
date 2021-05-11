@@ -44,10 +44,10 @@ void VideoCard::Name(std::string name)
 		_name = name;
 }
 
-std::string VideoCard::PPID() const
-{
-	return _ppid;
-}
+//std::string VideoCard::PPID() const
+//{
+//	return _ppid;
+//}
 
 std::string VideoCard::getPPIDFolder() const
 {

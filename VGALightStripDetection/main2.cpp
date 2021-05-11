@@ -606,10 +606,10 @@ void findFrameContours()
 				}
 
 				// 首次侦测且开启随机灭灯情况进入
-				if (/*cfg.randomLitOffProbability() > 0*/AgingInstance.getRandomLitOffState() && g_recheckFaileLedTime == 0)
+				if (/*cfg.randomLitOffProbability() > 0*/I2C.getRandomLitOffState() && g_recheckFaileLedTime == 0)
 				{
 					//if (g_randomShutDownLed >= cfg.randomLitOffProbability())
-					if(AgingInstance.getThisLedLitOffState(currentIndex))
+					if(!I2C.IsLitOff(currentIndex))
 						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
 					else
 						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, RandomShutDownLed);
@@ -683,7 +683,7 @@ void mainLightingControl()
 				//int r = rng.uniform(0, 101);	//[0, 101)
 				//SPDLOG_SINKS_DEBUG("The random number generated is {} ,RandomShutDownLedNum is {}", r, cfg.randomLitOffProbability());
 				//if (r >= cfg.randomLitOffProbability())
-				if(AgingInstance.getThisLedLitOffState(index))
+				//if(AgingInstance.getThisLedLitOffState(index))
 				{
 					I2C.setSignleColor(index, color);
 					SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
@@ -1481,7 +1481,7 @@ int showPassorFail()
 		SPDLOG_SINKS_ERROR("");
 		SPDLOG_SINKS_ERROR("{}", g_error.what());
 
-		if (AgingInstance.getRandomLitOffState())
+		if (I2C.getRandomLitOffState())
 		{
 			// 要是随即灭灯开了，就说明处于测试阶段，直接过
 		}	
@@ -1520,9 +1520,6 @@ int main(int argc, char* argv[])
 	HWND hwnd = GetConsoleWindow();
 	HMENU hmenu = GetSystemMenu(hwnd, false);
 	RemoveMenu(hmenu, SC_CLOSE, MF_BYCOMMAND);
-	//LONG style = GetWindowLong(hwnd, GWL_STYLE);
-	//style &= ~(WS_MINIMIZEBOX);
-	//SetWindowLong(hwnd, GWL_STYLE, style);
 	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	ShowWindow(hwnd, SW_SHOWNORMAL);
 	DestroyMenu(hmenu);
@@ -1554,12 +1551,15 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			throw ErrorCodeEx(ERR_INCOMPLETE_ARGS, "Incomplete required parameters");
+			throw ErrorCodeEx(ERR_INCOMPLETE_ARGS, "Incomplete required parameters(ppid or model name)");
 		}
 
 
 		SPDLOG_SINKS_INFO("-------------version {}.{}.{}.{}-------------", VersionMajor, VersionSec, VersionThi, VersionMin);
+		SPDLOG_SINKS_INFO("Model Name:{}", VideoCardIns.Name());
+		SPDLOG_SINKS_INFO("PPID:{}", VideoCardIns.PPID());
 		
+		I2C.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
 
@@ -1586,9 +1586,8 @@ int main(int argc, char* argv[])
 		autoCaptureROI2();
 
 		// 获取Video的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
-		AgingInstance.initAgingLog(I2C.getLedCount(), cfg.recheckFaileLedTime() > 0);
-
-		AgingInstance.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
+		AgingInstance.initAgingLog(I2C.getLedCount(), I2C.getRandomLitOffState(), cfg.recheckFaileLedTime() > 0);
+		//AgingInstance.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
 
 #if DEBUG_DETAILS
 		int v = 50;

@@ -1,5 +1,5 @@
 
-#include <regex>
+//#include <regex>
 #include <time.h>
 #include <io.h>
 #include <cmath>
@@ -10,7 +10,7 @@
 #include "ErrorCode.h"
 #include "VideoCard.h"
 #include "ConfigData.h"
-
+//#include "I2CWrap.h"
 #define color_num (BGR)
 
 //static bool reset_ppid = false;
@@ -25,7 +25,7 @@ AgingLog::AgingLog()
 //	initAgingLog(led_count, randomLightDown, retest);
 //}
 
-void AgingLog::initAgingLog(int led_count, bool retest)
+void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
 {
 	try 
 	{
@@ -36,12 +36,12 @@ void AgingLog::initAgingLog(int led_count, bool retest)
 			std::fill_n(lpLed, led_count * color_num, Fail);
 		}
 
-		//if (randomLightDown)
-		//{
-		//	this->randomLightDown = randomLightDown;
-		//	lpRandomShutDownLedCache = new int[led_count * color_num];
-		//	std::fill_n(lpRandomShutDownLedCache, led_count * color_num, Fail);
-		//}
+		if (randomLightDown)
+		{
+			this->randomLightDown = randomLightDown;
+			lpRandomShutDownLedCache = new int[led_count * color_num];
+			std::fill_n(lpRandomShutDownLedCache, led_count * color_num, Fail);
+		}
 
 		if (retest)
 		{
@@ -387,67 +387,67 @@ int AgingLog::getSingleLedRetestResult(int index, int color)
 //}
 
 //设定随机灭灯状态, 设定手动关灯列表
-void AgingLog::setRandomLitOffState(int probability, std::string manualset)
-{
-	SPDLOG_SINKS_DEBUG("RandomLitOffState probability:{}, manualset:{}", probability, manualset);
-
-	if (probability > 0 && !manualset.empty())
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw ErrorCodeEx(ERR_COMMAND_LINE_ARGS, "Random lit-off parameter configuration is repeated");
-	}
-
-	if (probability > 0 || !manualset.empty())
-	{
-		randomLightDown = true;
-	}
-	SPDLOG_SINKS_DEBUG("RandomLitOffState randomLightDown:{}", randomLightDown);
-
-	if (randomLightDown)
-	{
-		this->randomLightDown = randomLightDown;
-		lpRandomShutDownLedCache = new int[lpLedCount * color_num];
-		std::fill_n(lpRandomShutDownLedCache, lpLedCount * color_num, Fail);
-	}
-
-	if (!manualset.empty())
-	{
-		std::regex reg(",");		// 匹配split
-		std::sregex_token_iterator pos(manualset.begin(), manualset.end(), reg, -1);
-		decltype(pos) end;              // 自动推导类型 
-		for (; pos != end; ++pos)
-		{
-			auto it = rand_set.insert(atoi(pos->str().c_str()));
-			SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led", *it.first);
-		}
-	}
-
-	// 直接在这里初始化好每颗灯的命运
-	// eg: 22颗灯里面有【3,4,7,10,15】这几颗灯会随机灭掉，BGR都会灭掉
-	if (probability > 0)
-	{
-		cv::RNG rng(time(NULL));
-		for (int i = 0; i < lpLedCount; i++)
-		{
-			int r = rng.uniform(0, 101);	//[0, 101)
-			if (probability >= r)
-			{
-				auto it = rand_set.insert(i);
-				SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led, RNG {}", *it.first, r);
-			}
-		}
-	}
-}
-
-//当前灯是否需要关掉
-bool AgingLog::getThisLedLitOffState(int currentIndex)
-{
-	//手动随机灭灯情况下
-	if (rand_set.find(currentIndex) != rand_set.end())
-	{
-		SPDLOG_SINKS_DEBUG("The {}th need Lit-Off", currentIndex);
-		return false;	//此灯要随机灭灯
-	}
-	SPDLOG_SINKS_DEBUG("The {}th needn't Lit-Off", currentIndex);
-	return true;	//此灯不进行随机灭灯
-}
+//void AgingLog::setRandomLitOffState(int probability, std::string manualset)
+//{
+//	SPDLOG_SINKS_DEBUG("RandomLitOffState probability:{}, manualset:{}", probability, manualset);
+//
+//	if (probability > 0 && !manualset.empty())
+//	{
+//		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
+//		throw ErrorCodeEx(ERR_COMMAND_LINE_ARGS, "Random lit-off parameter configuration is repeated");
+//	}
+//
+//	if (probability > 0 || !manualset.empty())
+//	{
+//		randomLightDown = true;
+//	}
+//	SPDLOG_SINKS_DEBUG("RandomLitOffState randomLightDown:{}", randomLightDown);
+//
+//	if (randomLightDown)
+//	{
+//		this->randomLightDown = randomLightDown;
+//		lpRandomShutDownLedCache = new int[lpLedCount * color_num];
+//		std::fill_n(lpRandomShutDownLedCache, lpLedCount * color_num, Fail);
+//	}
+//
+//	if (!manualset.empty())
+//	{
+//		std::regex reg(",");		// 匹配split
+//		std::sregex_token_iterator pos(manualset.begin(), manualset.end(), reg, -1);
+//		decltype(pos) end;              // 自动推导类型 
+//		for (; pos != end; ++pos)
+//		{
+//			auto it = rand_set.insert(atoi(pos->str().c_str()));
+//			SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led", *it.first);
+//		}
+//	}
+//
+//	// 直接在这里初始化好每颗灯的命运
+//	// eg: 22颗灯里面有【3,4,7,10,15】这几颗灯会随机灭掉，BGR都会灭掉
+//	if (probability > 0)
+//	{
+//		cv::RNG rng(time(NULL));
+//		for (int i = 0; i < lpLedCount; i++)
+//		{
+//			int r = rng.uniform(0, 101);	//[0, 101)
+//			if (probability >= r)
+//			{
+//				auto it = rand_set.insert(i);
+//				SPDLOG_SINKS_DEBUG("RandomLitOffState {}th Led, RNG {}", *it.first, r);
+//			}
+//		}
+//	}
+//}
+//
+////当前灯是否需要关掉
+//bool AgingLog::getThisLedLitOffState(int currentIndex)
+//{
+//	//手动随机灭灯情况下
+//	if (rand_set.find(currentIndex) != rand_set.end())
+//	{
+//		SPDLOG_SINKS_DEBUG("The {}th need Lit-Off", currentIndex);
+//		return false;	//此灯要随机灭灯
+//	}
+//	SPDLOG_SINKS_DEBUG("The {}th needn't Lit-Off", currentIndex);
+//	return true;	//此灯不进行随机灭灯
+//}
