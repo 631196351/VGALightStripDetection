@@ -8,14 +8,14 @@ set LoopTime=1
 set log=PPID.log
 
 echo ----------------AgingBat---------------
-cd ./GetVGAINFO
+cd ./"VGAINFO_V2.1.1.2"
 rem 清理旧的PPID.log文件
 if exist !log! (del /q !log!)
 rem 获取PPID
 start /wait GetVGAINFO.exe ppid
 rem 读取PPID
 for /f %%i in (!log!) do (set ppid=%%i)
-cd ..
+cd /d %~dp0
 
 if [!ppid!]==[] (        
     for /f %%i in ('powershell -command "$([guid]::NewGuid().ToString())"') do (set ppid=%%i)        

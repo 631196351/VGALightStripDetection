@@ -12,6 +12,8 @@ enum LEDColor
 	BLACK,
 };
 
+static const char* color_str[] = { "Blue", "Green", "Red", "White" };
+
 // 用来过滤像素点的阈值
 enum
 {

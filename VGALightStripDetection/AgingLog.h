@@ -70,6 +70,9 @@ public:
 
 
 	static AgingLog& aging();
+
+	//friend std::ostream& operator<<(std::ostream& ost, const AgingLog& al);
+	void serialize();
 };
 
 #define AgingInstance AgingLog::aging()

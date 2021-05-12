@@ -451,3 +451,27 @@ int AgingLog::getSingleLedRetestResult(int index, int color)
 //	SPDLOG_SINKS_DEBUG("The {}th needn't Lit-Off", currentIndex);
 //	return true;	//此灯不进行随机灭灯
 //}
+
+
+//std::ostream& operator<<(std::ostream& ost, const AgingLog& al)
+void AgingLog::serialize()
+{
+	std::string s;
+	for (int c = 0; c < color_num; c++)
+	{
+		s.clear();
+		for (int j = 0; j < lpLedCount; ++j)
+		{
+			int x = j + lpLedCount * (c);
+			if (lpLed[x] > 0)
+			{
+				s += std::to_string(j);
+				s += ", ";
+			}
+		}
+		if (s.length() > 0)
+		{
+			SPDLOG_SINKS_ERROR("{}:  {}", color_str[c], s);
+		}
+	}	
+}

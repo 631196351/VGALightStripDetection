@@ -276,6 +276,8 @@ void autoGetCaptureFrame()
 
 				Mat camera;
 				capture.read(camera);
+				if (camera.empty())
+					throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
 
 				sprintf_s(txt, 128, "Power Off: %d", cfg.shutdownTime());
 				cv::putText(camera, txt, Point(0, (camera.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1);
@@ -1480,6 +1482,7 @@ int showPassorFail()
 		SPDLOG_SINKS_ERROR("");
 		SPDLOG_SINKS_ERROR("");
 		SPDLOG_SINKS_ERROR("{}", g_error.what());
+		AgingInstance.serialize();
 
 		if (I2C.getRandomLitOffState())
 		{
