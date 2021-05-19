@@ -28,6 +28,7 @@ using namespace std;
 
 const char* argkeys =
 "{help h ?|<none>| Print help message.}"
+"{version v|<none>|Print version.}"
 "{@ppid p  |<none>| Video card PPID: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}"
 "{@name n  |<none>| Video card Name: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}"
 "{lit-off lo|| Manually lit off the lights randomly eg: --lo='1,2,3,4,5'}";
@@ -103,8 +104,8 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 	{
 		char name[MAX_PATH] = { 0 };
 		sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
-		SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}", name);
-		cv::imwrite(name, f);
+		bool bwrite = cv::imwrite(name, f);
+		SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}, result:{}", name, bwrite);
 	}
 	catch (cv::Exception& e)
 	{
@@ -903,7 +904,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		Rect roi;
 		b = back;// back.copyTo(b);
 		f = fore;// fore.copyTo(f);
-
+		
 		std::vector<Mat> frame_bgrs, back_bgrs;
 		Mat frame_gray, back_gray;
 		if (color == WHITE) {
@@ -985,42 +986,15 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 				rect = Rect();
 			}
 		}
-		SPDLOG_SINKS_DEBUG("{} more Rect after the Rect are merged", boundRect.size());
+		//SPDLOG_SINKS_DEBUG("{} more Rect after the Rect are merged", boundRect.size());
 
-#if true
 		std::sort(boundRect.begin(), boundRect.end(), [](cv::Rect& l, cv::Rect& r) { return l.area() > r.area(); });
 
 		if (boundRect.size() > 0)
 		{
 			roi = boundRect[0];
 		}
-#else
-		for (auto it = boundRect.begin(); it != boundRect.end();)
-		{
-			double w_p = (double)it->width / (double)cfg.frame.width;
-			double h_p = (double)it->height / (double)cfg.frame.height;
-			SPDLOG_SINKS_DEBUG("Rect - x:{} y:{} width:{} height:{} area:{} w_p:{} h_p:{}", it->x, it->y, it->width, it->height, it->area(), w_p, h_p);
-			if (w_p > 0.6 || h_p > 0.6)
-			{
-#ifdef _DEBUG
-				rectangle(f, *it, Scalar(0, 0, 255), 1);
-#endif
-				it++;
-			}
-			else
-			{
-				it = boundRect.erase(it);
-			}
-		}
-#ifdef _DEBUG
-		cv::imshow("frameDiff2ROI - contours - 1", f);
-		waitKey(33);
-#endif
-		if (boundRect.size() == 1)
-		{
-			roi = boundRect[0];
-		}
-#endif
+
 		return roi;
 	}
 	catch (cv::Exception& e)
@@ -1532,6 +1506,11 @@ int main(int argc, char* argv[])
 	if (parser.has("help"))
 	{
 		parser.printMessage();
+		return ERR_All_IS_WELL;
+	}
+	else if(parser.has("version"))
+	{
+		std::cout << "Version " << VersionMajor << "." << VersionSec << "." << VersionThi << "." << VersionMin << std::endl;
 		return ERR_All_IS_WELL;
 	}
 
