@@ -17,8 +17,8 @@ class I2CWrap
 	lpVGAWriteICI2C		 _lpVGAWriteICI2C = NULL;
 	int					 _ledCount = 0;
 
-	std::set<int>		 _rand_set;
-	bool				 _bRlitOffState = false;
+	//std::set<int>		 _rand_set;
+	//bool				 _bRlitOffState = false;
 
 public:
 	I2CWrap();
@@ -38,14 +38,14 @@ public:
 
 	void resetColorIter(int begin, int end, int color);
 
-	//设定随机灭灯状态, 设定手动关灯列表
-	void setRandomLitOffState(int probability, std::string manualset);
-
-	//是否开启了随机灭灯
-	inline bool getRandomLitOffState() const { return _bRlitOffState; }
-
-	//当前灯是否需要关掉
-	bool IsLitOff(int currentIndex);
+	////设定随机灭灯状态, 设定手动关灯列表
+	//void setRandomLitOffState(int probability, std::string manualset);
+	//
+	////是否开启了随机灭灯
+	//inline bool getRandomLitOffState() const { return _bRlitOffState; }
+	//
+	////当前灯是否需要关掉
+	//bool IsLitOff(int currentIndex);
 
 };
 

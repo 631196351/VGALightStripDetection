@@ -16,6 +16,7 @@
 #include "VideoCard.h"
 #include "I2CWrap.h"
 #include "Minefield.h"
+#include "RandomLitoff.h"
 
 using namespace cv;
 using namespace std;
@@ -25,6 +26,7 @@ using namespace std;
 #define MainThreadIsExit if (g_main_thread_exit >= eExit) { break; }
 #define OnExitFlagReturn if (g_main_thread_exit >= eExit) { return; }
 #define DEBUG_DETAILS false
+//#define SAVE_ROI_FBMCR	true //是否保存抓取ROI时的foreground, background, mask, contours, result 五幅图
 
 const char* argkeys =
 "{help h ?|<none>| Print help message.}"
@@ -609,10 +611,10 @@ void findFrameContours()
 				}
 
 				// 首次侦测且开启随机灭灯情况进入
-				if (/*cfg.randomLitOffProbability() > 0*/I2C.getRandomLitOffState() && g_recheckFaileLedTime == 0)
+				if (/*cfg.randomLitOffProbability() > 0*/litoff.getRandomLitOffState() && g_recheckFaileLedTime == 0)
 				{
 					//if (g_randomShutDownLed >= cfg.randomLitOffProbability())
-					if(!I2C.IsLitOff(currentIndex))
+					if(!litoff.IsLitOff(currentIndex))
 						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
 					else
 						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, RandomShutDownLed);
@@ -904,7 +906,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		Rect roi;
 		b = back;// back.copyTo(b);
 		f = fore;// fore.copyTo(f);
-		
+
 		std::vector<Mat> frame_bgrs, back_bgrs;
 		Mat frame_gray, back_gray;
 		if (color == WHITE) {
@@ -919,10 +921,26 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 			back_gray = back_bgrs[color];
 		}
 
+		char name[MAX_PATH] = { 0 };
+#ifdef SAVE_ROI_FBMCR
+		{
+			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			cv::imwrite(name, frame_gray);
+
+			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			cv::imwrite(name, back_gray);
+		}
+#endif
 		SPDLOG_SINKS_DEBUG("Convert back and frame to gray.");
 		subtract(frame_gray, back_gray, mask);
 		SPDLOG_SINKS_DEBUG("frame_gray - back_gray = mask");
 
+#ifdef SAVE_ROI_FBMCR
+		{
+			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			cv::imwrite(name, mask);
+		}
+#endif
 		//cv::threshold(mask, mask, 0, 255, THRESH_BINARY | THRESH_OTSU);
 		cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
 		//SPDLOG_SINKS_DEBUG("AdaptiveThreshold BlockSize = {} C = {}", cfg.thresoldBlockSize(), cfg.thresoldC());
@@ -936,10 +954,6 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		cv::medianBlur(mask, mask, 3);
 		SPDLOG_SINKS_DEBUG("Blur mask");
 
-#ifdef  _DEBUG
-		cv::imshow("mask", mask);
-#endif 
-
 		//存储边缘
 		vector<vector<Point> > contours;
 		vector<Rect> boundRect;
@@ -950,6 +964,12 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 		checkContoursColor(f, mask, result, color, contours, boundRect);
 
+#ifdef SAVE_ROI_FBMCR
+		{
+			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			cv::imwrite(name, result);
+		}
+#endif
 		SPDLOG_SINKS_DEBUG("{} more Rect before the Rect are merged", boundRect.size());
 		for (int i = 0; i < boundRect.size(); i++)
 		{
@@ -960,7 +980,8 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 			// 合并轮廓
 			// 在已有轮廓中找距离最近的那一个,并进行标记
 			int t = -1;
-			int min_gap = 5;	//修补因灯带格子而导致的轮廓裂隙
+			//int min_gap = 5;	//修补因灯带格子而导致的轮廓裂隙
+			int min_gap = cfg.minContoursSpace();
 
 			for (int j = 0; j < boundRect.size(); j++)
 			{
@@ -989,6 +1010,19 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		//SPDLOG_SINKS_DEBUG("{} more Rect after the Rect are merged", boundRect.size());
 
 		std::sort(boundRect.begin(), boundRect.end(), [](cv::Rect& l, cv::Rect& r) { return l.area() > r.area(); });
+
+#ifdef SAVE_ROI_FBMCR
+		for (auto r : boundRect)
+		{
+			if (!r.empty())
+			{
+				rectangle(f, r, Scalar(255, 0, 255), 1);
+			}
+		}
+		sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
+		cv::imwrite(name, f);
+
+#endif // _DEBUG
 
 		if (boundRect.size() > 0)
 		{
@@ -1455,10 +1489,10 @@ int showPassorFail()
 		SPDLOG_SINKS_ERROR("FFF           AAA     AAA     IIIIIIIII     LLLLLLLLLLL");
 		SPDLOG_SINKS_ERROR("");
 		SPDLOG_SINKS_ERROR("");
-		SPDLOG_SINKS_ERROR("{}", g_error.what());
+		SPDLOG_SINKS_ERROR("{} - {}", g_error.error(), g_error.what());
 		AgingInstance.serialize();
 
-		if (I2C.getRandomLitOffState())
+		if (litoff.getRandomLitOffState())
 		{
 			// 要是随即灭灯开了，就说明处于测试阶段，直接过
 		}	
@@ -1516,7 +1550,8 @@ int main(int argc, char* argv[])
 
 	cv::TickMeter tm;
 	tm.start();
-	
+	litoff;
+
 	std::thread t1(autoGetCaptureFrame);
 	std::thread t2(findFrameContours);
 	//std::thread t3(renderTrackbarThread);
@@ -1541,7 +1576,7 @@ int main(int argc, char* argv[])
 		SPDLOG_SINKS_INFO("Model Name:{}", VideoCardIns.Name());
 		SPDLOG_SINKS_INFO("PPID:{}", VideoCardIns.PPID());
 		
-		I2C.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
+		litoff.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
 
@@ -1568,7 +1603,7 @@ int main(int argc, char* argv[])
 		autoCaptureROI2();
 
 		// 获取Video的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
-		AgingInstance.initAgingLog(I2C.getLedCount(), I2C.getRandomLitOffState(), cfg.recheckFaileLedTime() > 0);
+		AgingInstance.initAgingLog(I2C.getLedCount(), litoff.getRandomLitOffState(), cfg.recheckFaileLedTime() > 0);
 		//AgingInstance.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
 
 #if DEBUG_DETAILS

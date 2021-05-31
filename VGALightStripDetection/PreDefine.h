@@ -45,5 +45,5 @@ enum
 	VersionMajor = 2,
 	VersionSec = 0,
 	VersionThi = 0,
-	VersionMin = 11
+	VersionMin = 13
 };

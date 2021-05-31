@@ -52,6 +52,7 @@
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -96,7 +97,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;SAVE_ROI_FBMCR;VENDER_EXTRA;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
@@ -131,7 +132,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_CRT_SECURE_NO_WARNINGS;SAVE_ROI_FBMCR;VENDER_EXTRA;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,12 +146,15 @@
     <ClCompile Include="AgingLog.cpp" />
     <ClCompile Include="CommonColor.cpp" />
     <ClCompile Include="ConfigData.cpp" />
+    <ClCompile Include="ene_program.cpp" />
     <ClCompile Include="ErrorCode.cpp" />
     <ClCompile Include="I2CWrap.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main2.cpp" />
     <ClCompile Include="Minefield.cpp" />
+    <ClCompile Include="nvbase.cpp" />
     <ClCompile Include="PreDefine.cpp" />
+    <ClCompile Include="RandomLitoff.cpp" />
     <ClCompile Include="VideoCard.cpp" />
     <ClCompile Include="SpdMultipleSinks.cpp" />
     <ClCompile Include="utility.cpp" />
@@ -159,12 +163,15 @@
     <ClInclude Include="AgingLog.h" />
     <ClInclude Include="CommonColor.h" />
     <ClInclude Include="ConfigData.h" />
+    <ClInclude Include="ene_program.h" />
     <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="I2CWrap.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Minefield.h" />
     <ClInclude Include="nvapi.h" />
+    <ClInclude Include="nvbase.h" />
     <ClInclude Include="PreDefine.h" />
+    <ClInclude Include="RandomLitoff.h" />
     <ClInclude Include="VideoCard.h" />
     <ClInclude Include="SpdMultipleSinks.h" />
     <ClInclude Include="utility.h" />

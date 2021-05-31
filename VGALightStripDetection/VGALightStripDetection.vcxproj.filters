@@ -51,6 +51,15 @@
     <ClCompile Include="VideoCard.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="RandomLitoff.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="nvbase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ene_program.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nvapi.h">
@@ -87,6 +96,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="VideoCard.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomLitoff.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="nvbase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ene_program.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
