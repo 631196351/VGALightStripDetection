@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include <opencv2/opencv.hpp>
 
-// Σ�������趨�����봰�ڱ߿� N px �϶�ΪΣ�������ڴ�Σ�����ڵ���β�������Ա��϶�Ϊ��������
+// 危险区域设定，距离窗口边框 N px 认定为危险区，在此危险区内的首尾灯轮廓皆被认定为超出窗口
 class Minefield
 {
 	cv::Rect _t;

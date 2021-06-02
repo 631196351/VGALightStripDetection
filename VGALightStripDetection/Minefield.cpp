@@ -1,9 +1,9 @@
-#include "Minefield.h"
+ï»¿#include "Minefield.h"
 
 Minefield::Minefield(cv::Size r)
 {
 #if false
-	// Î£ÏÕÇøÓòÉè¶¨£¬¾àÀë´°¿Ú±ß¿ò N px ÈÏ¶¨ÎªÎ£ÏÕÇø£¬ÔÚ´ËÎ£ÏÕÇøÄÚµÄÊ×Î²µÆÂÖÀª½Ô±»ÈÏ¶¨Îª³¬³ö´°¿Ú
+	// å±é™©åŒºåŸŸè®¾å®šï¼Œè·ç¦»çª—å£è¾¹æ¡† N px è®¤å®šä¸ºå±é™©åŒºï¼Œåœ¨æ­¤å±é™©åŒºå†…çš„é¦–å°¾ç¯è½®å»“çš†è¢«è®¤å®šä¸ºè¶…å‡ºçª—å£
 	Rect box(0, (int)(cfg.frame.height * 0.25), cfg.frame.width, (int)(cfg.frame.height * 0.5));
 	auto InBox = [=](const cv::Rect& rect) ->bool {
 		if (rect != (box & rect))
@@ -14,9 +14,9 @@ Minefield::Minefield(cv::Size r)
 		return true;
 	};
 #else
-	// Î£ÏÕÇøÓòÉè¶¨£¬¾àÀë´°¿Ú±ß¿ò N px ÈÏ¶¨ÎªÎ£ÏÕÇø£¬ÔÚ´ËÎ£ÏÕÇøÄÚµÄÊ×Î²µÆÂÖÀª½Ô±»ÈÏ¶¨Îª³¬³ö´°¿Ú
+	// å±é™©åŒºåŸŸè®¾å®šï¼Œè·ç¦»çª—å£è¾¹æ¡† N px è®¤å®šä¸ºå±é™©åŒºï¼Œåœ¨æ­¤å±é™©åŒºå†…çš„é¦–å°¾ç¯è½®å»“çš†è¢«è®¤å®šä¸ºè¶…å‡ºçª—å£
 	int rl = 2;
-	int tb = (int)(r.height * 0.25);	// ÉÏÏÂ²¿·ÖµÄÎ£ÏÕÇøÓòÉè¶¨½Ï´óĞ©£¬ ÈÃ²¶»ñµ½µÄµÆ´øÂÖÀªĞ¡Ò»Ğ©
+	int tb = (int)(r.height * 0.25);	// ä¸Šä¸‹éƒ¨åˆ†çš„å±é™©åŒºåŸŸè®¾å®šè¾ƒå¤§äº›ï¼Œ è®©æ•è·åˆ°çš„ç¯å¸¦è½®å»“å°ä¸€äº›
 	_t = cv::Rect(0, 0, r.width, tb);
 	_r = cv::Rect(r.width - rl, 0, rl, r.height);
 	_b = cv::Rect(0, r.height - tb, r.width, tb);
@@ -32,9 +32,9 @@ Minefield::~Minefield()
 bool Minefield::inMinefield(const cv::Rect& r)
 {
 
-	// ¼«¶ËÇé¿öÏÂtl(), br() ·µ»ØµÄµã»á¸Õ¸Õ¿¨ÔÚcfg.frame.width or cfg.frame.heightµÄ±ß½çÏßÉÏ
-	// ¶øÕâÖÖÇé¿öÏÂ contains ÊÇ²»»áÈÏÎªµãÔÚrectÄÚµÄ
-	// ÍË¶øÇóÆä´Î£¬ ×óÉÏ½ÇµãÍùÍâ×ßÒ»²½£¬ ÓÒÏÂ½ÇµãÍùÀï×ßÒ»²½£¬ÈÃËûÃÇ¸ÕºÃ¿¨ÔÚrectÄÚ
+	// æç«¯æƒ…å†µä¸‹tl(), br() è¿”å›çš„ç‚¹ä¼šåˆšåˆšå¡åœ¨cfg.frame.width or cfg.frame.heightçš„è¾¹ç•Œçº¿ä¸Š
+	// è€Œè¿™ç§æƒ…å†µä¸‹ contains æ˜¯ä¸ä¼šè®¤ä¸ºç‚¹åœ¨rectå†…çš„
+	// é€€è€Œæ±‚å…¶æ¬¡ï¼Œ å·¦ä¸Šè§’ç‚¹å¾€å¤–èµ°ä¸€æ­¥ï¼Œ å³ä¸‹è§’ç‚¹å¾€é‡Œèµ°ä¸€æ­¥ï¼Œè®©ä»–ä»¬åˆšå¥½å¡åœ¨rectå†…
 	cv::Point tl = r.tl() + cv::Point(1, 1);
 	cv::Point br = r.br() - cv::Point(1, 1);
 

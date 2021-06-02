@@ -1,4 +1,4 @@
-#include "SpdMultipleSinks.h"	// 需要放置在第一行
+﻿#include "SpdMultipleSinks.h"	// 需要放置在第一行
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>

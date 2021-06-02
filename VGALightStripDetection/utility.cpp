@@ -1,4 +1,4 @@
-
+﻿
 #include <Windows.h>
 #include <tchar.h>
 #include "utility.h"

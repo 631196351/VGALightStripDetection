@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 //----		Red		Green	Blue	White
 //hmin		156		35		100		0
