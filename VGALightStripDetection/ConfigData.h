@@ -27,6 +27,7 @@ private:
 	int _intervalTime = 100;		// 灯珠亮灭的间隔时间
 	int _minContoursArea = 50;
 	int _minContoursSpace = 50;
+	int _minContoursSpace2 = 300;	//查找合并轮廓阶段，为了能够将背面&&前面的亮灯区域合并到一起，设定的阈值
 
 	int _cameraIndex = 0;
 	int _exposure = -5;	//相机曝光

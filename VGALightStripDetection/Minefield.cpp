@@ -16,7 +16,8 @@ Minefield::Minefield(cv::Size r)
 #else
 	// 危险区域设定，距离窗口边框 N px 认定为危险区，在此危险区内的首尾灯轮廓皆被认定为超出窗口
 	int rl = 2;
-	int tb = (int)(r.height * 0.25);	// 上下部分的危险区域设定较大些， 让捕获到的灯带轮廓小一些
+	int tb = 2;
+	//int tb = (int)(r.height * 0.25);	// 上下部分的危险区域设定较大些， 让捕获到的灯带轮廓小一些
 	_t = cv::Rect(0, 0, r.width, tb);
 	_r = cv::Rect(r.width - rl, 0, rl, r.height);
 	_b = cv::Rect(0, r.height - tb, r.width, tb);
