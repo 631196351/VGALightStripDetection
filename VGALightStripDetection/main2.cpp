@@ -970,65 +970,72 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 			cv::imwrite(name, result);
 		}
 #endif
-		SPDLOG_SINKS_DEBUG("{} more Rect before the Rect are merged", boundRect.size());
-		for (int i = 0; i < boundRect.size(); i++)
-		{
-			Rect& rect = boundRect[i];
-			if (rect.area() == 0)
-				continue;
-
-			// 合并轮廓
-			// 在已有轮廓中找距离最近的那一个,并进行标记
-			int t = -1;
-			//int min_gap = 5;	//修补因灯带格子而导致的轮廓裂隙
-			int min_gap = cfg.minContoursSpace();
-
-			for (int j = 0; j < boundRect.size(); j++)
-			{
-				if (i == j)     // 跳过自己
-					continue;
-				if (boundRect[j].area() == 0)
-					continue;
-
-				int gap = min_distance_of_rectangles(rect, boundRect[j]);
-
-				if (gap <= min_gap)
-				{
-					min_gap = gap;
-					t = j;
-				}
-			}
-
-			// 同距离自己最近的轮廓进行合并， 都离的远就自成一家
-			if (t >= 0)
-			{
-				Rect r = boundRect[t];
-				boundRect[t] |= rect;
-				rect = Rect();
-			}
-		}
-		//SPDLOG_SINKS_DEBUG("{} more Rect after the Rect are merged", boundRect.size());
 
 		std::sort(boundRect.begin(), boundRect.end(), [](cv::Rect& l, cv::Rect& r) { return l.area() > r.area(); });
+		for (int i = 0; i < boundRect.size(); ++i)
+		{
+			roi |= boundRect[i];
+		}
+		//SPDLOG_SINKS_DEBUG("{} more Rect before the Rect are merged", boundRect.size());
+		//for (int i = 0; i < boundRect.size(); i++)
+		//{
+		//	Rect& rect = boundRect[i];
+		//	if (rect.area() == 0)
+		//		continue;
+		//
+		//	// 合并轮廓
+		//	// 在已有轮廓中找距离最近的那一个,并进行标记
+		//	int t = -1;
+		//	//int min_gap = 5;	//修补因灯带格子而导致的轮廓裂隙
+		//	int min_gap = cfg.minContoursSpace();
+		//
+		//	for (int j = 0; j < boundRect.size(); j++)
+		//	{
+		//		if (i == j)     // 跳过自己
+		//			continue;
+		//		if (boundRect[j].area() == 0)
+		//			continue;
+		//
+		//		int gap = min_distance_of_rectangles(rect, boundRect[j]);
+		//
+		//		if (gap <= min_gap)
+		//		{
+		//			min_gap = gap;
+		//			t = j;
+		//		}
+		//	}
+		//
+		//	// 同距离自己最近的轮廓进行合并， 都离的远就自成一家
+		//	if (t >= 0)
+		//	{
+		//		Rect r = boundRect[t];
+		//		boundRect[t] |= rect;
+		//		rect = Rect();
+		//	}
+		//}
+		//SPDLOG_SINKS_DEBUG("{} more Rect after the Rect are merged", boundRect.size());
+
+		
 
 #ifdef SAVE_ROI_FBMCR
-		for (auto r : boundRect)
-		{
-			if (!r.empty())
-			{
-				rectangle(f, r, Scalar(255, 0, 255), 1);
-			}
-		}
+		//for (auto r : boundRect)
+		//{
+		//	if (!r.empty())
+		//	{
+		//		rectangle(f, r, Scalar(255, 0, 255), 1);
+		//	}
+		//}
+
+		rectangle(f, roi, Scalar(255, 0, 255), 1);
 		sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
 		cv::imwrite(name, f);
 
-#endif // _DEBUG
-
-		if (boundRect.size() > 0)
-		{
-			roi = boundRect[0];
-		}
-
+#endif
+		//if (boundRect.size() > 0)
+		//{
+		//	roi = boundRect[0];
+		//}
+		//
 		return roi;
 	}
 	catch (cv::Exception& e)

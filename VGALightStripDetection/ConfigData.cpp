@@ -44,7 +44,7 @@ void ConfigData::saveConfigData()
 	SPRINTF(_intervalTime); WritePrivateProfileString(L"AlgorithmThreshold", L"IntervalTime", d, lpPath);
 	SPRINTF(_minContoursArea); WritePrivateProfileString(L"AlgorithmThreshold", L"MinContoursArea", d, lpPath);
 	SPRINTF(_minContoursSpace); WritePrivateProfileString(L"AlgorithmThreshold", L"MinContoursSpace", d, lpPath);
-	SPRINTF(_minContoursSpace2); WritePrivateProfileString(L"AlgorithmThreshold", L"MinContoursSpace2", d, lpPath);
+	//SPRINTF(_minContoursSpace2); WritePrivateProfileString(L"AlgorithmThreshold", L"MinContoursSpace2", d, lpPath);
 	SPRINTF(_thresoldBlockSize);  WritePrivateProfileString(L"AlgorithmThreshold", L"AdaptiveThresholdArgBlockSize", d, lpPath);
 	SPRINTF(_thresoldC);  WritePrivateProfileString(L"AlgorithmThreshold", L"AdaptiveThresholdArgC", d, lpPath);
 	SPRINTF(_bgrColorThres[BLUE]); WritePrivateProfileString(L"AlgorithmThreshold", L"BBrightness", d, lpPath);
@@ -86,7 +86,7 @@ void ConfigData::readConfigFile()
 	_intervalTime = GetPrivateProfileInt(L"AlgorithmThreshold", L"IntervalTime", _intervalTime, lpPath);
 	_minContoursArea = GetPrivateProfileInt(L"AlgorithmThreshold", L"MinContoursArea", _minContoursArea, lpPath);
 	_minContoursSpace = GetPrivateProfileInt(L"AlgorithmThreshold", L"MinContoursSpace", _minContoursSpace, lpPath);
-	_minContoursSpace2 = GetPrivateProfileInt(L"AlgorithmThreshold", L"MinContoursSpace2", _minContoursSpace2, lpPath);
+	//_minContoursSpace2 = GetPrivateProfileInt(L"AlgorithmThreshold", L"MinContoursSpace2", _minContoursSpace2, lpPath);
 	_thresoldBlockSize = GetPrivateProfileInt(L"AlgorithmThreshold", L"AdaptiveThresholdArgBlockSize", _thresoldBlockSize, lpPath);
 	_thresoldC = GetPrivateProfileInt(L"AlgorithmThreshold", L"AdaptiveThresholdArgC", _thresoldC, lpPath);
 	
