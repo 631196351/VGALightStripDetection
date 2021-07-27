@@ -86,7 +86,7 @@ void ConfigData::readConfigFile()
 	_intervalTime = GetPrivateProfileInt(L"AlgorithmThreshold", L"IntervalTime", _intervalTime, lpPath);
 	_minContoursArea = GetPrivateProfileInt(L"AlgorithmThreshold", L"MinContoursArea", _minContoursArea, lpPath);
 	_minContoursSpace = GetPrivateProfileInt(L"AlgorithmThreshold", L"MinContoursSpace", _minContoursSpace, lpPath);
-	//_minContoursSpace2 = GetPrivateProfileInt(L"AlgorithmThreshold", L"MinContoursSpace2", _minContoursSpace2, lpPath);
+	_ledContoursArea = GetPrivateProfileInt(L"AlgorithmThreshold", L"LedContoursArea", _ledContoursArea, lpPath);
 	_thresoldBlockSize = GetPrivateProfileInt(L"AlgorithmThreshold", L"AdaptiveThresholdArgBlockSize", _thresoldBlockSize, lpPath);
 	_thresoldC = GetPrivateProfileInt(L"AlgorithmThreshold", L"AdaptiveThresholdArgC", _thresoldC, lpPath);
 	

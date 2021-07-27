@@ -492,7 +492,7 @@ void findFrameContours()
 				//GaussianBlur(mask, mask, Size(5, 5), 0);
 
 				//形态学处理
-				Mat kernel = getStructuringElement(MORPH_CROSS, Size(3, 3));
+				Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));
 				morphologyEx(mask, mask, MORPH_OPEN, kernel);
 				SPDLOG_SINKS_DEBUG("Morphology open operation processing mask");
 
@@ -580,7 +580,7 @@ void findFrameContours()
 						continue;
 
 					// 合并轮廓时会将被合并轮廓抹掉
-					if (r.area() > cfg.minContoursArea())
+					if (r.area() > cfg.ledContoursArea())
 					{
 						rectangle(original_frame, r, Scalar(0, 255, 255), 3);
 						// 第一遍测试结果和复测结果分开
@@ -925,10 +925,10 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 #ifdef SAVE_ROI_FBMCR
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
-			cv::imwrite(name, frame_gray);
+			cv::imwrite(name, f);
 
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color);
-			cv::imwrite(name, back_gray);
+			cv::imwrite(name, b);
 		}
 #endif
 		SPDLOG_SINKS_DEBUG("Convert back and frame to gray.");
@@ -1354,7 +1354,7 @@ void autoCaptureROI2()
 	int key = 0;
 	int correctLoopTime = 0;	// 被算法验证过 N 次没问题就可以认为找到恰当的轮廓了
 	//int color = cfg.c1();
-	int color = BLUE;
+	int color = RED;
 	Minefield mine(cfg.frame());
 
 	while (true)
@@ -1600,6 +1600,13 @@ int main(int argc, char* argv[])
 			capture.set(CAP_PROP_FRAME_HEIGHT, cfg.frame().height);
 			capture.set(CAP_PROP_EXPOSURE, cfg.exposure());
 			capture.set(CAP_PROP_SATURATION, cfg.saturation());
+
+			//capture.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
+			capture.set(CAP_PROP_FOURCC, MAKEFOURCC('M', 'J', 'P', 'G'));
+			//int ex = static_cast<int>(capture.get(CAP_PROP_FOURCC));
+			//Transform from int to char via Bitwise operators
+			//char ext[] = { (char)(ex & 0XFF),(char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24),0 };
+
 
 			//cfg.frame.width = (int)capture.get(CAP_PROP_FRAME_WIDTH);
 			//cfg.frame.height = (int)capture.get(CAP_PROP_FRAME_HEIGHT);
