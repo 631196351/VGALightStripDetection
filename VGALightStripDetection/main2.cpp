@@ -1574,7 +1574,7 @@ void autoCaptureROI2()
 
 				if (roi[color].empty()) 
 				{
-					SPDLOG_SINKS_ERROR("{}th color roi empty");
+					SPDLOG_SINKS_ERROR("{}th color roi empty", color);
 					throw ErrorCodeEx(ERR_POSTRUE_CORRECTION_ERROR, "Please readjust the camera or graphics card posture");
 				}
 			}
