@@ -44,7 +44,7 @@ SpdMultipleSinks::~SpdMultipleSinks()
 void SpdMultipleSinks::pushBasicFileSinkMT(const char* path)
 {
 	char b[MAX_PATH] = { 0 };
-	sprintf_s(b, MAX_PATH, "%s/%s/work_stats.txt", AgingFolder, path);
+	sprintf_s(b, MAX_PATH, "%s/%s/work_states.txt", AgingFolder, path);
 	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(b, true);
 	file_sink->set_pattern(lpatten);
 	file_sink->set_level(spdlog::level::trace);

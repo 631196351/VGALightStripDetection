@@ -86,3 +86,54 @@ Version Log
 
 [v2.0.0.15] - 2021.06.11
 1. 在灯带轮廓查找阶段，既然最终拿到的轮廓Rect都是经过颜色校验过的，那么简单认为都是灯带特征，直接将颜色校验完的轮廓Rect合并成一个大轮廓；findFrameContours中的轮廓合并逻辑暂且不动；MineField部分暂且不动
+
+[v2.0.0.16] - 2021.07.27
+1. 用Red来抓取ROI;对每颗灯的轮廓最小面积做阈值限制
+
+[v2.0.0.17] - 2021.07.27
+1. 分机种进行配置，配置参数规则如下：
+  PPIDROG-STRIX-RTX3090-O24G-GUNDAM-2I3S  =>> STRIX-GUNDAM
+	PPIDTUF-RTX3070TI-8G-GAMING-2I3S  =>> TUF-GAMING
+  若有机种找不到自己对应的配置时， 则需要更新3c.json配置文件
+  "TUF-GAMING": //机种thermo类型
+  {
+        "Camera": // 相机相关配置模块
+        {
+            "Index": 0, // 打开连接的相机ID
+            "Exposure": -4, // 设定相机曝光 Exposure∈[-13, 0]，之前设定为-7，后来因为太低，致使光线太暗，容易发生误判，所以提高到 -4；也不能太高，防止出现过曝问题
+            "Saturation": 65, // 相机饱和度设定 Saturation∈[0， 128]，之前设定为 128，但发现会导致在低曝光下， 画面颜色偏蓝，容易导致蓝色发生误判
+            "SkipFrame": 3, // 连续获取第几帧为使用画面； 谷客相机在848*480情况下才能有30帧的帧率， 且在多线程环境下， 亮灭灯后， 连续抓N帧来保证不会出现错帧问题
+            "Width": 848, // 窗口宽度
+            "Hight": 480  // 窗口高度， 对于好一点的相机， 可以实现抓取1080P的画面，然后通过高斯金字塔降采样来进行处理， 那样可以避免出现2003错误
+        },
+        "AgingSetting": // 测试相关配置
+        {
+            "StartColor": 0,  // BLUE= 0, GREEN= 1, RED= 2, WHITE= 3, AllColor= 4. StartColor, StopColor ∈ [0, 4)
+            "StopColor": 3,
+            "RandomShutDownLedNum": 0,  //随机灭灯设置，取值范围[0, 100); 取消随机灭灯置为0
+            "ShutDownDelayTime": -1,  //测试完毕后， 定时关机，单位秒， -1 表示不关机, -2 表示执行完后重启
+            "RecheckFaileLedTime": 0  //侦测到某颗灯Faile 后, 再进行N次测试，看是否真的是Faile了; 这里需要注意的是随机灭灯时， 我认为‘随机灭掉的灯’即为故障灯，所以在此复测时， 是不会点亮的
+        },
+        "AlgorithmThreshold": 
+        {
+            "IntervalTime": 100,  // 亮灭灯指令和抓取图像之间的间隔时间
+            "MinROIContoursArea": 100,  //在抓取灯带ROI阶段， 会抓到一些列的轮廓集合M， 然后将M中的集合合并成一个大轮廓即为灯带；这个M中面积小于MinROIContoursArea的就不参与合并了
+            "MinContoursArea": 100, //在抓取单颗灯珠ROI阶段，轮廓集合M中， 面积小于MinContoursArea的， 一律舍弃
+            "MinContoursSpace": 50, //在合并单颗灯珠轮廓集合M时， 轮廓与轮廓之间的距离大于MinContoursSpace 的，视为两个独立的轮廓，不进行合并，这样就有可能出现一颗灯， 两个轮廓的现象
+            "LedContoursArea": 300, //对合并好的轮廓面积进行界定，小于LedContoursArea即认定fail；因为遮挡或反光或其他原因，会影响最后的结果，这样来试图卡下来
+            "AdaptiveThresholdArgBlockSize": 101, // 自适应阈值算法参数1
+            "AdaptiveThresholdArgC": -9,  //自适应阈值蒜贩参数2
+            "ColorThres": [ 50, 50, 50, 50 ], // bgrw 四色最低阈值，用于颜色校验
+            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ] //bgrw 四色占比, 用于颜色校验
+        }
+  }
+  
+2. ROG-STRIX-RTX3080-O10G-WHITE-2I3S 这类白色机种，谷客相机曝光需要设定到-6左右，高一点的话抓到的颜色很容易过曝
+
+3. 在获取灯带ROI时，第一版采用亮一次BLUE，因外部影响(相机饱和度128， 会让反光偏蓝)，可能会多抓一些区域；
+   第二版采用亮一次 RED，上层机台会抓到置具，OP的衣领...... （基本都是饱和度128的锅），一样会概率行多抓一些区域；
+   第三版采用 （BLUE | GREEN） & RED 的算法来计算 ROI，设定相机饱和度为65.
+   
+4. 获取灯带ROI的颜色校验模块同单颗灯的颜色校验模块拆分开来
+
+5. 关闭MineField模块

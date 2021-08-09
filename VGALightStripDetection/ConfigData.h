@@ -14,11 +14,16 @@ public:
 
 	static ConfigData& instance();
 	//initConfigFile();
+#if false
 	void readConfigFile();
 	void saveConfigData();
+#endif
+	void readConfigFile(std::string model);
+	void recordConfig2WorkStates();
 
 private:
 	bool _dirty = false;	// 修改属性后，在销毁对象时进行保存
+	std::string _thermo_name;
 private:
 	//bool resetRect = 0;
 	//bool _debugMode = 0;
@@ -27,6 +32,7 @@ private:
 	int _intervalTime = 100;		// 灯珠亮灭的间隔时间
 	int _minContoursArea = 50;
 	int _minContoursSpace = 50;
+	int _minROIContoursArea = 100;
 	// 合并后的轮廓像素面积若小于_ledContoursArea，则认为有些太小了
 	// 原本设定的阈值是1000， 在测试Tuf系列机种时发现， 因摄像头与灯带夹角比较小时，成像面积在500左右，所以砍半设置
 	// 在测试f94 3090系列时，灯带纹路成像面积在300左右，
@@ -35,7 +41,7 @@ private:
 
 	int _cameraIndex = 0;
 	int _exposure = -5;	//相机曝光
-	int _saturation = 128;	// 相机的饱和度
+	int _saturation = 65;	// 相机的饱和度
 	cv::Size _frame = cv::Size(848, 480);
 	cv::Rect _rect = cv::Rect();// ROI 区域设定， 不建议直接修改，需要通过rect()设定
 	int _skipFrame = 3;
@@ -61,6 +67,7 @@ public:
 	inline int intervalTime() const { return _intervalTime; }
 	inline int minContoursArea() const { return _minContoursArea; }
 	inline int minContoursSpace() const { return _minContoursSpace; }
+	inline int minROIContoursArea() const { return _minROIContoursArea; }
 	inline int ledContoursArea() const { return _ledContoursArea; }
 	inline int cameraIndex() const { return _cameraIndex;}
 	inline int exposure() const { return _exposure; }

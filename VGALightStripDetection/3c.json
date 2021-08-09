@@ -1,0 +1,93 @@
+{
+    "AgingSetting": {
+        "StartColor": 0,
+        "StopColor": 3,
+        "RandomShutDownLedNum": 0,
+        "ShutDownDelayTime": -1,
+        "RecheckFaileLedTime": 0
+    },
+    "TUF-GAMING": {
+        "Camera": {
+            "Index": 0,
+            "Exposure": -4,
+            "Saturation": 65,
+            "SkipFrame": 3,
+            "Width": 848,
+            "Hight": 480
+        },
+        "AlgorithmThreshold": {
+            "IntervalTime": 100,
+            "MinROIContoursArea": 100,
+            "MinContoursArea": 100,
+            "MinContoursSpace": 50,
+            "LedContoursArea": 300,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "ColorThres": [ 50, 50, 50, 50 ],
+            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+        }
+    },
+    "STRIX-GAMING": {
+        "Camera": {
+            "Index": 0,
+            "Exposure": -4,
+            "Saturation": 65,
+            "SkipFrame": 3,
+            "Width": 848,
+            "Hight": 480
+        },
+        "AlgorithmThreshold": {
+            "IntervalTime": 100,
+            "MinROIContoursArea": 100,
+            "MinContoursArea": 100,
+            "MinContoursSpace": 50,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "ColorThres": [ 50, 50, 50, 50 ],
+            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+        }
+    },
+    "STRIX-WHITE": {
+        "Camera": {
+            "Index": 0,
+            "Exposure": -6,
+            "Saturation": 65,
+            "SkipFrame": 3,
+            "Width": 848,
+            "Hight": 480
+        },
+        "AlgorithmThreshold": {
+            "IntervalTime": 100,
+            "MinROIContoursArea": 100,
+            "MinContoursArea": 100,
+            "MinContoursSpace": 50,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "ColorThres": [ 50, 50, 50, 50 ],
+            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+        }
+    },
+    "STRIX-GUNDAM": {
+        "Camera": {
+            "Index": 0,
+            "Exposure": -4,
+            "Saturation": 65,
+            "SkipFrame": 3,
+            "Width": 848,
+            "Hight": 480
+        },
+        "AlgorithmThreshold": {
+            "IntervalTime": 100,
+            "MinROIContoursArea": 100,
+            "MinContoursArea": 10,
+            "MinContoursSpace": 50,
+            "LedContoursArea": 250,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "ColorThres": [ 50, 25, 50, 50 ],
+            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+        }
+    }
+}

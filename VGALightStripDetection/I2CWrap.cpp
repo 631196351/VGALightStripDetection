@@ -28,7 +28,7 @@ I2CWrap::I2CWrap()
 	if (_lpLoadVenderDLL != NULL)
 	{
 		int res = _lpLoadVenderDLL();
-		SPDLOG_SINKS_DEBUG("LoadVenderDLL return {}", res);
+		SPDLOG_SINKS_DEBUG("LoadVenderDLL return GPU count {}", res);
 	}
 	else
 	{
@@ -42,8 +42,9 @@ I2CWrap::I2CWrap()
 	BYTE offset[2] = { 0x1D,0x0C };
 #ifdef VENDER_EXTRA
 	bool result = false;
-
-	for (int i = 0; i < 5; ++i) {
+	// 在2分钟内持续调用i2c, 直到调用成功，否则报 ERR_RUN_I2C_FAILURE 异常
+	for (int i = 0; i < 120; ++i) {
+		(i > 0) ? Sleep(1000) : (void)0;
 		result = _lpVGAWriteICI2C(0xCE, 0x0, (BYTE*)offset, 0, 1, 1, 2, 1);	//set address
 		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i + 1, result);
 		if (result)
@@ -91,7 +92,7 @@ void I2CWrap::setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 	//所以在开启随机灭灯时，除了可以设置成黑色，指定灭掉的灯其他颜色均不可设置
 	if ((r > 0 || g > 0 || b > 0) && litoff.IsLitOff(led))
 	{
-		SPDLOG_SINKS_DEBUG("The {}th need Lit-Off", led);
+		SPDLOG_SINKS_DEBUG("The {}th need random lit-off", led);
 		return;
 	}
 	//Set Start Address

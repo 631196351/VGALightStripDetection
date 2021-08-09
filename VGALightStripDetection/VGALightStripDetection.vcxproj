@@ -73,11 +73,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Program Files\opencv\build\include;C:\Program Files\opencv\build\include\opencv2;$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files\opencv\build\include;C:\Program Files\opencv\build\include\opencv2;$(ProjectDir);$(ProjectDir)\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Program Files\opencv\build\include;C:\Program Files\opencv\build\include\opencv2;$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files\opencv\build\include;C:\Program Files\opencv\build\include\opencv2;$(ProjectDir);$(ProjectDir)\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
