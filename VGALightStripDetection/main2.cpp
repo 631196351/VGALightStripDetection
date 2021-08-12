@@ -679,10 +679,9 @@ void mainLightingControl()
 
 				I2C.setSignleColor(colorNum[index], 0, 0, 0);
 				SPDLOG_SINKS_DEBUG("Turn off the {}th Led", colorNum[index]);
-				//Sleep(cfg.intervalTime);
-				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime);
-				getFrame(internal_back);
+				Sleep(cfg.intervalTime());
 				SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
+				getFrame(internal_back);
 
 				//int r = rng.uniform(0, 101);	//[0, 101)
 				//SPDLOG_SINKS_DEBUG("The random number generated is {} ,RandomShutDownLedNum is {}", r, cfg.randomLitOffProbability());
@@ -691,6 +690,7 @@ void mainLightingControl()
 				{
 					I2C.setSignleColor(index, color);
 					SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
+					Sleep(cfg.intervalTime());
 				}
 
 				//Sleep(cfg.intervalTime);
@@ -791,8 +791,8 @@ void checkTheFailLedAgain()
 						I2C.setSignleColor(index, color);
 						SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
 
-						//Sleep(cfg.intervalTime());
-						//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+						Sleep(cfg.intervalTime());
+						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 
 						g_set_led_mutex.lock();
 						g_Index = index;
@@ -860,7 +860,7 @@ void saveSingleColorResult()
 				// 一个轮回保存一个灯色
 				I2C.resetColor(color);
 				SPDLOG_SINKS_DEBUG("Turn on all {} led, color {}", I2C.getLedCount(), color);
-				//Sleep(cfg.intervalTime());
+				Sleep(cfg.intervalTime());
 				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 
 				Mat frame;
@@ -1564,11 +1564,13 @@ void autoCaptureROI2()
 			for (int color = BLUE; color < WHITE; ++color)
 			{
 				I2C.resetColor(BLACK);
+				Sleep(cfg.intervalTime());
 				getFrame(back, false);
 
-				I2C.resetColor(color);
-				getFrame(fore, false);
 				SPDLOG_SINKS_DEBUG("lit-on {}th color", color);
+				I2C.resetColor(color);
+				Sleep(cfg.intervalTime());
+				getFrame(fore, false);
 
 				roi[color] = frameDiff2ROI(back, fore, color);
 
@@ -1871,3 +1873,23 @@ int main(int argc, char* argv[])
 
 ///Opencv——目标跟踪Tracker
 ///https://blog.csdn.net/qq_43587345/article/details/102833753
+///
+///Color models and color spaces
+///https://programmingdesignsystems.com/color/color-models-and-color-spaces/
+///
+///HSV(Hue, Saturation and Value)
+///https://www.tech-faq.com/hsv.html
+///
+///http://colorizer.org/
+///http://color.lukas-stratmann.com/color-systems/hsv.html
+///
+///Why do we use the HSV colour space so often in vision and image processing ?
+///https://dsp.stackexchange.com/questions/2687/why-do-we-use-the-hsv-colour-space-so-often-in-vision-and-image-processing
+///
+///The HSV color space
+///https://www.blackice.com/Help/Tools/Image%20OCX%20webhelp/WebHelp/The_HSV_color_space.htm
+///
+///https://math.hws.edu/graphicsbook/demos/c2/rgb-hsv.html
+///
+///Color models and color spaces
+///https://programmingdesignsystems.com/color/color-models-and-color-spaces/

@@ -249,6 +249,7 @@ void ConfigData::recordConfig2WorkStates()
 	SPDLOG_SINKS_DEBUG("\t Index : {}", _cameraIndex);
 	SPDLOG_SINKS_DEBUG("\t Exposure : {}", _exposure);
 	SPDLOG_SINKS_DEBUG("\t Saturation : {}", _saturation);
+	SPDLOG_SINKS_DEBUG("\t SkipFrame : {}", _skipFrame);
 	SPDLOG_SINKS_DEBUG("\t Width : {}", _frame.width);
 	SPDLOG_SINKS_DEBUG("\t Hight : {}", _frame.height);
 

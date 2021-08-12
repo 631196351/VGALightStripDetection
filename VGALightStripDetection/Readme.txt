@@ -90,7 +90,7 @@ Version Log
 [v2.0.0.16] - 2021.07.27
 1. 用Red来抓取ROI;对每颗灯的轮廓最小面积做阈值限制
 
-[v2.0.0.17] - 2021.07.27
+[v2.0.0.17] - 2021.08.06
 1. 分机种进行配置，配置参数规则如下：
   PPIDROG-STRIX-RTX3090-O24G-GUNDAM-2I3S  =>> STRIX-GUNDAM
 	PPIDTUF-RTX3070TI-8G-GAMING-2I3S  =>> TUF-GAMING
@@ -137,3 +137,7 @@ Version Log
 4. 获取灯带ROI的颜色校验模块同单颗灯的颜色校验模块拆分开来
 
 5. 关闭MineField模块
+
+[v2.0.0.18] - 2021.08.12
+1. 获取background 耗时82ms; 获取foreground 耗时176ms;可能的原因是A线程在几十毫秒前刚从相机里要完图，B线程后脚就过来再问相机要图，相机就索性给了同一张图。
+   在亮灭灯后，delay 100ms, 然后再去抓 3 帧
