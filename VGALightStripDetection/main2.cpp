@@ -1602,6 +1602,8 @@ void autoCaptureROI2()
 			
 			SPDLOG_SINKS_WARN(e.what());
 			putText(fore, e.what(), Point(0, (fore.rows / 8) * 2), FONT_HERSHEY_TRIPLEX, 0.5, Scalar(0, 255, 255), 1);
+			if(e.error() == ERR_RUN_I2C_FAILURE)
+				throw e;
 		}
 		catch (cv::Exception& e)
 		{
