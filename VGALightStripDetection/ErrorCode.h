@@ -26,6 +26,7 @@ enum eError
 	ERR_ORIGIN_FRAME_EMPTY_EXCEPTION,	//当前帧空帧异常	
 	ERR_LED_STRIPE_BLOCKED,			// 自动获取ROI时，发现灯带被遮挡
 	ERR_POSTRUE_CORRECTION_ERROR,	// 相机或显卡位置偏离，需要重新调整姿态
+	ERR_MISSING_FRAME,				// 抓到的帧数小于相机个数
 };
 
 class ErrorCode : public std::exception

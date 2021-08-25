@@ -18,7 +18,7 @@ public:
 	void readConfigFile();
 	void saveConfigData();
 #endif
-	void readConfigFile(std::string model);
+	void readConfigFile(std::string model, unsigned led_count);
 	void recordConfig2WorkStates();
 
 private:
@@ -44,6 +44,8 @@ private:
 	int _saturation = 65;	// 相机的饱和度
 	cv::Size _frame = cv::Size(848, 480);
 	cv::Rect _rect = cv::Rect();// ROI 区域设定， 不建议直接修改，需要通过rect()设定
+	cv::Rect _roi[CaptureNum];
+	cv::Rect _rect2 = cv::Rect();
 	int _skipFrame = 3;
 	
 	int _bgrColorThres[AllColor] = {50, 50, 50, 50};
@@ -74,6 +76,8 @@ public:
 	inline int saturation() const { return _saturation; }
 	inline const cv::Size& frame() const { return _frame; }
 	inline const cv::Rect& rect() const { return _rect; }
+	inline const cv::Rect* rois() const { return _roi; }
+	inline const cv::Rect& rect2() const { return _rect2; }
 	inline int skipFrame() const { return _skipFrame; }
 	inline int bgrThres(int c) const { return _bgrColorThres[c]; }
 	inline double bgrPercentage(int c) const { return _bgrColorPercentage[c]; }
@@ -87,6 +91,7 @@ public:
 
 public:
 	void rect(cv::Rect& r);	
+	void rect(cv::Rect roi[][CaptureNum], int colors);
 	void shutdownTime(int t);
 };
 

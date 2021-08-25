@@ -42,8 +42,10 @@ enum
 
 enum
 {
-	VersionMajor = 2,
+	VersionMajor = 3,
 	VersionSec = 0,
-	VersionThi = 0,
-	VersionMin = 18
+	VersionThi = 1,
+	VersionMin = 0
 };
+
+#define CaptureNum 2

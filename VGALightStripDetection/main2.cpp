@@ -1,4 +1,5 @@
-﻿#if 1
+﻿//#define LIGHTSTRIPV2
+#ifdef LIGHTSTRIPV2 
 #include <opencv2/opencv.hpp>
 //#include <stdio.h>
 #include <vector>

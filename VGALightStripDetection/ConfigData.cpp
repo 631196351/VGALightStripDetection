@@ -121,7 +121,23 @@ void ConfigData::rect(cv::Rect& r)
 {
 	/// 检查ROI区域是否超出画面宽高
 	_rect = r & cv::Rect(0, 0, _frame.width, _frame.height);
+	//_rect = r;
 	//_dirty = true;
+}
+
+void ConfigData::rect(cv::Rect roi[][CaptureNum], int colors)
+{
+	int w = 0;
+	int h = 0;
+	for (int i = 0; i < CaptureNum; ++i)
+	{
+		_roi[i] = ((roi[BLUE][i] | roi[GREEN][i]) & roi[RED][i]) & cv::Rect(0, 0, _frame.width, _frame.height * CaptureNum);
+		SPDLOG_SINKS_DEBUG("ROI {}th : x:{},y:{}, width:{}, height:{}", i, _roi[i].x, _roi[i].y, _roi[i].width, _roi[i].height);
+		w = cv::max(w, _roi[i].width);
+		h += _roi[i].height;
+	}
+
+	_rect2 = cv::Rect(0, 0, w, h);
 }
 
 void ConfigData::shutdownTime(int t)
@@ -136,7 +152,7 @@ ConfigData& ConfigData::instance()
 	return instance;
 }
 
-void ConfigData::readConfigFile(std::string model)
+void ConfigData::readConfigFile(std::string model, unsigned led_count)
 {
 	//PPIDROG-STRIX-RTX3090-O24G-GUNDAM-2I3S
 	//PPIDTUF-RTX3070TI-8G-GAMING-2I3S
@@ -148,11 +164,11 @@ void ConfigData::readConfigFile(std::string model)
 
 	if (model.find("STRIX") != std::string::npos)
 	{
-		_thermo_name = v[1] + "-" + v[4];
+		_thermo_name = v[1] + "-" + v[4] + "-" + std::to_string(led_count);
 	}
 	else if (model.find("TUF") != std::string::npos)
 	{
-		_thermo_name = v[0] + "-" + v[3];
+		_thermo_name = v[0] + "-" + v[3] + "-" + std::to_string(led_count);
 	}
 
 	std::ifstream in("3c.json");

@@ -2,7 +2,7 @@
 #include "ErrorCode.h"
 #include "SpdMultipleSinks.h"
 #include "PreDefine.h"
-#include "RandomLitoff.h"
+//#include "RandomLitoff.h"
 #include "nvbase.h"
 
 // LED 灯的地址
@@ -90,11 +90,11 @@ void I2CWrap::setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 {
 	//模拟随机灭灯就需要假设这颗灯本来就是坏的 -> 插上就是黑的
 	//所以在开启随机灭灯时，除了可以设置成黑色，指定灭掉的灯其他颜色均不可设置
-	if ((r > 0 || g > 0 || b > 0) && litoff.IsLitOff(led))
-	{
-		SPDLOG_SINKS_DEBUG("The {}th need random lit-off", led);
-		return;
-	}
+	//if ((r > 0 || g > 0 || b > 0) && litoff.IsLitOff(led))
+	//{
+	//	SPDLOG_SINKS_DEBUG("The {}th need random lit-off", led);
+	//	return;
+	//}
 	//Set Start Address
 	uOffset[0] = 0x81;
 	uOffset[1] = REG[led];
