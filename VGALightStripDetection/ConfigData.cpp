@@ -1,14 +1,14 @@
 ﻿#include <fstream>
-#include <regex>
+//#include <regex>
 #include <vector>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include "ConfigData.h"
 #include "SpdMultipleSinks.h"
 #include "ErrorCode.h"
-#ifdef _DEBUG
-#include "I2CWrap.h"
-#endif
+//#ifdef _DEBUG
+//#include "I2CWrap.h"
+//#endif
 #if 0
 #include <Windows.h>
 #endif
@@ -117,13 +117,13 @@ void ConfigData::readConfigFile()
 }
 #endif
 
-void ConfigData::rect(cv::Rect& r)
-{
-	/// 检查ROI区域是否超出画面宽高
-	_rect = r & cv::Rect(0, 0, _frame.width, _frame.height);
-	//_rect = r;
-	//_dirty = true;
-}
+//void ConfigData::rect(cv::Rect& r)
+//{
+//	/// 检查ROI区域是否超出画面宽高
+//	_rect = r & cv::Rect(0, 0, _frame.width, _frame.height);
+//	//_rect = r;
+//	//_dirty = true;
+//}
 
 void ConfigData::rect(cv::Rect roi[][CaptureNum], int colors)
 {
@@ -132,12 +132,13 @@ void ConfigData::rect(cv::Rect roi[][CaptureNum], int colors)
 	for (int i = 0; i < CaptureNum; ++i)
 	{
 		_roi[i] = ((roi[BLUE][i] | roi[GREEN][i]) & roi[RED][i]) & cv::Rect(0, 0, _frame.width, _frame.height * CaptureNum);
-		SPDLOG_SINKS_DEBUG("ROI {}th : x:{},y:{}, width:{}, height:{}", i, _roi[i].x, _roi[i].y, _roi[i].width, _roi[i].height);
+		SPDLOG_SINKS_DEBUG("ConfigData ROI {}th : x:{},y:{}, width:{}, height:{}", i, _roi[i].x, _roi[i].y, _roi[i].width, _roi[i].height);
 		w = cv::max(w, _roi[i].width);
 		h += _roi[i].height;
 	}
 
 	_rect2 = cv::Rect(0, 0, w, h);
+	SPDLOG_SINKS_DEBUG("ConfigData rect2 : x:{},y:{}, width:{}, height:{}", _rect2.x, _rect2.y, _rect2.width, _rect2.height);
 }
 
 void ConfigData::shutdownTime(int t)
@@ -154,21 +155,36 @@ ConfigData& ConfigData::instance()
 
 void ConfigData::readConfigFile(std::string model, unsigned led_count)
 {
-	//PPIDROG-STRIX-RTX3090-O24G-GUNDAM-2I3S
-	//PPIDTUF-RTX3070TI-8G-GAMING-2I3S
-	//model = "PPIDROG-KO-RTX3090-O24G-GUNDAM-2I3S";
 	model.assign(model.begin() + 4, model.end());
-	//std::string thermo_name;
-	std::regex reg("[-]");
-	std::vector<std::string> v(std::sregex_token_iterator(model.begin(), model.end(), reg, -1), std::sregex_token_iterator());
 
 	if (model.find("STRIX") != std::string::npos)
 	{
-		_thermo_name = v[1] + "-" + v[4] + "-" + std::to_string(led_count);
+		if (model.find("WHITE") != std::string::npos)
+		{
+			//ROG-STRIX-RTX3070-O8G-GAMING-WHITE-2I3S
+			_thermo_name = "STRIX-WHITE-" + std::to_string(led_count);
+		}
+		else if (model.find("GUNDAM") != std::string::npos) 
+		{
+			//ROG-STRIX-RTX3080-O10G-GUNDAM-2I3S
+			_thermo_name = "STRIX-GUNDAM-" + std::to_string(led_count);
+		}
+		else if (model.find("GAMING") != std::string::npos)
+		{
+			//ROG-STRIX-RTX3080-O10G-GAMING-2I3S
+			_thermo_name = "STRIX-GAMING-" + std::to_string(led_count);
+		}
 	}
 	else if (model.find("TUF") != std::string::npos)
 	{
-		_thermo_name = v[0] + "-" + v[3] + "-" + std::to_string(led_count);
+		//TUF-RTX3090-O24G-2I3S
+		//TUF-RTX3090-24G-2I3S-PD
+		//TUF-RTX3060-12G-GAMING-2I3S
+		_thermo_name = "TUF-" + std::to_string(led_count);
+	}
+	else if (model.find("KO") != std::string::npos)
+	{
+		_thermo_name = "KO-" + std::to_string(led_count);
 	}
 
 	std::ifstream in("3c.json");
@@ -187,52 +203,71 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 		if (dom.HasMember("AgingSetting") && dom["AgingSetting"].IsObject())
 		{
 			const auto& asg = dom["AgingSetting"];
+			_frame.width = asg["Width"].GetInt();
+			_frame.height = asg["Hight"].GetInt();
+			_skipFrame = asg["SkipFrame"].GetInt();
 			_startColor = (LEDColor)asg["StartColor"].GetInt();
 			_stopColor = (LEDColor)asg["StopColor"].GetInt();
 			_randomShutDownLed = asg["RandomShutDownLedNum"].GetInt();
 			_shutdownTime = asg["ShutDownDelayTime"].GetInt();
 			_recheckFaileLedTime = asg["RecheckFaileLedTime"].GetInt();
 		}
-#ifdef _DEBUG
-		if (!dom.HasMember(_thermo_name.c_str()))
-		{
-			_thermo_name = (I2C.getLedCount() >= 15) ? "STRIX-GAMING" : "TUF-GAMING";
-		}
-#endif
+
 		if (dom.HasMember(_thermo_name.c_str()) && dom[_thermo_name.c_str()].IsObject())
 		{
 			const auto& thermo = dom[_thermo_name.c_str()];
 			if (thermo.HasMember("Camera") && thermo["Camera"].IsObject())
 			{
 				const auto& cam = thermo["Camera"];
-				_cameraIndex = cam["Index"].GetInt();
+				//_cameraIndex = cam["Index"].GetInt();
 				_exposure = cam["Exposure"].GetInt();
 				_saturation = cam["Saturation"].GetInt();
-				_skipFrame = cam["SkipFrame"].GetInt();
-				_frame.width = cam["Width"].GetInt();
-				_frame.height = cam["Hight"].GetInt();
+				
 			}
 			if (thermo.HasMember("AlgorithmThreshold") && thermo["AlgorithmThreshold"].IsObject())
 			{
 				const auto& atd = thermo["AlgorithmThreshold"];
 				_intervalTime = atd["IntervalTime"].GetInt();
 				_minContoursArea = atd["MinContoursArea"].GetInt();
-				_minContoursSpace = atd["MinContoursSpace"].GetInt();
-				_minROIContoursArea = atd["MinROIContoursArea"].GetInt();
+				//_minContoursSpace = atd["MinContoursSpace"].GetInt();
+				//_minROIContoursArea = atd["MinROIContoursArea"].GetInt();
 				_ledContoursArea = atd["LedContoursArea"].GetInt();
 				_thresoldBlockSize = atd["AdaptiveThresholdArgBlockSize"].GetInt();
 				_thresoldC = atd["AdaptiveThresholdArgC"].GetInt();
 
-				const auto& colors = atd["ColorThres"];
-				for (unsigned i = 0; i < colors.Size(); ++i)
-				{
-					_bgrColorThres[i] = colors[i].GetInt();
-				}
+				//const auto& colors = atd["ColorThres"];
+				//for (unsigned i = 0; i < colors.Size(); ++i)
+				//{
+				//	_bgrColorThres[i] = colors[i].GetInt();
+				//}
+				//
+				//const auto& colors_percent = atd["ColorPercentage"];
+				//for (unsigned i = 0; i < colors_percent.Size(); ++i)
+				//{
+				//	_bgrColorPercentage[i] = colors_percent[i].GetDouble();
+				//}
 
-				const auto& colors_percent = atd["ColorPercentage"];
-				for (unsigned i = 0; i < colors_percent.Size(); ++i)
+				/// Opencv HSV Color
+				/// H ∈ [0, 180]
+				/// S ∈ [0，255]
+				/// V ∈ [0，255]
+				///http://color.lukas-stratmann.com/color-systems/hsv.html
+
+				const auto& hsv = atd["HSV"];
+				const auto& hsv_b = hsv["b"];
+				for (unsigned i = 0; i < hsv_b.Size(); ++i)
 				{
-					_bgrColorPercentage[i] = colors_percent[i].GetDouble();
+					_hsvColor[BLUE][i] = hsv_b[i].GetFloat();
+				}
+				const auto& hsv_g = hsv["g"];
+				for (unsigned i = 0; i < hsv_g.Size(); ++i)
+				{
+					_hsvColor[GREEN][i] = hsv_g[i].GetFloat();
+				}
+				const auto& hsv_r = hsv["r"];
+				for (unsigned i = 0; i < hsv_r.Size(); ++i)
+				{
+					_hsvColor[RED][i] = hsv_r[i].GetFloat();
 				}
 			}
 		}
@@ -254,29 +289,27 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 
 void ConfigData::recordConfig2WorkStates()
 {
-	SPDLOG_SINKS_DEBUG("AgingSetting");
-	SPDLOG_SINKS_DEBUG("\t startColor : {}", _startColor);
-	SPDLOG_SINKS_DEBUG("\t stopColor : {}", _stopColor);
-	SPDLOG_SINKS_DEBUG("\t randomShutDownLed : {}", _randomShutDownLed);
-	SPDLOG_SINKS_DEBUG("\t shutdownTime : {}", _shutdownTime);
-	SPDLOG_SINKS_DEBUG("\t recheckFaileLedTime : {}", _recheckFaileLedTime);
+	SPDLOG_SINKS_INFO("AgingSetting");
+	SPDLOG_SINKS_INFO("\t startColor : {}", _startColor);
+	SPDLOG_SINKS_INFO("\t stopColor : {}", _stopColor);
+	SPDLOG_SINKS_INFO("\t randomShutDownLed : {}", _randomShutDownLed);
+	SPDLOG_SINKS_INFO("\t shutdownTime : {}", _shutdownTime);
+	SPDLOG_SINKS_INFO("\t recheckFaileLedTime : {}", _recheckFaileLedTime);
 
-	SPDLOG_SINKS_DEBUG("Thermo : {}", _thermo_name);
-	SPDLOG_SINKS_DEBUG("\t Index : {}", _cameraIndex);
-	SPDLOG_SINKS_DEBUG("\t Exposure : {}", _exposure);
-	SPDLOG_SINKS_DEBUG("\t Saturation : {}", _saturation);
-	SPDLOG_SINKS_DEBUG("\t SkipFrame : {}", _skipFrame);
-	SPDLOG_SINKS_DEBUG("\t Width : {}", _frame.width);
-	SPDLOG_SINKS_DEBUG("\t Hight : {}", _frame.height);
+	SPDLOG_SINKS_INFO("\t Thermo : {}", _thermo_name);
+	SPDLOG_SINKS_INFO("\t Exposure : {}", _exposure);
+	SPDLOG_SINKS_INFO("\t Saturation : {}", _saturation);
+	SPDLOG_SINKS_INFO("\t SkipFrame : {}", _skipFrame);
+	SPDLOG_SINKS_INFO("\t Width : {}", _frame.width);
+	SPDLOG_SINKS_INFO("\t Hight : {}", _frame.height);
 
-	SPDLOG_SINKS_DEBUG("\t IntervalTime : {}", _intervalTime);
-	SPDLOG_SINKS_DEBUG("\t MinContoursArea : {}", _minContoursArea);
-	SPDLOG_SINKS_DEBUG("\t MinContoursSpace : {}", _minContoursSpace);
-	SPDLOG_SINKS_DEBUG("\t MinROIContoursArea : {}", _minROIContoursArea);
-	SPDLOG_SINKS_DEBUG("\t LedContoursArea : {}", _ledContoursArea);
+	SPDLOG_SINKS_INFO("\t IntervalTime : {}", _intervalTime);
+	SPDLOG_SINKS_INFO("\t MinContoursArea : {}", _minContoursArea);
+	SPDLOG_SINKS_INFO("\t LedContoursArea : {}", _ledContoursArea);
 
-	SPDLOG_SINKS_DEBUG("\t AdaptiveThresholdArgBlockSize : {}", _thresoldBlockSize);
-	SPDLOG_SINKS_DEBUG("\t AdaptiveThresholdArgC : {}", _thresoldC);
-	SPDLOG_SINKS_DEBUG("\t ColorThres : [{}, {}, {}, {}]", _bgrColorThres[0], _bgrColorThres[1], _bgrColorThres[2], _bgrColorThres[3]);
-	SPDLOG_SINKS_DEBUG("\t ColorPercentage : [{}, {}, {}, {}]", _bgrColorPercentage[0], _bgrColorPercentage[1], _bgrColorPercentage[2], _bgrColorPercentage[3]);
+	SPDLOG_SINKS_INFO("\t AdaptiveThresholdArgBlockSize : {}", _thresoldBlockSize);
+	SPDLOG_SINKS_INFO("\t AdaptiveThresholdArgC : {}", _thresoldC);
+	SPDLOG_SINKS_INFO("\t HSV-Blue: {}≤ h ≤{}， {}≤s≤255, {}≤v≤255", _hsvColor[BLUE][0], _hsvColor[BLUE][1], _hsvColor[BLUE][2], _hsvColor[BLUE][3]);
+	SPDLOG_SINKS_INFO("\t HSV-Greem: {}≤ h ≤{}， {}≤s≤255, {}≤v≤255", _hsvColor[GREEN][0], _hsvColor[GREEN][1], _hsvColor[GREEN][2], _hsvColor[GREEN][3]);
+	SPDLOG_SINKS_INFO("\t HSV-Red: {}≤ h1 ≤{} ∪ {}≤ h2 ≤{}， {}≤s≤255, {}≤v≤255", _hsvColor[RED][0], _hsvColor[RED][1], _hsvColor[RED][4], _hsvColor[RED][5], _hsvColor[RED][2], _hsvColor[RED][3]);
 }

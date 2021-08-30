@@ -1,114 +1,120 @@
 {
     "AgingSetting": {
+        "Width": 800,
+        "Hight": 600,
+        "SkipFrame": 3,
         "StartColor": 0,
         "StopColor": 3,
         "RandomShutDownLedNum": 0,
         "ShutDownDelayTime": -1,
         "RecheckFaileLedTime": 0
     },
-    "TUF-GAMING-4": {
+    "TUF-4": {
         "Camera": {
-            "Index": 0,
             "Exposure": -5,
-            "Saturation": 65,
-            "SkipFrame": 3,
-            "Width": 800,
-            "Hight": 600
+            "Saturation": 65
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
-            "MinROIContoursArea": 100,
             "MinContoursArea": 100,
-            "MinContoursSpace": 50,
             "LedContoursArea": 300,
             "AdaptiveThresholdArgBlockSize": 101,
             "AdaptiveThresholdArgC": -9,
-            "ColorThres": [ 50, 50, 50, 50 ],
-            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ]
+            }
+        }
+    },
+    "KO-19": {
+        "Camera": {
+            "Exposure": -5,
+            "Saturation": 65
+        },
+        "AlgorithmThreshold": {
+            "IntervalTime": 100,
+            "MinContoursArea": 100,
+            "LedContoursArea": 300,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ]
+            }
         }
     },
     "STRIX-GAMING-22": {
         "Camera": {
-            "Index": 0,
             "Exposure": -4,
-            "Saturation": 65,
-            "SkipFrame": 3,
-            "Width": 800,
-            "Hight": 600
+            "Saturation": 65
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
-            "MinROIContoursArea": 100,
             "MinContoursArea": 100,
-            "MinContoursSpace": 50,
             "LedContoursArea": 500,
             "AdaptiveThresholdArgBlockSize": 101,
             "AdaptiveThresholdArgC": -9,
-            "ColorThres": [ 50, 50, 50, 50 ],
-            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ]
+            }
         }
     },
     "STRIX-GAMING-19": {
         "Camera": {
-            "Index": 0,
             "Exposure": -4,
-            "Saturation": 65,
-            "SkipFrame": 3,
-            "Width": 800,
-            "Hight": 600
+            "Saturation": 65
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
-            "MinROIContoursArea": 100,
             "MinContoursArea": 100,
-            "MinContoursSpace": 50,
             "LedContoursArea": 500,
             "AdaptiveThresholdArgBlockSize": 101,
             "AdaptiveThresholdArgC": -9,
-            "ColorThres": [ 50, 50, 50, 50 ],
-            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ]
+            }
         }
     },
     "STRIX-WHITE-22": {
         "Camera": {
-            "Index": 0,
             "Exposure": -7,
-            "Saturation": 65,
-            "SkipFrame": 3,
-            "Width": 800,
-            "Hight": 600
+            "Saturation": 65
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
-            "MinROIContoursArea": 100,
             "MinContoursArea": 100,
-            "MinContoursSpace": 50,
             "LedContoursArea": 500,
             "AdaptiveThresholdArgBlockSize": 101,
             "AdaptiveThresholdArgC": -9,
-            "ColorThres": [ 50, 50, 50, 50 ],
-            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ]
+            }
         }
     },
     "STRIX-GUNDAM-22": {
         "Camera": {
-            "Index": 0,
             "Exposure": -4,
-            "Saturation": 65,
-            "SkipFrame": 3,
-            "Width": 800,
-            "Hight": 600
+            "Saturation": 65
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
-            "MinROIContoursArea": 100,
             "MinContoursArea": 10,
-            "MinContoursSpace": 50,
             "LedContoursArea": 250,
             "AdaptiveThresholdArgBlockSize": 101,
             "AdaptiveThresholdArgC": -9,
-            "ColorThres": [ 50, 25, 50, 50 ],
-            "ColorPercentage": [ 0.45, 0.45, 0.45, 0.45 ]
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ]
+            }
         }
     }
 }
