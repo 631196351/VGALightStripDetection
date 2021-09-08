@@ -44,6 +44,16 @@ enum
 {
 	VersionMajor = 2,
 	VersionSec = 0,
-	VersionThi = 0,
-	VersionMin = 18
+	VersionThi = 1,
+	VersionMin = 2
+};
+
+enum HSV
+{
+	eHmin = 0,
+	eHmax = 1,
+	eSmin = 2,
+	eVmin = 3,
+	eHmin2 = 4,
+	eHmax2 = 5
 };

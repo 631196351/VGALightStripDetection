@@ -151,6 +151,7 @@
     <ClCompile Include="I2CWrap.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main2.cpp" />
+    <ClCompile Include="main_test.cpp" />
     <ClCompile Include="Minefield.cpp" />
     <ClCompile Include="nvbase.cpp" />
     <ClCompile Include="PreDefine.cpp" />
@@ -178,6 +179,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="3c.ini" />
+    <None Include="3c.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

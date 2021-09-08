@@ -14,7 +14,6 @@ BYTE uOffset[12] = { 0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00
 I2CWrap::I2CWrap()
 {
 #ifdef VENDER_EXTRA
-	//HINSTANCE hDLL;		// Handle to DLL
 	_hDLL = LoadLibrary(L"VGA_Extra_x64.dll");
 	_hDLL == NULL ? throw ErrorCodeEx(ERR_LOAD_I2C_FAILURE, "Load VGA_Extra_x64.dll Failure") : (void)0;
 
@@ -25,15 +24,20 @@ I2CWrap::I2CWrap()
 	SPDLOG_SINKS_DEBUG("VGA_READ_IC_I2C:{}", _lpVGAReadICI2C == NULL ? "NULL" : "NOT NULL");
 	SPDLOG_SINKS_DEBUG("VGA_WRITE_IC_I2C:{}", _lpVGAWriteICI2C == NULL ? "NULL" : "NOT NULL");
 	// 载入dll
-	if (_lpLoadVenderDLL != NULL)
-	{
-		int res = _lpLoadVenderDLL();
-		SPDLOG_SINKS_DEBUG("LoadVenderDLL return GPU count {}", res);
-	}
-	else
+	if (_lpLoadVenderDLL == NULL)
 	{
 		throw ErrorCodeEx(ERR_LOAD_I2C_FAILURE, "Load VGA_Extra_x64.dll Failure");
 	}
+	int gpu_count = 0;
+	for (int i = 0; i < 120; ++i) {
+		(i > 0) ? Sleep(1000) : (void)0;
+		gpu_count = _lpLoadVenderDLL();
+		SPDLOG_SINKS_DEBUG("{}th LoadVenderDLL return GPU count {}", i + 1, gpu_count);
+		if (gpu_count > 0)
+			break;
+	}
+	gpu_count == 0 ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Init VenderDll fail") : (void)0;
+
 #else
 	nvi2cinit();
 #endif
@@ -90,11 +94,11 @@ void I2CWrap::setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 {
 	//模拟随机灭灯就需要假设这颗灯本来就是坏的 -> 插上就是黑的
 	//所以在开启随机灭灯时，除了可以设置成黑色，指定灭掉的灯其他颜色均不可设置
-	if ((r > 0 || g > 0 || b > 0) && litoff.IsLitOff(led))
-	{
-		SPDLOG_SINKS_DEBUG("The {}th need random lit-off", led);
-		return;
-	}
+	//if ((r > 0 || g > 0 || b > 0) && litoff.IsLitOff(led))
+	//{
+	//	SPDLOG_SINKS_DEBUG("The {}th need random lit-off", led);
+	//	return;
+	//}
 	//Set Start Address
 	uOffset[0] = 0x81;
 	uOffset[1] = REG[led];

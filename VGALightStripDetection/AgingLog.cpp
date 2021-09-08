@@ -465,7 +465,8 @@ void AgingLog::serialize()
 			int x = j + lpLedCount * (c);
 			if (lpLed[x] > 0)
 			{
-				s += std::to_string(j);
+				// 日志显示时下标从1开始记
+				s += std::to_string(j + 1);
 				s += ", ";
 			}
 		}
