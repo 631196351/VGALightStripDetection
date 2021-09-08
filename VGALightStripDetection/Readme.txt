@@ -141,3 +141,11 @@ Version Log
 [v2.0.0.18] - 2021.08.12
 1. 获取background 耗时82ms; 获取foreground 耗时176ms;可能的原因是A线程在几十毫秒前刚从相机里要完图，B线程后脚就过来再问相机要图，相机就索性给了同一张图。
    在亮灭灯后，delay 100ms, 然后再去抓 3 帧
+
+
+[v2.0.1.2] - 2021.09.08
+1. 核心功能：BGR颜色校验器 替换为 HSV颜色校验器，并分机种进行配置
+2. 因为BGR颜色校验器在轻微反光，过曝情况下无法正常工作；且针对阈值的调整只能依据经验来设置，相比较而言，
+   HSV颜色校验依据依据[link1](http://color.lukas-stratmann.com/color-systems/hsv.html) 进行可视化配置
+   再依此[link2](https://blog.csdn.net/timidsmile/article/details/17297811) 对H 通道进行减半处理
+3. 在main_test.cpp 模块将历史图像数据放进去，比较BGR && HSV 颜色校验器的校验效果
