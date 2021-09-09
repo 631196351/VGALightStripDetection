@@ -45,7 +45,7 @@ enum
 	VersionMajor = 2,
 	VersionSec = 0,
 	VersionThi = 1,
-	VersionMin = 2
+	VersionMin = 4
 };
 
 enum HSV

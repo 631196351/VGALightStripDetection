@@ -149,3 +149,10 @@ Version Log
    HSV颜色校验依据依据[link1](http://color.lukas-stratmann.com/color-systems/hsv.html) 进行可视化配置
    再依此[link2](https://blog.csdn.net/timidsmile/article/details/17297811) 对H 通道进行减半处理
 3. 在main_test.cpp 模块将历史图像数据放进去，比较BGR && HSV 颜色校验器的校验效果
+
+
+[v2.0.1.4] - 2021.09.09
+1. GetVGAINFO 可以抓到1M room 的N卡 PPID 和 1M room 的A卡 PPID, 所以Aging.bat 中先用GetVGAINFO来抓 PPID 和ModelName，若均为空则认定是N卡， 用nvflash来抓 这个逻辑不正确
+   有可能 GetVGAINFO 抓到 1M room 的N卡 PPID后，将N卡误认为是A卡， 但此时ModelName是空，会报1007错误
+   所以将Aging.bat 逻辑反转一下， 先抓N卡， 再去抓A卡
+2. 把出入日志的Time 列跟PPID 列调转一下，跟目录Time_PPID 格式保持一致 

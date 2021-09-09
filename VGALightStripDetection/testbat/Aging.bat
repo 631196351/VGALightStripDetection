@@ -8,29 +8,29 @@ echo ----------------Aging---------------
 
 set log=PPID.log
 
-cd /d %~dp0/GetVGAINFO
+cd "%~dp0/NVFlash 5.670/Windows64"
 
-if exist *.log (del /q *.log)
+if exist !log! (del /q !log!)
 
-start /wait GetVGAINFO.exe ppid
+start /wait nvflash.exe --rdoem !log!
 
-for /f %%i in (!log!) do (set ppid=%%i)
-
-start /wait GetVGAINFO.exe ModelName
-
-for /f %%i in (BIOSModelName.log) do (set model_name=%%i)
+for /f "tokens=1,2* delims=#" %%i in (!log!) do (
+    set model_name=%%i
+    set ppid=%%j
+)
 
 if "%ppid%" == "" if "%model_name%" == "" (
-    cd "%~dp0/NVFlash 5.670/Windows64"
+    cd /d "%~dp0/GetVGAINFO"
 
-    if exist !log! (del /q !log!)
+    if exist *.log (del /q *.log)
 
-    start /wait nvflash.exe --rdoem !log!
+    start /wait GetVGAINFO.exe ppid
 
-    for /f "tokens=1,2* delims=#" %%i in (!log!) do (
-        set model_name=%%i
-        set ppid=%%j
-    )
+    for /f %%i in (!log!) do (set ppid=%%i)
+
+    start /wait GetVGAINFO.exe ModelName
+
+    for /f %%i in (BIOSModelName.log) do (set model_name=%%i)
 )
 
 echo !model_name!

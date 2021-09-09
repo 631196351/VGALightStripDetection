@@ -61,7 +61,7 @@ void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
 			if (length == 0)
 			{
 				// 添加表头
-				aging_file <<"VideoCard,"<< "PPID," << "Time," << "Type,";
+				aging_file <<"VideoCard,"<< "Time," << "PPID," << "Type,";
 
 				char buf[10] = { 0 };
 				for (int i = 0; i < color_num; i++)
@@ -176,7 +176,7 @@ void AgingLog::saveAgingLog()
 		////////////////////////////////////////////////////////////////////////////
 		if (randomLightDown)
 		{
-			aging_file <<VideoCardIns.Name()<<","<< VideoCardIns.PPID() << "\t," << t << "\t,"<<"Random,";
+			aging_file <<VideoCardIns.Name()<<","<< t << "\t," << VideoCardIns.PPID() << "\t,"<<"Random,";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				// 随机灭掉的灯用-1表示
@@ -198,7 +198,7 @@ void AgingLog::saveAgingLog()
 		}
 		////////////////////////////////////////////////////////////////////////////
 		r = 0;
-		aging_file << VideoCardIns.Name() << "," << VideoCardIns.PPID() << "\t," << t << "\t," << "Normal,";
+		aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";
 		for (int i = 0; i < lpLedCount * color_num; i++)
 		{
 			r += lpLed[i];
@@ -221,7 +221,7 @@ void AgingLog::saveAgingLog()
 		if (retest)
 		{
 			r = 0;
-			aging_file << VideoCardIns.Name() << "," << VideoCardIns.PPID() << "\t," << t << "\t," << "Retest,";
+			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				r += lpRetest[i];
