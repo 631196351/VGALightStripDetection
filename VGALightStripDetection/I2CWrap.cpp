@@ -14,7 +14,6 @@ BYTE uOffset[12] = { 0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00
 I2CWrap::I2CWrap()
 {
 #ifdef VENDER_EXTRA
-	//HINSTANCE hDLL;		// Handle to DLL
 	_hDLL = LoadLibrary(L"VGA_Extra_x64.dll");
 	_hDLL == NULL ? throw ErrorCodeEx(ERR_LOAD_I2C_FAILURE, "Load VGA_Extra_x64.dll Failure") : (void)0;
 
@@ -25,15 +24,20 @@ I2CWrap::I2CWrap()
 	SPDLOG_SINKS_DEBUG("VGA_READ_IC_I2C:{}", _lpVGAReadICI2C == NULL ? "NULL" : "NOT NULL");
 	SPDLOG_SINKS_DEBUG("VGA_WRITE_IC_I2C:{}", _lpVGAWriteICI2C == NULL ? "NULL" : "NOT NULL");
 	// 载入dll
-	if (_lpLoadVenderDLL != NULL)
-	{
-		int res = _lpLoadVenderDLL();
-		SPDLOG_SINKS_DEBUG("LoadVenderDLL return GPU count {}", res);
-	}
-	else
+	if (_lpLoadVenderDLL == NULL)
 	{
 		throw ErrorCodeEx(ERR_LOAD_I2C_FAILURE, "Load VGA_Extra_x64.dll Failure");
 	}
+	int gpu_count = 0;
+	for (int i = 0; i < 120; ++i) {
+		(i > 0) ? Sleep(1000) : (void)0;
+		gpu_count = _lpLoadVenderDLL();
+		SPDLOG_SINKS_DEBUG("{}th LoadVenderDLL return GPU count {}", i + 1, gpu_count);
+		if (gpu_count > 0)
+			break;
+	}
+	gpu_count <= 0 ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Init VenderDll fail") : (void)0;
+
 #else
 	nvi2cinit();
 #endif
@@ -56,7 +60,7 @@ I2CWrap::I2CWrap()
 	NvAPI_Status result;
 	for (int i = 0; i < 5; ++i) {
 		result = nvi2cWriteBlock(0xCE, 0x0, offset, 2);
-		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i+1, result);
+		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i + 1, result);
 		if (result == NVAPI_OK)
 			break;
 	}
@@ -70,7 +74,7 @@ I2CWrap::I2CWrap()
 	nvi2cReadBlock(0xCE, 0x08, (NvU8*)&_ledCount, 1);
 #endif
 	SPDLOG_SINKS_DEBUG("Number of LEDs : {}", _ledCount);
-}
+	}
 
 
 I2CWrap::~I2CWrap()

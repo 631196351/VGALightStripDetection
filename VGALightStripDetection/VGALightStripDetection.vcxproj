@@ -147,6 +147,7 @@
     <ClCompile Include="CommonColor.cpp" />
     <ClCompile Include="ConfigData.cpp" />
     <ClCompile Include="ene_program.cpp" />
+    <ClCompile Include="CaptureDevices.cpp" />
     <ClCompile Include="ErrorCode.cpp" />
     <ClCompile Include="I2CWrap.cpp" />
     <ClCompile Include="main.cpp" />
@@ -165,6 +166,7 @@
     <ClInclude Include="CommonColor.h" />
     <ClInclude Include="ConfigData.h" />
     <ClInclude Include="ene_program.h" />
+    <ClInclude Include="CaptureDevices.h" />
     <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="I2CWrap.h" />
     <ClInclude Include="main.h" />

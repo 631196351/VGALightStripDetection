@@ -9,10 +9,13 @@
         "ShutDownDelayTime": -1,
         "RecheckFaileLedTime": 0
     },
-    "TUF-4": {
+    "TUF": {
         "Camera": {
             "Exposure": -5,
-            "Saturation": 65
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4 ]
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
@@ -23,14 +26,18 @@
             "HSV": {
                 "b": [ 190, 270, 102, 40 ],
                 "g": [ 80, 170, 102, 40 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ]
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
             }
         }
     },
-    "KO-19": {
+    "KO": {
         "Camera": {
             "Exposure": -5,
-            "Saturation": 65
+            "Saturation": 65,
+            "Front": [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14 ],
+            "Rear": [],
+            "Overhead": [ 5, 6, 7 ]
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
@@ -41,14 +48,18 @@
             "HSV": {
                 "b": [ 190, 270, 102, 40 ],
                 "g": [ 80, 170, 102, 40 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ]
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
             }
         }
     },
-    "STRIX-GAMING-22": {
+    "STRIX-22": {
         "Camera": {
             "Exposure": -4,
-            "Saturation": 65
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
@@ -59,14 +70,18 @@
             "HSV": {
                 "b": [ 190, 270, 102, 40 ],
                 "g": [ 80, 170, 102, 40 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ]
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
             }
         }
     },
-    "STRIX-GAMING-19": {
+    "STRIX-19": {
         "Camera": {
-            "Exposure": -4,
-            "Saturation": 65
+            "Exposure": -7,
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [ 16, 17, 18, 19 ],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ]
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
@@ -77,14 +92,18 @@
             "HSV": {
                 "b": [ 190, 270, 102, 40 ],
                 "g": [ 80, 170, 102, 40 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ]
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
             }
         }
     },
     "STRIX-WHITE-22": {
         "Camera": {
             "Exposure": -7,
-            "Saturation": 65
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
@@ -95,14 +114,18 @@
             "HSV": {
                 "b": [ 190, 270, 102, 40 ],
                 "g": [ 80, 170, 102, 40 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ]
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
             }
         }
     },
     "STRIX-GUNDAM-22": {
         "Camera": {
             "Exposure": -4,
-            "Saturation": 65
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
         },
         "AlgorithmThreshold": {
             "IntervalTime": 100,
@@ -113,7 +136,8 @@
             "HSV": {
                 "b": [ 190, 270, 102, 40 ],
                 "g": [ 80, 170, 102, 40 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ]
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
             }
         }
     }

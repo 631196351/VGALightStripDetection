@@ -10,8 +10,8 @@
 #include "ErrorCode.h"
 #include "VideoCard.h"
 #include "I2CWrap.h"
-//#include "Minefield.h"
 #include "RandomLitoff.h"
+#include "CaptureDevices.h"
 
 using namespace cv;
 using namespace std;
@@ -25,7 +25,7 @@ const char* argkeys =
 
 #define MainThreadIsExit if (g_main_thread_exit >= eExit) { break; }
 #define OnExitFlagReturn if (g_main_thread_exit >= eExit) { return; }
-
+#define SAVE_ROI_FBMCR
 //#define DEBUG_DETAILS
 
 std::mutex g_set_led_mutex;
@@ -40,14 +40,13 @@ ErrorCode g_error = ErrorCode(ERR_All_IS_WELL, "All is well");
 std::vector<VideoCapture> g_captures(CaptureNum);
 std::vector<Mat> g_fore(CaptureNum);
 std::vector<Mat> g_back(CaptureNum);
-//const int g_pyDown = 2;	//下采样倍率
+
+const int g_pyDown = 2;	//下采样倍率
 
 void spliceMultipleFrames(std::vector<Mat>& frames, Mat& result)
 {
 	int w = g_captures[0].get(CAP_PROP_FRAME_WIDTH);
 	int h = g_captures[0].get(CAP_PROP_FRAME_HEIGHT);
-	//int w = g_captures[0].get(CAP_PROP_FRAME_WIDTH)/ g_pyDown;
-	//int h = g_captures[0].get(CAP_PROP_FRAME_HEIGHT)/ g_pyDown;
 	result = Mat(Size(w, h* CaptureNum), CV_8UC3, Scalar::all(0));
 	for (int i = 0; i < frames.size(); ++i)
 	{
@@ -56,9 +55,9 @@ void spliceMultipleFrames(std::vector<Mat>& frames, Mat& result)
 	}
 }
 
-void getFrame( std::vector<Mat>& f, bool cutFrame = true)
+void getFrame( std::vector<Mat>& f)
 {
-	try
+	EXCEPTION_OPERATOR_TRY
 	{
 		Mat img;
 		SPDLOG_SINKS_DEBUG("Get Frame");
@@ -72,36 +71,34 @@ void getFrame( std::vector<Mat>& f, bool cutFrame = true)
 					throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
 				if (i + 1 >= cfg.skipFrame())
 				{
-					pyrDown(img, img, Size(img.cols , img.rows));
-					//pyrDown(img, img, Size(img.cols / g_pyDown, img.rows / g_pyDown));
-					if (cutFrame)
-					{
-						const Rect* rois = cfg.rois();
-						img(rois[j]).copyTo(f[j]);
-					}
-					else
-					{
-						img.copyTo(f[j]);
-					}
+					img.copyTo(f[j]);
 				}
 			}
 		}
 	}
-	catch (cv::Exception& e)
+	EXCEPTION_OPERATOR_CATCH_2;
+}
+
+void getSingleFrame(cv::Mat& f,int camera = 0)
+{
+	EXCEPTION_OPERATOR_TRY
 	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
+		Mat img;
+		SPDLOG_SINKS_DEBUG("Get Frame");
+		for (int i = 0; i < cfg.skipFrame(); ++i)
+		{
+			g_captures[camera].read(img);
+			SPDLOG_SINKS_DEBUG("{}th capture's {}th frame", camera, i);
+			if (img.empty())
+				throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
+			if (i + 1 >= cfg.skipFrame())
+			{
+				const Rect* rois = cfg.rois();
+				img(rois[camera]).copyTo(f);
+			}
+		}
 	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
+	EXCEPTION_OPERATOR_CATCH_2;
 }
 
 void autoGetCaptureFrame()
@@ -134,8 +131,7 @@ void autoGetCaptureFrame()
 				putText(video, txt, Point(0, (video.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1);
 				//if (!cfg.rect().empty())
 				//	rectangle(video, cfg.rect(), Scalar(0, 255, 255), 5);
-				//pyrDown(video, video, Size(video.cols / g_pyDown, video.rows / g_pyDown));
-				pyrDown(video, video, Size(video.cols, video.rows));
+				pyrDown(video, video, Size(video.cols / g_pyDown, video.rows / g_pyDown));
 				imshow("video", video);
 
 				key = cv::waitKey(33);
@@ -157,21 +153,7 @@ void autoGetCaptureFrame()
 				Sleep(1);
 			}
 		}
-		catch (Exception& e)
-		{
-			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-			showErrorCode(ErrorCode(e, ERR_OPENCV_RUNTIME_EXCEPTION));
-		}
-		catch (ErrorCode& e)
-		{
-			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-			showErrorCode(e);
-		}
-		catch (std::exception& e)
-		{
-			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-			showErrorCode(ErrorCode(e, ERR_STD_EXCEPTION));
-		}
+		EXCEPTION_OPERATOR_CATCH_3;
 	}
 }
 
@@ -184,161 +166,8 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 		bool bwrite = cv::imwrite(name, f);
 		SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}, result:{}", name, bwrite);
 	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
+	EXCEPTION_OPERATOR_CATCH_2;
 }
-
-int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
-{
-	int min_dist;
-
-	//首先计算两个矩形中心点
-	Point C1, C2;
-	C1.x = rect1.x + (rect1.width / 2);
-	C1.y = rect1.y + (rect1.height / 2);
-	C2.x = rect2.x + (rect2.width / 2);
-	C2.y = rect2.y + (rect2.height / 2);
-
-	// 分别计算两矩形中心点在X轴和Y轴方向的距离
-	int Dx, Dy;
-	Dx = abs(C2.x - C1.x);
-	Dy = abs(C2.y - C1.y);
-
-	//两矩形不相交，在X轴方向有部分重合的两个矩形，最小距离是上矩形的下边线与下矩形的上边线之间的距离
-	if ((Dx < ((rect1.width + rect2.width) / 2)) && (Dy >= ((rect1.height + rect2.height) / 2)))
-	{
-		min_dist = Dy - ((rect1.height + rect2.height) / 2);
-	}
-
-	//两矩形不相交，在Y轴方向有部分重合的两个矩形，最小距离是左矩形的右边线与右矩形的左边线之间的距离
-	else if ((Dx >= ((rect1.width + rect2.width) / 2)) && (Dy < ((rect1.height + rect2.height) / 2)))
-	{
-		min_dist = Dx - ((rect1.width + rect2.width) / 2);
-	}
-
-	//两矩形不相交，在X轴和Y轴方向无重合的两个矩形，最小距离是距离最近的两个顶点之间的距离，
-	// 利用勾股定理，很容易算出这一距离
-	else if ((Dx >= ((rect1.width + rect2.width) / 2)) && (Dy >= ((rect1.height + rect2.height) / 2)))
-	{
-		int delta_x = Dx - ((rect1.width + rect2.width) / 2);
-		int delta_y = Dy - ((rect1.height + rect2.height) / 2);
-		min_dist = sqrt(delta_x * delta_x + delta_y * delta_y);
-	}
-
-	//两矩形相交，最小距离为负值，返回-1
-	else
-	{
-		min_dist = -1;
-	}
-
-	return min_dist;
-}
-#if false
-void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vector<vector<Point> >& contours, vector<Rect>& boundRect)
-{
-	try
-	{
-		for (int index = 0; index < contours.size(); index++)
-		{
-			// 生成最小包围矩形
-			vector<Point> contours_poly;
-			approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
-			Rect rect = boundingRect(contours_poly);
-
-			//SPDLOG_SINKS_DEBUG("{}th rect.area:{}", index, rect.area());
-			// 轮廓面积校验
-			if (rect.area() < cfg.minContoursArea())
-				continue;
-
-			// 校验轮廓颜色
-			Mat mask_cell = mask(rect).clone();
-			Mat frame_cell = frame(rect).clone();
-			//cv::imshow("frame_cell", frame_cell);
-			//waitKey();
-
-			// 计算各通道均值
-			bool colorCorrect = false;
-			Scalar means;
-			means = mean(frame_cell, mask_cell);
-
-			double b = means[0];
-			double g = means[1];
-			double r = means[2];
-			double p = 0.0;
-			if (currentColor == BLUE)
-			{
-				p = b / (b + g + r);
-				// 亮bule时，b通道要占多数，其他情况一律抹掉该轮廓
-				if (b > cfg.bgrThres(BLUE) && b > g && b > r && p > cfg.bgrPercentage(BLUE)) {
-					colorCorrect = true;
-				}
-				else if ((1.0 - p) < 0.02) {
-					// b 通道独占80%，即便是亮度很低的情况下也近乎纯蓝色
-					colorCorrect = true;
-				}
-			}
-			else if (currentColor == GREEN)
-			{
-				p = g / (b + g + r);
-				if (g > cfg.bgrThres(GREEN) && g > b && g > r && p > cfg.bgrPercentage(GREEN)) {
-					colorCorrect = true;
-				}
-				else if ((1.0 - p) < 0.02) {
-					colorCorrect = true;
-				}
-			}
-			else if (currentColor == RED)
-			{
-				p = r / (b + g + r);
-				if (r > cfg.bgrThres(RED) && r > b && r > g && p > cfg.bgrPercentage(RED)) {
-					colorCorrect = true;
-				}
-				else if ((1.0 - p) < 0.02) {
-					colorCorrect = true;
-				}
-			}
-
-			if (colorCorrect)
-			{
-				boundRect.push_back(rect);
-				// 绘制各自小轮廓
-				Scalar color = Scalar(0, 255, 255);
-				drawContours(result, contours, index, color, 1);
-
-				SPDLOG_SINKS_DEBUG("CheckContoursColor {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> yes", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
-			}
-			else
-			{
-				SPDLOG_SINKS_DEBUG("CheckContoursColor {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> no", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
-				rect = Rect();
-			}
-		}
-	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-}
-#endif
 
 void findFrameContours()
 {
@@ -361,16 +190,9 @@ void findFrameContours()
 				SPDLOG_SINKS_DEBUG("Color = {}, Index = {}", currentColor, currentIndex);
 
 				Mat mask, mask_hsv, hsv_img_mask;
-				// 多视角画面拼接
-				Mat frame = Mat::zeros(cfg.rect2().size(), CV_8UC3);
-				Mat back = Mat::zeros(cfg.rect2().size(), CV_8UC3);
-				for (int x = 0, h = 0; x < CaptureNum; ++x)
-				{
-					g_fore[x].copyTo(frame(Rect(0, h, g_fore[x].cols, g_fore[x].rows)));
-					g_back[x].copyTo(back(Rect(0, h, g_back[x].cols, g_back[x].rows)));
-					h += g_back[x].rows;
-				}
-
+				Mat frame, back;
+				g_fore[0].copyTo(frame);
+				g_back[0].copyTo(back);
 
 				if (frame.empty() || back.empty())
 				{
@@ -388,164 +210,14 @@ void findFrameContours()
 					saveDebugROIImg(back, currentColor, currentIndex, "back");
 				}
 				SPDLOG_SINKS_DEBUG("Frame difference algorithm starts.");
-#if 0
-				std::vector<Mat> frame_bgrs, back_bgrs;
-				Mat frame_gray, back_gray, temp;
-				if (currentColor == WHITE) {
-					cv::cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
-					cv::cvtColor(back, back_gray, COLOR_BGR2GRAY);
-				}
-				else
-				{
-					split(frame, frame_bgrs);
-					split(back, back_bgrs);
-					frame_gray = frame_bgrs[currentColor];
-					back_gray = back_bgrs[currentColor];
-				}
 
-				SPDLOG_SINKS_DEBUG("Convert back and frame to gray.");
-				subtract(frame_gray, back_gray, mask);
-				SPDLOG_SINKS_DEBUG("frame_gray - back_gray = mask");
-
-				//cv::threshold(mask, mask, 0, 255, THRESH_BINARY | THRESH_OTSU);
-				cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
-				//GaussianBlur(mask, mask, Size(5, 5), 0);
-
-				//形态学处理
-				Mat kernel = getStructuringElement(MORPH_CROSS/*MORPH_RECT*/, Size(3, 3));
-				morphologyEx(mask, mask, MORPH_OPEN, kernel);
-				SPDLOG_SINKS_DEBUG("Morphology open operation processing mask");
-
-				cv::medianBlur(mask, mask, 3);
-				SPDLOG_SINKS_DEBUG("Blur mask");
-
-#ifdef DEBUG_DETAILS
-				cv::imshow("mask", mask);
-#endif
-				{
-					saveDebugROIImg(mask, currentColor, currentIndex, "mask");
-				}
-
-				//存储边缘
-				vector<vector<Point> > contours;
-				vector<Rect> boundRect;
-				vector<Vec4i> hierarchy;
-				Mat result = Mat::zeros(frame.size(), frame.type());
-				findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
-				SPDLOG_SINKS_DEBUG("Find {} Contours", contours.size());
-
-				///RGB颜色校验器不应该是校验foreground 上的颜色, 而是要校验(foreground - background) 上的颜色
-				///因为foreground上会带有反光或者环境光的干扰因素在里面, 帧差之后会抵消大部分的干扰因素;
-				///其次就在RGB阈值设定上, 这块不如HSV颜色校验器来的直观, 来的快
-				checkContoursColor(frame, mask, result, currentColor, contours, boundRect);
-#ifdef DEBUG_DETAILS
-				cv::imshow("contours", result);
-#endif
-				{
-					saveDebugROIImg(result, currentColor, currentIndex, "contours");
-				}
-
-				SPDLOG_SINKS_DEBUG("{} more Rect before the Rect are merged", boundRect.size());
-				for (int i = 0; i < boundRect.size(); i++)
-				{
-					Rect& rect = boundRect[i];
-					if (rect.area() == 0)
-						continue;
-
-					//printf("\ncontours1----------------[x:%d, y:%d, w:%d, h:%d]\n", rect.x, rect.y, rect.width, rect.height);
-					// 合并轮廓
-					// 在已有轮廓中找距离最近的那一个,并进行标记
-					int t = -1;
-					int min_gap = cfg.minContoursSpace();	//用来记录离自己最近的距离
-
-					for (int j = 0; j < boundRect.size(); j++)
-					{
-						if (i == j)     // 跳过自己
-							continue;
-						if (boundRect[j].area() == 0)
-							continue;
-
-						int gap = min_distance_of_rectangles(rect, boundRect[j]);
-
-						if (gap <= cfg.minContoursSpace())
-						{
-							if (gap <= min_gap)
-							{
-								min_gap = gap;
-								t = j;
-							}
-						}
-					}
-
-					// 同距离自己最近的轮廓进行合并， 都离的远就自成一家
-					if (t >= 0)
-					{
-						Rect r = boundRect[t];
-						boundRect[t] |= rect;
-						rect = Rect();
-					}
-				}
-
-				for (auto it = boundRect.begin(); it != boundRect.end();)
-				{
-					if (it->area() == 0) { it = boundRect.erase(it); }
-					else { it++; }
-				}
-
-				SPDLOG_SINKS_DEBUG("{} more Rect after the Rect are merged", boundRect.size());
-				//得到灯的轮廓
-				size_t unqualified_rect = 0;
-				for (int index = 0; index < boundRect.size(); index++)
-				{
-					const Rect& r = boundRect[index];
-					SPDLOG_SINKS_DEBUG("Rect {}th - x:{} y:{} width:{} height:{} area:{}, RecheckFaileLedTime:{}", index, r.x, r.y, r.width, r.height, r.area(), g_recheckFaileLedTime);
-					if (r.area() > cfg.ledContoursArea())
-					{
-						rectangle(frame, r, Scalar(0, 255, 255), 3);
-						// 第一遍测试结果和复测结果分开
-						if (g_recheckFaileLedTime == 0)
-							AgingInstance.setSingleLedResult(currentIndex, currentColor, Pass);
-						else
-							AgingInstance.setSingleLedRetestResult(currentIndex, currentColor, Pass);
-					}
-					else
-					{
-						unqualified_rect++;
-					}
-				}
-
-				if (unqualified_rect == boundRect.size())
-				{
-					cv::putText(frame, "Fail", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
-					// 第一遍测试结果和复测结果分开
-					if (g_recheckFaileLedTime == 0)
-						AgingInstance.setSingleLedResult(currentIndex, currentColor, Fail);
-					else
-						AgingInstance.setSingleLedRetestResult(currentIndex, currentColor, Fail);
-
-					SPDLOG_SINKS_ERROR("The {}th {} light FAIL. RecheckFaileLedTime:{}", currentIndex, currentColor, g_recheckFaileLedTime);
-				}
-
-				// 首次侦测且开启随机灭灯情况进入
-				if (litoff.getRandomLitOffState() && g_recheckFaileLedTime == 0)
-				{
-					if (!litoff.IsLitOff(currentIndex))
-						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
-					else
-						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, RandomShutDownLed);
-				}
-
-				saveDebugROIImg(frame, currentColor, currentIndex, "result");
-				cv::imshow("result", frame);
-				cv::waitKey(1);
-#else
 				cv::subtract(frame, back, mask);
 
 				const float* hsv = cfg.hsvColor(currentColor);
 
 				cv::cvtColor(mask, mask_hsv, COLOR_BGR2HSV);
 
-				cv::inRange(mask_hsv, Scalar(hsv[0] * 0.5, hsv[2], hsv[3]), Scalar(hsv[1] * 0.5, 255, 255), hsv_img_mask);
+				cv::inRange(mask_hsv, Scalar(hsv[0], hsv[2], hsv[3]), Scalar(hsv[1], 255, 255), hsv_img_mask);
 
 				if (currentColor == RED)
 				{
@@ -562,7 +234,7 @@ void findFrameContours()
 				cv::GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
 
 				{
-#if DEBUG_DETAILS
+#ifdef DEBUG_DETAILS
 					cv::imshow("mask", mask);
 					imshow("mask_hsv", mask_hsv);
 #endif
@@ -585,7 +257,7 @@ void findFrameContours()
 					approxPolyDP(Mat(contours[i]), contours_poly, 3, true);
 					Rect r = boundingRect(contours_poly);
 
-					SPDLOG_SINKS_DEBUG("{}th rect.area:{}", i, r.area());
+					//SPDLOG_SINKS_DEBUG("{}th rect.area:{}", i, r.area());
 					// 轮廓面积校验
 					if (r.area() < cfg.minContoursArea())
 						continue;
@@ -632,25 +304,11 @@ void findFrameContours()
 				saveDebugROIImg(frame, currentColor, currentIndex, "result");
 				cv::imshow("result", frame);
 				cv::waitKey(1);
-#endif
 				t.stop();
 				SPDLOG_SINKS_INFO("Tick Time: {}, {}", t.getTimeSec(), t.getTimeTicks());
 			}
-			catch (cv::Exception& e)
-			{
-				SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-				showErrorCode(ErrorCode(e, ERR_OPENCV_RUNTIME_EXCEPTION));
-			}
-			catch (ErrorCode& e)
-			{
-				SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-				showErrorCode(e);
-			}
-			catch (std::exception& e)
-			{
-				SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-				showErrorCode(ErrorCode(e, ERR_STD_EXCEPTION));
-			}
+			EXCEPTION_OPERATOR_CATCH_3;
+
 			g_wait = false;	// !important
 
 		}
@@ -668,8 +326,8 @@ void mainLightingControl()
 		SPDLOG_SINKS_DEBUG("---------------- MainLightingControl ----------------");
 		cv::TickMeter t;
 		t.start();
-		std::vector<Mat> back(CaptureNum);
-		std::vector<Mat> fore(CaptureNum);
+		cv::Mat back;
+		cv::Mat fore;
 		std::vector<int> colorNum(I2C.getLedCount());
 		for (int i = 1; i < I2C.getLedCount(); i++)
 		{
@@ -679,16 +337,6 @@ void mainLightingControl()
 		// 关闭所有灯
 		I2C.resetColor(0, 0, 0);
 
-		auto deepCopyMat = [](std::vector<Mat>& l, std::vector<Mat>& r)
-		{
-			if (l.size() != CaptureNum)
-			{
-				SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-				throw ErrorCodeEx(ERR_MISSING_FRAME, "抓到的图像数小于相机个数");
-			}
-			//r.clear();
-			r.swap(l);
-		};
 		for (int color = cfg.c1(); color < cfg.c2(); ++color)
 		{
 			MainThreadIsExit;
@@ -696,30 +344,31 @@ void mainLightingControl()
 			for (int index = 0; index < I2C.getLedCount(); index++)
 			{
 				MainThreadIsExit;
+				
+				int camera_index = cfg.lanternIndexToCamera(index);
 
 				I2C.setSignleColor(colorNum[index], BLACK);
-				SPDLOG_SINKS_DEBUG("Turn off the {}th Led", colorNum[index]);
 				Sleep(cfg.intervalTime());
 				SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
-				getFrame(back);
+				getSingleFrame(back, camera_index);
 
 				litoff.IsLitOff(index) ? (void)0 : I2C.setSignleColor(index, color);
-				SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
 				Sleep(cfg.intervalTime());
 				SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
-				getFrame(fore);
+				getSingleFrame(fore, camera_index);
 
 				g_set_led_mutex.lock();
 				g_Index = index;
 				g_Led = color;
 				g_wait = true;
-				deepCopyMat(back, g_back);
-				deepCopyMat(fore, g_fore);
+				//g_CameraIndex = camera_index;
+				//deepCopyMat(back, g_back);
+				//deepCopyMat(fore, g_fore);
+				back.copyTo(g_back[0]);
+				fore.copyTo(g_fore[0]);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
-
 			}
-
 		}
 
 		I2C.resetColor(0, 0, 0);
@@ -732,128 +381,10 @@ void mainLightingControl()
 		SPDLOG_SINKS_INFO("----------------MainLightingControl---------------- Tick Time: {}, {}", t.getTimeSec(), t.getTimeTicks());
 
 	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
+	EXCEPTION_OPERATOR_CATCH_2;
 }
 
-#if false
-void checkROIContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vector<vector<Point> >& contours, vector<Rect>& boundRect)
-{
-	try
-	{
-		for (int index = 0; index < contours.size(); index++)
-		{
-			// 生成最小包围矩形
-			vector<Point> contours_poly;
-			approxPolyDP(Mat(contours[index]), contours_poly, 3, true);
-			Rect rect = boundingRect(contours_poly);
 
-			//SPDLOG_SINKS_DEBUG("{}th rect.area:{}", index, rect.area());
-			// 轮廓面积校验
-			if (rect.area() < cfg.minROIContoursArea())
-				continue;
-
-			// 校验轮廓颜色
-			Mat mask_cell = mask(rect).clone();
-			Mat frame_cell = frame(rect).clone();
-			//cv::imshow("frame_cell", frame_cell);
-			//waitKey();
-
-			// 计算各通道均值
-			bool colorCorrect = false;
-			Scalar means;
-			means = mean(frame_cell, mask_cell);
-
-			double b = means[0];
-			double g = means[1];
-			double r = means[2];
-			double p = 0.0;
-			if (currentColor == BLUE)
-			{
-				p = b / (b + g + r);
-				// 亮bule时，b通道要占多数，其他情况一律抹掉该轮廓
-				if (b > cfg.bgrThres(BLUE) && b > g && b > r && p > cfg.bgrPercentage(BLUE)) {
-					colorCorrect = true;
-				}
-				else if ((1.0 - p) < 0.02) {
-					// b 通道独占80%，即便是亮度很低的情况下也近乎纯蓝色
-					colorCorrect = true;
-				}
-			}
-			else if (currentColor == GREEN)
-			{
-				p = g / (b + g + r);
-				if (g > cfg.bgrThres(GREEN) && g > b && g > r && p > cfg.bgrPercentage(GREEN)) {
-					colorCorrect = true;
-				}
-				else if ((1.0 - p) < 0.02) {
-					colorCorrect = true;
-				}
-			}
-			else if (currentColor == RED)
-			{
-				p = r / (b + g + r);
-				if (r > cfg.bgrThres(RED) && r > b && r > g && p > cfg.bgrPercentage(RED)) {
-					colorCorrect = true;
-				}
-				else if ((1.0 - p) < 0.02) {
-					colorCorrect = true;
-				}
-			}
-			//else if(currentColor == WHITE)
-			//{
-			//
-			//	colorCorrect = true;
-			//}
-
-			if (colorCorrect)
-			{
-				boundRect.push_back(rect);
-				// 绘制各自小轮廓
-				Scalar color = Scalar(0, 255, 255);
-				drawContours(result, contours, index, color, 1);
-
-				SPDLOG_SINKS_DEBUG("CheckContoursColor {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> yes", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
-			}
-			else
-			{
-				SPDLOG_SINKS_DEBUG("CheckContoursColor {}th ({},{}) width:{} height:{} area:{}; Mean b:{}, g:{}, r:{}, p:{} --> no", index, rect.x, rect.y, rect.width, rect.height, rect.area(), b, g, r, p);
-				rect = Rect();
-			}
-		}
-	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-}
-#endif
-
-#define SAVE_ROI_FBMCR
 void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, int color, Rect outRect[][CaptureNum])
 {
 	try
@@ -865,72 +396,6 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 			Rect roi;
 			b = back[x];// back.copyTo(b);
 			f = fore[x];// fore.copyTo(f);
-#if 0
-			std::vector<Mat> frame_bgrs, back_bgrs;
-			Mat frame_gray, back_gray;
-			if (color == WHITE) {
-				cv::cvtColor(f, frame_gray, COLOR_BGR2GRAY);
-				cv::cvtColor(b, back_gray, COLOR_BGR2GRAY);
-			}
-			else
-			{
-				split(f, frame_bgrs);
-				split(b, back_bgrs);
-				frame_gray = frame_bgrs[color];
-				back_gray = back_bgrs[color];
-			}
-
-#ifdef SAVE_ROI_FBMCR
-			char name[MAX_PATH] = { 0 };
-			{
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, f);
-
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, b);
-			}
-#endif
-			SPDLOG_SINKS_DEBUG("Convert back and frame to gray.");
-			cv::subtract(frame_gray, back_gray, mask);
-			threshold(mask, mask, 100, 255, THRESH_TOZERO);
-			SPDLOG_SINKS_DEBUG("frame_gray - back_gray = mask");
-
-#ifdef SAVE_ROI_FBMCR
-			{
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, mask);
-			}
-#endif
-			cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
-
-			//形态学处理
-			Mat kernel = getStructuringElement(MORPH_CROSS, Size(3, 3));
-			morphologyEx(mask, mask, MORPH_OPEN, kernel);
-			cv::medianBlur(mask, mask, 3);
-
-			//存储边缘
-			vector<vector<Point> > contours;
-			vector<Rect> boundRect;
-			vector<Vec4i> hierarchy;
-			Mat result = Mat::zeros(f.size(), f.type());
-			cv::findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
-			SPDLOG_SINKS_DEBUG("Find {} Contours", contours.size());
-
-			checkROIContoursColor(f, mask, result, color, contours, boundRect);
-
-#ifdef SAVE_ROI_FBMCR
-			{
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, result);
-			}
-#endif
-
-			std::sort(boundRect.begin(), boundRect.end(), [](cv::Rect& l, cv::Rect& r) { return l.area() > r.area(); });
-			for (int i = 0; i < boundRect.size(); ++i)
-			{
-				roi |= boundRect[i];
-			}
-#else
 
 #ifdef SAVE_ROI_FBMCR
 			char name[MAX_PATH] = { 0 };
@@ -945,16 +410,17 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 			cv::subtract(f, b, mask);
 
 			const float* hsv = cfg.hsvColor(color);
+			const float* roi_hv = cfg.roiHV();
 
 			cv::cvtColor(mask, mask_hsv, COLOR_BGR2HSV);
 
-			cv::inRange(mask_hsv, Scalar(hsv[0] * 0.5, hsv[2], hsv[3]), Scalar(hsv[1] * 0.5, 255, 255), hsv_img_mask);
+			cv::inRange(mask_hsv, Scalar(hsv[eHmin], roi_hv[0], roi_hv[1]), Scalar(hsv[eHmax], 255, 255), hsv_img_mask);
 
 			if (color == RED)
 			{
 				Mat hsv_img_mask_r;
 
-				cv::inRange(mask_hsv, Scalar(hsv[4], hsv[2], hsv[3]), Scalar(hsv[5], 255, 255), hsv_img_mask_r);
+				cv::inRange(mask_hsv, Scalar(hsv[eHmin2], roi_hv[0], roi_hv[1]), Scalar(hsv[eHmax2], 255, 255), hsv_img_mask_r);
 				hsv_img_mask += hsv_img_mask_r;
 			}
 
@@ -994,8 +460,6 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 				drawContours(result, contours, i, Scalar(0, 255, 255), 1);
 			}
 
-#endif
-
 			cv::rectangle(f, roi, Scalar(255, 0, 255), 1);
 #ifdef SAVE_ROI_FBMCR
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
@@ -1005,21 +469,7 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 			outRect[color][x] = roi;
 		}
 	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
+	EXCEPTION_OPERATOR_CATCH_2;
 }
 
 void autoCaptureROI2()
@@ -1049,12 +499,12 @@ void autoCaptureROI2()
 			{
 				I2C.resetColor(BLACK);
 				Sleep(cfg.intervalTime());
-				getFrame(back, false);
+				getFrame(back);
 
 				SPDLOG_SINKS_DEBUG("lit-on {}th color", color);
 				I2C.resetColor(color);
 				Sleep(cfg.intervalTime());
-				getFrame(fore, false);
+				getFrame(fore);
 
 				frameDiff2ROI(back, fore, color, roi);
 
@@ -1070,6 +520,7 @@ void autoCaptureROI2()
 				spliceMultipleFrames(fore, frame);
 
 				cv::imwrite(name, frame);
+				pyrDown(frame, frame, Size(frame.cols / g_pyDown, frame.rows / g_pyDown));
 				cv::imshow("result", frame);
 				cv::waitKey(33);
 			}
@@ -1078,20 +529,7 @@ void autoCaptureROI2()
 			cv::destroyWindow("result");
 			break;
 		}
-		catch (ErrorCode& e)
-		{
-			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		}
-		catch (cv::Exception& e)
-		{
-			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-			throw e;
-		}
-		catch (std::exception& e)
-		{
-			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-			throw e;
-		}
+		EXCEPTION_OPERATOR_CATCH_1;
 	}
 }
 
@@ -1107,72 +545,17 @@ int showErrorCode(ErrorCode& e)
 }
 
 
-void saveSingleColorResult()
-{
-	//OnExitFlagReturn;
-	//try
-	//{
-	//	SPDLOG_SINKS_DEBUG("---------------- save single led color 1 -----------------");
-	//
-	//	for (int color = cfg.c1(); color < cfg.c2(); ++color)
-	//	{
-	//		MainThreadIsExit;
-	//		I2C.resetColor(color);
-	//		SPDLOG_SINKS_DEBUG("Turn on all {} led, color {}", I2C.getLedCount(), color);
-	//		Sleep(cfg.intervalTime());
-	//
-	//		Mat frame;
-	//		getFrame(frame);	// get current frame
-	//		char name[_MAX_PATH] = { 0 };
-	//		sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
-	//		cv::putText(frame, AgingInstance.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
-	//		//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
-	//		imwrite(name, frame);
-	//
-	//		//I2C.resetColor(0, 0, 0);
-	//		//Sleep(cfg.intervalTime());
-	//	}
-	//	I2C.resetColor(0, 0, 0);	//确保结束后灯是灭的
-	//	SPDLOG_SINKS_DEBUG("---------------- save single led color 2 -----------------");
-	//
-	//}
-	//catch (cv::Exception& e)
-	//{
-	//	SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-	//	throw e;
-	//}
-	//catch (ErrorCode& e)
-	//{
-	//	SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-	//	throw e;
-	//}
-	//catch (std::exception& e)
-	//{
-	//	SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-	//	throw e;
-	//}
-}
-
 void checkTheFailLedAgain()
 {
 	OnExitFlagReturn;
 	if (cfg.recheckFaileLedTime() <= 0)
 		return;
-	auto deepCopyMat = [](std::vector<Mat>& l, std::vector<Mat>& r)
-	{
-		if (l.size() != CaptureNum)
-		{
-			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-			throw ErrorCodeEx(ERR_MISSING_FRAME, "抓到的图像数小于相机个数");
-		}
-		//r.clear();
-		r.swap(l);
-	};
+
 	try
 	{
 		SPDLOG_SINKS_DEBUG("---------------- Check the Failed Led Again 1 ----------------");
-		std::vector<Mat> back(CaptureNum);
-		std::vector<Mat> fore(CaptureNum);
+		cv::Mat back;
+		cv::Mat fore;
 
 		AgingInstance.syncSingLedResult2RetestResult();
 
@@ -1193,23 +576,25 @@ void checkTheFailLedAgain()
 
 					if (AgingInstance.getSingleLedRetestResult(index, color) == Fail)
 					{
+						int camera_index = cfg.lanternIndexToCamera(index);
+
 						// 关闭所有灯
 						I2C.resetColor(0, 0, 0);
 						Sleep(cfg.intervalTime());
-						getFrame(back);
+						getSingleFrame(back, camera_index);
 						SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 
 						I2C.setSignleColor(index, color);
 						Sleep(cfg.intervalTime());
-						getFrame(fore);
+						getSingleFrame(fore, camera_index);
 						SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 
 						g_set_led_mutex.lock();
 						g_Index = index;
 						g_Led = color;
 						g_wait = true;
-						deepCopyMat(back, g_back);
-						deepCopyMat(fore, g_fore);
+						back.copyTo(g_back[0]);
+						fore.copyTo(g_fore[0]);
 
 						SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 						g_set_led_mutex.unlock();
@@ -1229,21 +614,7 @@ void checkTheFailLedAgain()
 		SPDLOG_SINKS_DEBUG("Reset RecheckFaileLedTime to {}", g_recheckFaileLedTime);
 		SPDLOG_SINKS_DEBUG("---------------- Check the Failed Led Again 2 ----------------");
 	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		throw e;
-	}
+	EXCEPTION_OPERATOR_CATCH_2;
 }
 
 int showPassorFail()
@@ -1362,6 +733,7 @@ int main(int argc, char* argv[])
 		SPDLOG_SINKS_INFO("Model Name:{}", VideoCardIns.Name());
 		SPDLOG_SINKS_INFO("PPID:{}", VideoCardIns.PPID());
 		SPDLOG_SINKS_INFO("CaptureNum:{}", CaptureNum);
+		CameraDevices;
 
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
@@ -1372,7 +744,7 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < CaptureNum; i++)
 		{
-			if (!g_captures[i].open(i))
+			if (!g_captures[i].open(i, CAP_DSHOW))
 			{
 				SPDLOG_SINKS_ERROR("Failed to open {}th camera", i + 1);
 				throw ErrorCodeEx(ERR_CANT_OPEN_CAMERA, "Failed to open camera");
@@ -1401,24 +773,9 @@ int main(int argc, char* argv[])
 		{
 			mainLightingControl();
 			checkTheFailLedAgain();
-			saveSingleColorResult();
 		}
 	}
-	catch (cv::Exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		showErrorCode(ErrorCode(e, ERR_OPENCV_RUNTIME_EXCEPTION));
-	}
-	catch (ErrorCode& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		showErrorCode(e);
-	}
-	catch (std::exception& e)
-	{
-		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
-		showErrorCode(ErrorCode(e, ERR_STD_EXCEPTION));
-	}
+	EXCEPTION_OPERATOR_CATCH_3;
 
 	if (g_main_thread_exit == eNotExit)
 	{
