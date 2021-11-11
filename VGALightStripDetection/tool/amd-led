@@ -1,0 +1,566 @@
+#!/usr/bin/perl
+use 5.010;
+use Time::HiRes qw(usleep nanosleep);
+############################
+# @author  Jane
+# @version V1.0
+# @date    2020-10-21
+############################
+
+#use strict;
+use subs qw/Get_AGT_Tool Logfile Check_PSU_LED Set_Registers Apply_Settings Colour_Init Check_RED Check_BLUE Check_GREEN Check_WHITE LED_OFF Rainbow Show_Led Ext_FAN_Test Check_MCU_FW_Version/;
+
+
+$TEST_Version="V02";  # Diag Tool Version , If Change Must Modify Here
+
+print " ==============================================================\n";
+print " ==      NAVI21 TUF ENE TEST : $TEST_Version For AMD NISSHO  ==\n";
+print " ==============================================================\n";
+
+#=======================================================
+#                      Main Function
+#=======================================================
+&Get_AGT_Tool();
+#&Check_PSU_LED();
+&Check_RED();
+&Check_GREEN();
+&Check_BLUE();
+#&Check_WHITE();
+# &LED_OFF();
+# &Check_GREEN_SINGLE();
+#&Rainbow();
+#&Ext_FAN_Test();
+#&Check_MCU_FW_Version();
+
+sub Get_AGT_Tool()
+{
+	if(-e "agt_mcu")
+	{$agt_tool = "agt_mcu";}
+	else
+	{
+		printf "\e[31mCannot Find agt_mcu , AGT Version should be over V3.0.0.21E . \e[0m\n";
+		$log_string = "agt_mcu missing !" ;
+		&ShowFail();
+	}
+}
+
+sub Logfile{
+#**************
+#LOG File
+#**************
+open (File_Log, ">ENE.log");
+select File_Log ;
+print $log_string."\r\n";
+}
+
+sub Check_PSU_LED{
+	printf "=================================================\n";
+	printf "=                				=\n";
+	printf "=              EXT Power LED TEST	  	=\n";
+	printf "=                				=\n";
+	printf "=================================================\n";
+	
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0x56,0x12,1`;
+	
+	print " Please Check EXT_POWER LED is Strobing ? (y/n) : ";
+	chomp($flag = <STDIN>);
+
+	if($flag eq "y" || $flag eq "Y")
+	{
+		printf" \e[32mThe EXT_POWER_LED is Strobing.     --> PSU Pass . \e[0m\n";
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0x56,0x12,0`;
+
+	}else{
+		printf" \e[31mThe EXT_POWER_LED is NOT Strobing !    --> PSU Fail . \e[0m\n";
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0x56,0x12,0`;
+		$Test_flag = 110 ;
+		&ShowFail();
+	}	
+}
+
+sub Ext_FAN_Test{
+	print "Ext Fan Test: \n";
+	print "====================\n\n";
+	print "Set Ext Fan Mode : -> Manual \n";
+	`./$agt_tool -oemi2cw:0,0x56,0x40,0x1`; #Manual
+	usleep(20000);#0.02s
+	`./$agt_tool -oemi2cw:0,0x56,0x41,0xFF`;#EXT FAN DUTY 100%
+	usleep(20000);#0.02s
+	print "Set Ext Fan 100% \n";
+	print "-----------------\n";
+	sleep(3);
+	$Fan1_100_hex = `./$agt_tool -oemi2cr:0,0x56,0x44 |grep OEM`;
+	@tt = split(/:/,$Fan1_100_hex );
+	chomp($Fan1_100_hex = $tt[2]);
+	$Fan1_100_hex =~s/(^\s+|\s+$)//g;
+	$Fan1_100 = $Fan1_100_hex ;
+	$Fan1_100=~s/0x//g;
+	$Fan1_100 = hex($Fan1_100);
+	print "100% Speed Ext Fan1 = $Fan1_100 <$Fan1_100_hex>\n" ;
+
+	$Fan2_100_hex = `./$agt_tool -oemi2cr:0,0x56,0x48 |grep OEM`;
+	usleep(20000);#0.02s
+	@tt = split(/:/,$Fan2_100_hex );
+	chomp($Fan2_100_hex = $tt[2]);
+	$Fan2_100_hex =~s/(^\s+|\s+$)//g;
+	$Fan2_100 = $Fan2_100_hex ;
+	$Fan2_100=~s/0x//g;
+	$Fan2_100 = hex($Fan2_100);
+	print "100% Speed Ext Fan2 = $Fan2_100 <$Fan2_100_hex>\n" ;
+
+	`./$agt_tool -oemi2cw:0,0x56,0x41,0x7F`;#EXT FAN DUTY 50%
+	usleep(20000);#0.02s
+	print "\n\nSet Ext Fan 50% \n";
+	print "-----------------\n";
+	sleep(3);
+	$Fan1_50_hex = `./$agt_tool -oemi2cr:0,0x56,0x44 |grep OEM`;
+	usleep(20000);#0.02s
+	@tt = split(/:/,$Fan1_50_hex );
+	chomp($Fan1_50_hex = $tt[2]);
+	$Fan1_50_hex =~s/(^\s+|\s+$)//g;
+	$Fan1_50 = $Fan1_50_hex ;
+	$Fan1_50=~s/0x//g;
+	$Fan1_50 = hex($Fan1_50);
+	print "50% Speed Ext Fan1 = $Fan1_50 <$Fan1_50_hex>\n" ;
+
+	$Fan2_50_hex = `./$agt_tool -oemi2cr:0,0x56,0x48 |grep OEM`;
+	usleep(20000);#0.02s
+	@tt = split(/:/,$Fan2_50_hex );
+	chomp($Fan2_50_hex = $tt[2]);
+	$Fan2_50_hex =~s/(^\s+|\s+$)//g;
+	$Fan2_50 = $Fan2_50_hex ;
+	$Fan2_50=~s/0x//g;
+	$Fan2_50 = hex($Fan2_50);
+	print "50% Speed Ext Fan2 = $Fan2_50 <$Fan2_50_hex>\n" ;
+
+	print "\nTest Fan Result : \n";
+	print "------------------\n";
+
+	if( $Fan1_100 > $Fan1_50 )
+	{
+        printf "\e[32m\e[1m";
+		print "Fan1 Test Pass  ($Fan1_100 > $Fan1_50) \n";
+		printf "\e[0m";
+	}
+	else
+	{
+        	printf "\e[31m\e[1m";
+		print "Fan1 Test Fail  ($Fan1_100 < $Fan1_50) \n";
+		printf "\e[0m";
+		<STDIN>;
+		exit 110 ;
+	}
+
+
+	if($Fan2_100 > $Fan2_50 )
+	{
+		printf "\e[32m\e[1m";
+		print "Fan2 Test Pass  ($Fan2_100 > $Fan2_50) \n";
+		printf "\e[0m";
+	}
+	else
+	{
+		printf "\e[31m\e[1m";
+		print "Fan2 Test Fail  ($Fan2_100 < $Fan2_50) \n";
+		printf "\e[0m";
+		<STDIN>;
+		exit 110 ;
+	}
+	print"\n";
+
+	print "Set Ext Fan Defult : -> Auto \n\n";
+	`./$agt_tool_mcu -oemi2cw:0,0x56,0x40,0x0`; #Default
+	usleep(20000);#0.02s
+
+	
+	
+}
+
+sub Check_MCU_FW_Version{
+	print "FW Version Check : \n";
+	print "----------------- \n";
+	$FW_LO = `./$agt_tool -oemi2cr:0,0x56,0x1E |grep OEM`;
+	$FW_HI = `./$agt_tool -oemi2cr:0,0x56,0x1F |grep OEM`;	
+	usleep(200000);#0.2s
+	@tt = split(/:/,$FW_LO );
+	chomp($FW_LO = $tt[2]);
+	$FW_LO =~s/(^\s+|\s+$)//g;
+	#$FW_HI = `./$agt_tool -oemi2cr:0,0x54,0x1F |grep OEM`; #FW_HI have some issue ,the value could be changed !
+	@tt = split(/:/,$FW_HI );
+	chomp($FW_HI = $tt[2]);
+	$FW_HI =~s/(^\s+|\s+$)//g;
+	if($FW_HI eq "0x02" && $FW_LO eq "0x00" )
+	#if($FW_LO eq "0x08" )
+	{
+		$FW_HI =~s/0x//g;
+		$FW_LO =~s/0x//g;
+		printf "\e[32m\e[1m";
+		print "FW Version:$FW_HI.$FW_LO ;  -->Check Pass \n\n";
+		printf "\e[0m";
+
+	}
+	else
+	{
+		$FW_HI =~s/0x//g;
+		$FW_LO =~s/0x//g;
+		printf "\e[31m\e[1m";
+		print "FW Version:$FW_HI.$FW_LO ;  -->Check Fail \n\n";
+		printf "\e[0m";
+		<STDIN>;
+		exit 110 ;
+	}
+
+	
+	
+}
+
+
+
+sub Set_Registers{
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x21`;	#Set Address Low byte
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Set Static effect
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x81`;	
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0a,0x60`;	#Set RGB duties
+	}
+sub Apply_Settings{
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x2F`;	#Set Address Low byte
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Setting Apply
+
+	}
+
+#=======================================================
+#            Check LED
+#=======================================================
+#ENE6K582
+#Slave address:0xCE
+#Static test:	RED->GREEN->BLUE->WHITE->DEFAULT
+#
+sub Check_RED{
+	system "clear";
+	printf "\e[33m\n\n\n";
+	printf "=================================================\n";
+	printf "=                				=\n";
+	printf "=              ENE6K582 LED TEST	  	=\n";
+	printf "=                				=\n";
+	printf "=================================================\n";
+	printf "\n\e[0m";
+	
+	Set_Registers();
+	for($j=0;$j<15;$j++)
+	{
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x06,0xFF,0x00,0x00,0xFF,0x00,0x00`;
+	}
+	Apply_Settings;
+	printf  "\e[0;37;41m\n";
+	Show_Led;
+	print " Please Check LED IS : RED? (y/n) : ";
+	chomp($flag = <STDIN>);
+
+	if($flag eq "y" || $flag eq "Y")
+	{
+		printf" \e[32mCheck LED Is RED .     --> Check Pass . \e[0m\n";
+		$log_string = "RED_LED_PASS" ;
+	}else{
+		printf" \e[31mCheck LED Not RED !    --> Check Fail . \e[0m\n";
+		$log_string = "RED_LED_FAIL" ;
+		Rainbow;
+		$Test_flag = 110 ;
+		&ShowFail();
+	}
+	
+}
+
+sub Check_GREEN{
+	Set_Registers();
+	for($j=0;$j<15;$j++)
+	{
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x06,0x00,0x00,0xFF,0x00,0x00,0xFF`;
+	}
+	Apply_Settings;
+	system "clear";
+	printf  "\e[0;37;42m\n";
+	Show_Led;
+	print " Please Check LED IS : GREEN? (y/n) : ";
+	chomp($flag = <STDIN>);
+	
+	if($flag eq "y" || $flag eq "Y")
+	{
+		printf" \e[32mCheck LED Is GREEN.     --> Check Pass . \e[0m\n";
+		$log_string = $log_string.' | '."GREEN_LED_PASS" ;
+
+	}else{
+		printf" \e[31mCheck LED Is GREEN !    --> Check Fail . \e[0m\n";
+		$log_string = $log_string.' | '."GREEN_LED_FAIL" ;
+		Rainbow;
+		$Test_flag = 110 ;
+		&ShowFail();
+	}
+	
+	
+}
+
+
+sub Check_BLUE{
+	Set_Registers();
+	for($j=0;$j<15;$j++)
+	{
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x06,0x00,0xFF,0x00,0x00,0xFF,0x00`;
+	}
+	Apply_Settings;
+	system "clear";
+	printf  "\e[0;37;44m\n";	
+	Show_Led;
+	print " Please Check LED IS : BLUE? (y/n) : ";
+	chomp($flag = <STDIN>);
+	
+	if($flag eq "y" || $flag eq "Y")
+	{
+		printf" \e[32mCheck LED Is BLUE.     --> Check Pass . \e[0m\n";
+		$log_string = $log_string.' | '."BLUE_LED_PASS" ;
+
+	}else{
+		printf" \e[31mCheck LED Is BLUE !    --> Check Fail . \e[0m\n";
+		$log_string = $log_string.' | '."BLUE_LED_FAIL" ;
+		Rainbow;
+		$Test_flag = 110 ;
+		&ShowFail();
+	}
+	
+}
+
+sub Check_WHITE{
+	Set_Registers();
+	for($j=0;$j<15;$j++)
+	{
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x06,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF`;
+	}
+	Apply_Settings;
+	system "clear";
+	printf  "\e[0;30;47m\n";	
+	Show_Led;
+	print " Please Check LED IS : WHITE? (y/n) : ";
+	chomp($flag = <STDIN>);
+	
+	if($flag eq "y" || $flag eq "Y")
+	{
+		printf" \e[32mCheck LED Is WHITE.     --> Check Pass . \e[0m\n";
+		$log_string = $log_string.' | '."WHITE_LED_PASS" ;
+
+	}else{
+		printf" \e[31mCheck LED Is WHITE !    --> Check Fail . \e[0m\n";
+		$log_string = $log_string.' | '."WHITE_LED_FAIL" ;
+
+		Rainbow;
+		$Test_flag = 110 ;
+		&ShowFail();
+	}
+}
+
+sub LED_OFF{
+	Set_Registers();
+	
+	for($j=0;$j<15;$j++)
+	{
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x06,0x00,0x0,0x0,0x00,0x00,0x00`;
+	}
+	Apply_Settings;
+	system "clear";
+	#printf  "\e[0;30;47m\n";	
+	#Show_Led;
+	# print " Please Check LED IS : OFF? (y/n) : ";
+	# chomp($flag = <STDIN>);
+	
+	# if($flag eq "y" || $flag eq "Y")
+	# {
+	# 	printf" \e[32mCheck LED Is OFF .    --> Check Pass . \e[0m\n";
+	# 	$log_string = $log_string.' | '."LED_OFF_PASS" ;
+
+	# }else{
+	# 	printf" \e[31mCheck LED Is OFF !    --> Check Fail . \e[0m\n";
+	# 	$log_string = $log_string.' | '."LED_OFF_FAIL" ;
+
+	# 	Rainbow;
+	# 	$Test_flag = 110 ;
+	# 	&ShowFail();
+	# }
+
+}
+
+
+
+sub Rainbow{
+#-----------------
+#-		RAINBOW
+#-----------------
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x21`;	#Set Address Low byte
+	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x05`;	#Set Static effect
+	Apply_Settings;
+}
+
+
+sub Show_Led{
+	#system "clear";
+	print "         L L L             E E E E E E E   D D D D D D D         ? ? ? ? ? ?    \n";
+	print "         L L L             E E             D D       D D D               ? ? ?  \n";
+	print "         L L L             E E             D D         D D D             ? ? ?  \n";
+	print "         L L L             E E             D D           D D D           ? ? ?  \n";
+	print "         L L L             E E E E E E E   D D           D D D       ? ? ? ?    \n";
+	print "         L L L             E E             D D           D D D       ? ?        \n";
+	print "         L L L             E E             D D           D D D     ? ? ?        \n";
+	print "         L L L             E E             D D         D D D                    \n";
+	print "         L L L             E E             D D       D D D         ? ? ?        \n";
+	print "         L L L L L L L L   E E E E E E E   D D D D D D D           ? ? ?        \n";
+	printf "\e[0m\n";
+}
+
+
+sub ShowPass()
+{
+    printf  "\e[32m\n";
+    print "PPPPPPPP          AAA            SSSSS            SSSSS     \n";
+    print  "PPPPPPPPPP       AAAAA         SSSSSSSSSS       SSSSSSSSSS  \n";
+    print  "PPP     PPP     AAA AAA       SSS     SSSS     SSS     SSSS \n";
+    print  "PPP     PPP    AAA   AAA      SSS              SSS		\n";
+    print  "PPPPPPPPPP    AAA     AAA      SSS              SSS		\n";
+    print  "PPPPPPPP      AAA     AAA        SSSS             SSSS	\n";
+    print  "PPP           AAA     AAA          SSSS             SSSS	\n";
+    print  "PPP           AAAAAAAAAAA            SSSS             SSSS	\n";
+    print  "PPP           AAAAAAAAAAA              SSS              SSS	\n";
+    print  "PPP           AAA     AAA     SSSS     SSS     SSSS     SSS	\n";
+    print  "PPP           AAA     AAA      SSSSSSSSSS       SSSSSSSSSS	\n";
+    print  "PPP           AAA     AAA         SSSSS            SSSSS	\n";
+    printf  "\e[0m\n\n";
+    Logfile;
+    exit 0 ;
+}
+
+
+sub ShowFail()
+{
+    printf  "\e[31m\n";
+    print  "FFFFFFFFF         AAA         IIIIIIIII     LLL        \n";
+    print  "FFFFFFFFF        AAAAA        IIIIIIIII     LLL        \n";
+    print  "FFF             AAA AAA          III        LLL        \n";
+    print  "FFF            AAA   AAA         III        LLL        \n";
+    print  "FFF           AAA     AAA        III        LLL        \n";
+    print  "FFFFFFFF      AAA     AAA        III        LLL        \n";
+    print  "FFFFFFFF      AAA     AAA        III        LLL        \n";
+    print  "FFF           AAAAAAAAAAA        III        LLL        \n";
+    print  "FFF           AAAAAAAAAAA        III        LLL        \n";
+    print  "FFF           AAA     AAA        III        LLL        \n";
+    print  "FFF           AAA     AAA     IIIIIIIII     LLLLLLLLLLL\n";
+    print  "FFF           AAA     AAA     IIIIIIIII     LLLLLLLLLLL\n";
+    printf "\n\n\e[0m";
+    Logfile;
+    exit 110 ;
+}
+
+
+if($Test_flag == 110 )
+{	
+   &ShowFail(); 
+}else{
+   &ShowPass();
+}
+
+
+sub Check_GREEN_SINGLE{
+	#Set_Registers();
+
+	#for($j=0;$j<2;$j++)
+	#{
+	#	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x06,0x00,0x00,0xFF,0x00,0x00,0xFF`;
+	#	#$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x00,0x00,0x00,0xFF,0xFF,0x00,0x00`;
+	#	print $cmd_temp
+	#}
+	#`./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x06,0x00,0x00,0xFF,0x00,0x00,0x00`;
+	#Apply_Settings;
+	#system "clear";
+	#printf  "\e[0;37;42m\n";
+	#Show_Led;
+	# print " Please Check Check_GREEN_SINGLE LED IS : GREEN? (y/n) : ";
+	# chomp($flag = <STDIN>);
+	
+	# if($flag eq "y" || $flag eq "Y")
+	# {
+	# 	printf" \e[32mCheck LED Is GREEN.     --> Check Pass . \e[0m\n";
+	# 	$log_string = $log_string.' | '."GREEN_LED_PASS" ;
+
+	# }else{
+	# 	printf" \e[31mCheck LED Is GREEN !    --> Check Fail . \e[0m\n";
+	# 	$log_string = $log_string.' | '."GREEN_LED_FAIL" ;
+	# 	Rainbow;
+	# 	$Test_flag = 110 ;
+	# 	&ShowFail();
+	# }
+
+	# for($j=0;$j < 120;$j+=1)
+	# {
+	# 	printf "$j";
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x21`;	#Set Address Low byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x00`;	#Set Static effect
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x81`;	
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x66`;	#Set RGB duties
+
+	# 	`./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x03,0x00,0xFF,0x00`;
+
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x2F`;	#Set Address Low byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Setting Apply
+	# 	#usleep(200000);#0.2s
+
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x21`;	#Set Address Low byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x00`;	#Set Static effect
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x81`;	
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0a,0x66`;	#Set RGB duties
+
+	# 	`./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x03,0x00,0x00,0x00`;
+
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x2F`;	#Set Address Low byte
+	# 	$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Setting Apply
+	# 	#usleep(200000);#0.2s
+	# }
+	my $t1 = time;
+	printf "$t1";
+    for($j=0; $j < 22; $j++)
+	{
+		#printf "##############################\r\n";
+		$tmp = sprintf("%1x",0x60+($j*3));
+		#printf "$temp";
+
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x21`;	#Set Address Low byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Set Static effect
+
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x81`;
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0a,$tmp`;	#Set RGB duties
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x03,0x00,0xFF,0x00`;
+		
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x2F`;	#Set Address Low byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Setting Apply
+		#################################################################################
+
+
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x21`;	#Set Address Low byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Set Static effect
+
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x81`;	
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0a,$tmp`;	#Set RGB duties
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x03,0x03,0x00,0x00,0x00`;
+
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x09,0x80`;	#Set Address High byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x0A,0x2F`;	#Set Address Low byte
+		$cmd_temp = `./$agt_tool -i=0 -oemi2cw:0,0xCE,0x01,0x01`;	#Setting Apply
+	}
+	my $t2 = time;
+	my $diff = $t2 - $t1;
+	print "time cost:$diff s\n";
+}

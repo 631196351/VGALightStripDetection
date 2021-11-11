@@ -2,14 +2,17 @@
 #include <opencv2/opencv.hpp>
 //#include <stdio.h>
 #include <vector>
-#include <Windows.h>
-#include <thread>
-#include <mutex>
-//#include <fstream>
 
+#if defined(WINDOWS)
+#include <Windows.h>
+#endif
+
+#include<chrono>	// for sleep
+#include <thread>
+
+#include <mutex>
+#include "PreDefine.h"
 #include "ConfigData.h"
-//#include "nvbase.h"
-//#include "utility.h"
 #include "AgingLog.h"
 #include "SpdMultipleSinks.h"
 #include "ErrorCode.h"
@@ -17,6 +20,10 @@
 #include "I2CWrap.h"
 #include "Minefield.h"
 #include "RandomLitoff.h"
+
+#if defined(LINUX)
+#include "utility.h"
+#endif
 
 using namespace cv;
 using namespace std;
@@ -52,7 +59,7 @@ int g_main_thread_exit = eNotExit;
 int g_recheckFaileLedTime = 0;
 ErrorCode g_error = ErrorCode(ERR_All_IS_WELL, "All is well");
 
-int showErrorCode(ErrorCode& e);	// 声明
+int showErrorCode(ErrorCode e);	// 声明
 
 int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
@@ -104,8 +111,8 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 {
 	try 
 	{
-		char name[MAX_PATH] = { 0 };
-		sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
+		char name[MAX_FILE_PATH] = { 0 };
+		snprintf(name, MAX_FILE_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
 		bool bwrite = cv::imwrite(name, f);
 		SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}, result:{}", name, bwrite);
 	}
@@ -208,19 +215,19 @@ void renderTrackbarThread()
 		//sh = hsv.s[0] + hsv.s[6];
 		//vh = hsv.v[0] + hsv.v[6];
 		//
-		//sprintf_s(buf, 128, "lowHSV < higHSV !!!");
+		//snprintf(buf, 128, "lowHSV < higHSV !!!");
 		//putText(empty, buf, Point(0, empty.rows / 4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		//
-		//sprintf_s(buf, 128, "Real Low HSV (%d, %d, %d)", hl, sl, vl);
+		//snprintf(buf, 128, "Real Low HSV (%d, %d, %d)", hl, sl, vl);
 		//putText(empty, buf, Point(0, empty.rows / 4 * 2), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		//
-		//sprintf_s(buf, 128, "Real High HSV (%d, %d, %d)", hh, sh, vh);
+		//snprintf(buf, 128, "Real High HSV (%d, %d, %d)", hh, sh, vh);
 		//putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 
-		sprintf_s(buf, 128, "AdaptiveThresholdArgBlockSize = %d", cfg.thresoldBlockSize);
+		snprintf(buf, 128, "AdaptiveThresholdArgBlockSize = %d", cfg.thresoldBlockSize);
 		putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 
-		sprintf_s(buf, 128, "AdaptiveThresholdArgC = %d", cfg.thresoldC);
+		snprintf(buf, 128, "AdaptiveThresholdArgC = %d", cfg.thresoldC);
 		putText(empty, buf, Point(0, empty.rows / 4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		imshow("Toolkit", empty);
 		empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
@@ -245,6 +252,7 @@ void getFrame(Mat& f, bool cutFrame = true)
 		t.copyTo(f);
 		if (cutFrame)
 		{
+			SPDLOG_SINKS_DEBUG("f: [{}, {}], rect : [{}, {}]", f.cols, f.rows, cfg.rect().width, cfg.rect().height);
 			f = f(cfg.rect());
 		}
 	}
@@ -282,11 +290,15 @@ void autoGetCaptureFrame()
 				if (camera.empty())
 					throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
 
-				sprintf_s(txt, 128, "Power Off: %d", cfg.shutdownTime());
+				#if defined(IMSHOWIMAGE)
+				snprintf(txt, 128, "Power Off: %d", cfg.shutdownTime());
 				cv::putText(camera, txt, Point(0, (camera.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1);
 				if(!cfg.rect().empty())
 					rectangle(camera, cfg.rect(), Scalar(0, 255, 255), 3);
+				
+				
 				cv::imshow("camera", camera);
+				#endif
 
 				key = cv::waitKey(33);
 				if (key == 0x1b)	// Esc 键
@@ -299,12 +311,14 @@ void autoGetCaptureFrame()
 					cfg.shutdownTime(eNotPowerOff);
 					SPDLOG_SINKS_DEBUG("AutoGetCaptureFrame not poweroff");
 				}
+
 			}
 			else
 			{
 				// 因为异常机制和多线程有冲突：主线程出现异常，要析构线程对象，会导致报错
 				// 开启AP即start 工作线程，但需要等待相机初始化完成才能正式work
-				Sleep(1);
+				//Sleep(1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
 		}
 		catch (cv::Exception& e)
@@ -681,7 +695,7 @@ void findFrameContours()
 				}
 
 				{
-#if DEBUG_DETAILS
+#if defined(DEBUG_DETAILS) && defined(IMSHOWIMAGE)
 					cv::imshow("original_frame", frame);
 					cv::imshow("background", back);
 #endif
@@ -712,7 +726,7 @@ void findFrameContours()
 				GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
 
 				{
-#if DEBUG_DETAILS
+#if defined(DEBUG_DETAILS) && defined(IMSHOWIMAGE)
 					cv::imshow("mask", mask);
 					imshow("mask_hsv", mask_hsv);
 #endif
@@ -782,8 +796,11 @@ void findFrameContours()
 				}
 
 				saveDebugROIImg(frame, currentColor, currentIndex, "result");
+				
+				#if defined(IMSHOWIMAGE)
 				cv::imshow("result", frame);
 				cv::waitKey(1);
+				#endif
 
 				t.stop();
 				SPDLOG_SINKS_INFO("Tick Time: {}, {}", t.getTimeSec(), t.getTimeTicks());
@@ -808,7 +825,8 @@ void findFrameContours()
 		}
 
 		g_set_led_mutex.unlock();
-		Sleep(1);// 完成工作，等待时，释放CPU时间，避免CPU在此空转
+		//Sleep(1);// 完成工作，等待时，释放CPU时间，避免CPU在此空转
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 #endif
 }
@@ -842,7 +860,8 @@ void mainLightingControl()
 
 				I2C.setSignleColor(colorNum[index], 0, 0, 0);
 				SPDLOG_SINKS_DEBUG("Turn off the {}th Led", colorNum[index]);
-				Sleep(cfg.intervalTime());
+				//Sleep(cfg.intervalTime());
+				std::this_thread::sleep_for(std::chrono::milliseconds(cfg.intervalTime()));
 				SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 				getFrame(internal_back);
 
@@ -853,7 +872,8 @@ void mainLightingControl()
 				{
 					litoff.IsLitOff(index) ? (void)0 : I2C.setSignleColor(index, color);
 					SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
-					Sleep(cfg.intervalTime());
+					//Sleep(cfg.intervalTime());
+					std::this_thread::sleep_for(std::chrono::milliseconds(cfg.intervalTime()));
 				}
 
 				//Sleep(cfg.intervalTime);
@@ -869,7 +889,8 @@ void mainLightingControl()
 				//g_randomShutDownLed = r;
 				SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 				g_set_led_mutex.unlock();
-				Sleep(10); // 让出CPU时间
+				//Sleep(10); // 让出CPU时间
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 				// 让上一轮测试结果显示一会再关闭
 				//destroyWindow("final_result");
@@ -945,7 +966,8 @@ void checkTheFailLedAgain()
 						I2C.resetColor(0, 0, 0);
 						SPDLOG_SINKS_DEBUG("Turn off {} Led", I2C.getLedCount());
 
-						Sleep(cfg.intervalTime());
+						//Sleep(cfg.intervalTime());
+						std::this_thread::sleep_for(std::chrono::milliseconds(cfg.intervalTime()));
 						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 
 						getFrame(internal_back);
@@ -954,7 +976,8 @@ void checkTheFailLedAgain()
 						I2C.setSignleColor(index, color);
 						SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
 
-						Sleep(cfg.intervalTime());
+						//Sleep(cfg.intervalTime());
+						std::this_thread::sleep_for(std::chrono::milliseconds(cfg.intervalTime()));
 						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 
 						g_set_led_mutex.lock();
@@ -968,7 +991,8 @@ void checkTheFailLedAgain()
 						//g_randomShutDownLed = 0;
 						SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 						g_set_led_mutex.unlock();
-						Sleep(10); // 让出CPU时间
+						//Sleep(10); // 让出CPU时间
+						std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 						// 让上一轮测试结果显示一会再关闭
 						//destroyWindow("final_result");
@@ -1023,13 +1047,14 @@ void saveSingleColorResult()
 				// 一个轮回保存一个灯色
 				I2C.resetColor(color);
 				SPDLOG_SINKS_DEBUG("Turn on all {} led, color {}", I2C.getLedCount(), color);
-				Sleep(cfg.intervalTime());
+				//Sleep(cfg.intervalTime());
+				std::this_thread::sleep_for(std::chrono::milliseconds(cfg.intervalTime()));
 				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 
 				Mat frame;
 				getFrame(frame);	// get current frame
-				char name[_MAX_PATH] = { 0 };
-				sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
+				char name[MAX_FILE_PATH] = { 0 };
+				snprintf(name, MAX_FILE_PATH, "%s/%s/all_color_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
 				cv::putText(frame, AgingInstance.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
 				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
 				cv::imwrite(name, frame);
@@ -1191,10 +1216,10 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		char name[MAX_PATH] = { 0 };
 #ifdef SAVE_ROI_FBMCR
 		{
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, f);
 
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, b);
 		}
 #endif
@@ -1205,7 +1230,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 #ifdef SAVE_ROI_FBMCR
 		{
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, mask);
 		}
 #endif
@@ -1234,7 +1259,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 #ifdef SAVE_ROI_FBMCR
 		{
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, result);
 		}
 #endif
@@ -1295,7 +1320,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		//}
 
 		rectangle(f, roi, Scalar(255, 0, 255), 1);
-		sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
+		snprintf(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
 		cv::imwrite(name, f);
 
 #endif
@@ -1333,10 +1358,10 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 #ifdef SAVE_ROI_FBMCR
 		char name[MAX_PATH] = { 0 };
 		{
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, f);
 
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, b);
 		}
 #endif
@@ -1366,7 +1391,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 #ifdef SAVE_ROI_FBMCR
 		{
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, hsv_img_mask);
 		}
 #endif
@@ -1397,7 +1422,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 #ifdef SAVE_ROI_FBMCR
 		{
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			snprintf(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, result);
 		}
 #endif
@@ -1405,7 +1430,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 #ifdef SAVE_ROI_FBMCR
 
 		rectangle(f, roi, Scalar(255, 0, 255), 1);
-		sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
+		snprintf(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
 		cv::imwrite(name, f);
 
 #endif
@@ -1445,12 +1470,14 @@ void autoCaptureROI2()
 			for (int color = BLUE; color < WHITE; ++color)
 			{
 				I2C.resetColor(BLACK);
-				Sleep(cfg.intervalTime());
+				//Sleep(cfg.intervalTime());
+				std::this_thread::sleep_for(std::chrono::milliseconds(cfg.intervalTime()));
 				getFrame(back, false);
 
 				SPDLOG_SINKS_DEBUG("lit-on {}th color", color);
 				I2C.resetColor(color);
-				Sleep(cfg.intervalTime());
+				//Sleep(cfg.intervalTime());
+				std::this_thread::sleep_for(std::chrono::milliseconds(cfg.intervalTime()));
 				getFrame(fore, false);
 
 				roi[color] = frameDiff2ROI(back, fore, color);
@@ -1461,14 +1488,20 @@ void autoCaptureROI2()
 					throw ErrorCodeEx(ERR_POSTRUE_CORRECTION_ERROR, "Please readjust the camera or graphics card posture");
 				}
 			}
-
+			
+			#if defined(IMSHOWIMAGE)
 			cv::imshow("result", fore);
 			cv::waitKey(33);
+			#endif
 
 			Rect r = (roi[BLUE] | roi[GREEN]) & roi[RED];
 			cfg.rect(r);
 			SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}, area:{}", cfg.rect().x, cfg.rect().y, cfg.rect().width, cfg.rect().height, cfg.rect().area());
+
+			#if defined(IMSHOWIMAGE)
 			cv::destroyWindow("result");
+			#endif
+
 			break;
 
 		}
@@ -1477,7 +1510,7 @@ void autoCaptureROI2()
 			SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
 			
 			char buf[128] = { 0 };
-			sprintf_s(buf, 128, "error code %d", e.error());
+			snprintf(buf, 128, "error code %d", e.error());
 			SPDLOG_SINKS_WARN(buf);
 			putText(fore, buf, Point(0, (fore.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1);
 			
@@ -1500,13 +1533,17 @@ void autoCaptureROI2()
 	}
 }
 
-int showErrorCode(ErrorCode& e)
+int showErrorCode(ErrorCode e)
 {
 	SPDLOG_SINKS_ERROR("Catch Error : {}", e.what());
 	g_main_thread_exit = eExitWithException;
 	cfg.shutdownTime(eNotPowerOff);
 	g_error = e;
+	
+	#if defined(IMSHOWIMAGE)
 	cv::destroyAllWindows();
+	#endif
+
 	SPDLOG_SINKS_DEBUG("g_main_thread_exit = {}, cfg.shutdownTime = {}", g_main_thread_exit, cfg.shutdownTime());
 	return e.error();
 }
@@ -1561,7 +1598,11 @@ int showPassorFail()
 		else
 		{
 			// 没有开启随机灭灯，但出现了fail，直接卡住
+			#if defined(WINDOWS)
 			system("pause");
+			#elif defined(LINUX)
+			getchar();
+			#endif
 		}	
 	};
 
@@ -1589,6 +1630,7 @@ int showPassorFail()
 
 int main(int argc, char* argv[])
 {
+	#ifdef WINDOWS
 	//屏蔽控制台关闭按钮
 	HWND hwnd = GetConsoleWindow();
 	HMENU hmenu = GetSystemMenu(hwnd, false);
@@ -1597,6 +1639,7 @@ int main(int argc, char* argv[])
 	ShowWindow(hwnd, SW_SHOWNORMAL);
 	DestroyMenu(hmenu);
 	ReleaseDC(hwnd, NULL);
+	#endif
 
 	cv::CommandLineParser parser(argc, argv, argkeys);
 	if (parser.has("help"))
@@ -1650,22 +1693,30 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			//capture.set(CAP_PROP_SETTINGS, 1);
-			capture.set(CAP_PROP_FPS, 30);
-			capture.set(CAP_PROP_FRAME_WIDTH, cfg.frame().width);
-			capture.set(CAP_PROP_FRAME_HEIGHT, cfg.frame().height);
-			capture.set(CAP_PROP_EXPOSURE, cfg.exposure());
-			capture.set(CAP_PROP_SATURATION, cfg.saturation());
+			// capture.set(CAP_PROP_SETTINGS, 1);
+			capture.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
 
-			//capture.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
-			capture.set(CAP_PROP_FOURCC, MAKEFOURCC('M', 'J', 'P', 'G'));
-			//int ex = static_cast<int>(capture.get(CAP_PROP_FOURCC));
+			// In the Ubuntu, the width and height attribute settings should be placed before the frame rate attribute settings
+			bool width_result = capture.set(CAP_PROP_FRAME_WIDTH, cfg.frame().width);
+			bool height_result = capture.set(CAP_PROP_FRAME_HEIGHT, cfg.frame().height);
+			bool fps_result = capture.set(CAP_PROP_FPS, 30);
+			bool auto_exposure_result = capture.set(CAP_PROP_AUTO_EXPOSURE, 1);	// (1为手动模式，3为自动模式)
+			bool exposure_result = capture.set(CAP_PROP_EXPOSURE, cfg.exposure());
+			bool saturation_result = capture.set(CAP_PROP_SATURATION, cfg.saturation());
+
+			//capture.set(CAP_PROP_FOURCC, MAKEFOURCC('M', 'J', 'P', 'G'));
+			int ex = static_cast<int>(capture.get(CAP_PROP_FOURCC));
 			//Transform from int to char via Bitwise operators
-			//char ext[] = { (char)(ex & 0XFF),(char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24),0 };
+			char ext[] = { (char)(ex & 0XFF),(char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24),0 };
+			SPDLOG_SINKS_DEBUG("FOURCC = {}; ", ext);
 
+			SPDLOG_SINKS_DEBUG("fps = {}; fps_result = {}", (int)capture.get(CAP_PROP_FPS), fps_result);
+			SPDLOG_SINKS_DEBUG("width = {}; width_result = {}", (int)capture.get(CAP_PROP_FRAME_WIDTH), width_result);
+			SPDLOG_SINKS_DEBUG("height = {}; height_result = {}", (int)capture.get(CAP_PROP_FRAME_HEIGHT), height_result);
+			SPDLOG_SINKS_DEBUG("auto_exposure = {}; auto_exposure_result = {}", (int)capture.get(CAP_PROP_AUTO_EXPOSURE), auto_exposure_result);
+			SPDLOG_SINKS_DEBUG("exposure = {}; exposure_result = {}", (int)capture.get(CAP_PROP_EXPOSURE), exposure_result);
+			SPDLOG_SINKS_DEBUG("saturation = {}; saturation_result = {}", (int)capture.get(CAP_PROP_SATURATION), saturation_result);
 
-			//cfg.frame.width = (int)capture.get(CAP_PROP_FRAME_WIDTH);
-			//cfg.frame.height = (int)capture.get(CAP_PROP_FRAME_HEIGHT);
 
 			g_wait_capture = true;	//自动拍摄线程开始工作
 		}
@@ -1729,24 +1780,34 @@ int main(int argc, char* argv[])
 
 	showPassorFail();
 
+	tm.stop();
+	SPDLOG_SINKS_INFO("Tick Time: {}, {}", tm.getTimeSec(), tm.getTimeTicks());
+	
 	if (cfg.shutdownTime() >= ePowerOff)
 	{
+		#if defined(WINDOWS)
 		char shutdown[128] = { 0 };
-		sprintf_s(shutdown, 128, "shutdown -s -t %d", cfg.shutdownTime());
+		snprintf(shutdown, 128, "shutdown -s -t %d", cfg.shutdownTime());
 		system(shutdown);
+		#elif defined(LINUX)
+		shutdownAfter(cfg.shutdownTime());
+		#endif
 	}
 	else if (cfg.shutdownTime() == eReStart)
 	{
+		#if defined(WINDOWS)
 		char shutdown[128] = { 0 };
-		sprintf_s(shutdown, 128, "shutdown -r -t 2");
+		snprintf(shutdown, 128, "shutdown -r -t 2");
 		system(shutdown);
+		#elif defined(LINUX)
+		shutdownAfter(2, true);
+		#endif
 	}
 	else if (cfg.shutdownTime() == eNotPowerOff)
 	{
 		;
 	}
-	tm.stop();
-	SPDLOG_SINKS_INFO("Tick Time: {}, {}", tm.getTimeSec(), tm.getTimeTicks());
+	
 	return g_error.error();
 }
 #endif

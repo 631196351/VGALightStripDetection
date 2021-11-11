@@ -1,16 +1,15 @@
 ﻿
 //#include <regex>
-#include <time.h>
-#include <io.h>
+//#include <time.h>
+//#include <string.h>
+#include <cstdio>
 #include <cmath>
 #include "AgingLog.h"
 #include "PreDefine.h"
-//#include "utility.h"
 #include "SpdMultipleSinks.h"
 #include "ErrorCode.h"
 #include "VideoCard.h"
 #include "ConfigData.h"
-//#include "I2CWrap.h"
 #define color_num (BGR)
 
 //static bool reset_ppid = false;
@@ -68,7 +67,8 @@ void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
 				{
 					for (int j = 0; j < led_count; j++)
 					{
-						sprintf_s(buf, 10, "%02d%02d\t,", i, j);
+						//sprintf_s(buf, 10, "%02d%02d\t,", i, j);
+						std::snprintf(buf, 10, "%02d%02d\t,", i, j);
 						aging_file << buf;
 					}
 				}
@@ -160,7 +160,12 @@ void AgingLog::syncSingLedResult2RetestResult()
 	std::string t, t2;
 	if (retest) {
 		int len = (lpLedCount * color_num) * sizeof(int);
-		memcpy_s(lpRetest, len, lpLed, len);
+
+		#ifdef WINDOWS
+		std::memcpy(lpRetest, len, lpLed, len);
+		#else
+		std::memcpy(lpRetest, lpLed, len);
+		#endif
 	}
 }
 
@@ -171,7 +176,7 @@ void AgingLog::saveAgingLog()
 		int r = 0;
 		struct tm *p = VideoCardIns.getTimestamp();
 		char t[128] = { 0 };
-		sprintf_s(t, 128, "%d%02d%02d%02d%02d%02d", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+		std::snprintf(t, 128, "%d%02d%02d%02d%02d%02d", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
 
 		////////////////////////////////////////////////////////////////////////////
 		if (randomLightDown)

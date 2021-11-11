@@ -1,9 +1,14 @@
 ﻿#pragma once
 
+#ifdef WINDOWS
 #include <Windows.h>
+#endif
+
 #include <set>
 typedef unsigned long Ul32;
 typedef unsigned char BYTE;
+typedef unsigned char UCHAR;
+typedef unsigned char UINT;
 
 typedef int(*lpLoadVenderDLL)();
 typedef bool(*lpVGAReadICI2C)(UCHAR ucAddress, UCHAR reg_address, BYTE &rData, UINT iCardNumber, Ul32 ulDDCPort, UCHAR regSize, UCHAR DataSize, Ul32 flags);
@@ -11,7 +16,9 @@ typedef bool(*lpVGAWriteICI2C)(UCHAR ucAddress, UCHAR reg_address, UCHAR *rData,
 
 class I2CWrap
 {
+	#ifdef WINDOWS
 	HINSTANCE			 _hDLL = NULL;
+	#endif
 	lpLoadVenderDLL		 _lpLoadVenderDLL = NULL;
 	lpVGAReadICI2C		 _lpVGAReadICI2C = NULL;
 	lpVGAWriteICI2C		 _lpVGAWriteICI2C = NULL;

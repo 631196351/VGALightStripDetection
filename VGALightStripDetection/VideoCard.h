@@ -8,6 +8,7 @@ class VideoCard
 	std::string _ppid;
 	std::string _name;
 	std::string _ppid_time;
+	int _vga;	//nv or amd card
 public:
 	VideoCard();
 	~VideoCard();
@@ -19,7 +20,7 @@ public:
 	std::string getPPIDFolder() const;
 	inline const char* targetFolder() const { return _ppid_time.c_str(); }
 	inline tm* getTimestamp() const { return localtime(&_time);}
-
+	inline int getVendor() const {return _vga;};
 	static VideoCard& instance();
 };
 

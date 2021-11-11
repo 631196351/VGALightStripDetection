@@ -1,5 +1,7 @@
+#ifdef WINDOWS
 #include <Windows.h>
-
+#endif
+#include "PreDefine.h"
 #include "VideoCard.h"
 
 VideoCard::VideoCard()
@@ -15,6 +17,7 @@ VideoCard::~VideoCard()
 void VideoCard::PPID(std::string ppid)
 {
 	_ppid = ppid;
+	#ifdef WINDOWS
 	if (_ppid.empty())
 	{
 		char p[64] = { 0 };
@@ -29,10 +32,10 @@ void VideoCard::PPID(std::string ppid)
 			guid.Data4[6], guid.Data4[7]);
 		_ppid = p;
 	}
-
+	#endif
 	struct tm *p = localtime(&_time);
-	char f[_MAX_PATH] = { 0 };
-	sprintf_s(f, _MAX_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, _ppid.c_str());
+	char f[MAX_FILE_PATH] = { 0 };
+	snprintf(f, MAX_FILE_PATH, "%d%02d%02d%02d%02d%02d_%s", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, _ppid.c_str());
 	_ppid_time = f;
 }
 
@@ -42,12 +45,14 @@ void VideoCard::Name(std::string name)
 		_name = "NA";
 	else
 		_name = name;
-}
 
-//std::string VideoCard::PPID() const
-//{
-//	return _ppid;
-//}
+	if(_name.find("RTX") != std::string::npos)
+		_vga = VGA_NVIDIA;
+	else if(name.find("RX") != std::string::npos)
+		_vga = VGA_AMD;
+	else
+		_vga = VGA_NONE;
+}
 
 std::string VideoCard::getPPIDFolder() const
 {

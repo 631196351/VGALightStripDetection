@@ -1,4 +1,4 @@
-﻿{
+{
     "AgingSetting": {
         "Width": 1280,
         "Hight": 720,
@@ -13,7 +13,7 @@
     "TUF": {
         "Camera": {
             "Index": 0,
-            "Exposure": -4,
+            "Exposure": 100,
             "Saturation": 65
         },
         "AlgorithmThreshold": {
@@ -32,7 +32,7 @@
     "STRIX": {
         "Camera": {
             "Index": 0,
-            "Exposure": -4,
+            "Exposure": 100,
             "Saturation": 65
         },
         "AlgorithmThreshold": {
@@ -51,7 +51,7 @@
     "STRIX-WHITE-22": {
         "Camera": {
             "Index": 0,
-            "Exposure": -6,
+            "Exposure": 100,
             "Saturation": 65
         },
         "AlgorithmThreshold": {
@@ -70,7 +70,7 @@
     "STRIX-GUNDAM-22": {
         "Camera": {
             "Index": 0,
-            "Exposure": -4,
+            "Exposure": 100,
             "Saturation": 65
         },
         "AlgorithmThreshold": {

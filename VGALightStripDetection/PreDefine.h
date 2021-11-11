@@ -57,3 +57,17 @@ enum HSV
 	eHmin2 = 4,
 	eHmax2 = 5
 };
+
+#if defined(WINDOWS)
+	#define MAX_FILE_PATH MAX_PATH
+#elif defined(LINUX)
+	#include <limits.h>
+	#define MAX_FILE_PATH PATH_MAX
+#endif
+
+enum VGA
+{
+	VGA_NONE = -1,
+	VGA_NVIDIA,
+	VGA_AMD
+};

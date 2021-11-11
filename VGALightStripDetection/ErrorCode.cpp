@@ -61,7 +61,7 @@ void ErrorCode::formatErrorMsg()
 		_msg += std::to_string(_line);
 	}
 }
-const char* ErrorCode::what() const
+const char* ErrorCode::what() const noexcept
 {
 	return _msg.c_str();
 }

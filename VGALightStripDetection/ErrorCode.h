@@ -26,6 +26,7 @@ enum eError
 	ERR_ORIGIN_FRAME_EMPTY_EXCEPTION,	//当前帧空帧异常	
 	ERR_LED_STRIPE_BLOCKED,			// 自动获取ROI时，发现灯带被遮挡
 	ERR_POSTRUE_CORRECTION_ERROR,	// 相机或显卡位置偏离，需要重新调整姿态
+	ERR_INVALID_LED_COUNT,			// led count == 0 
 };
 
 class ErrorCode : public std::exception
@@ -47,7 +48,7 @@ public:
 	ErrorCode(int code, const std::string& err, const std::string& file, const std::string& func, int line);
 	~ErrorCode();
 
-	virtual const char* what() const;
+	virtual const char* what() const noexcept;
 	inline int error() const { return _code; }
 
 private:

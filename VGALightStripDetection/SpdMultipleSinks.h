@@ -26,12 +26,12 @@ private:
 	spdlog::logger _logger;
 };
 #define SinkInstance SpdMultipleSinks::sinks()
-#define SPDLOG_SINKS_TRACE(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::trace, fmt, __VA_ARGS__)
-#define SPDLOG_SINKS_DEBUG(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::debug, fmt, __VA_ARGS__)
-#define SPDLOG_SINKS_INFO(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::info, fmt, __VA_ARGS__)
-#define SPDLOG_SINKS_WARN(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::warn, fmt, __VA_ARGS__)
-#define SPDLOG_SINKS_ERROR(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::err, fmt, __VA_ARGS__)
-#define SPDLOG_SINKS_CRITICAL(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::critical, fmt, __VA_ARGS__)
+#define SPDLOG_SINKS_TRACE(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::trace, fmt, ##__VA_ARGS__)
+#define SPDLOG_SINKS_DEBUG(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::debug, fmt, ##__VA_ARGS__)
+#define SPDLOG_SINKS_INFO(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::info, fmt, ##__VA_ARGS__)
+#define SPDLOG_SINKS_WARN(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::warn, fmt, ##__VA_ARGS__)
+#define SPDLOG_SINKS_ERROR(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#define SPDLOG_SINKS_CRITICAL(fmt, ...) SinkInstance.log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::critical, fmt, ##__VA_ARGS__)
 
 #define SPDLOG_NOTES_THIS_FUNC_EXCEPTION SPDLOG_SINKS_ERROR("An exception occurred in the {} function", __FUNCTION__)
 
