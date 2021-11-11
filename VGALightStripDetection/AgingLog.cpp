@@ -10,7 +10,8 @@
 #include "ErrorCode.h"
 #include "VideoCard.h"
 #include "ConfigData.h"
-//#include "I2CWrap.h"
+#include "I2CWrap.h"
+#include "RandomLitoff.h"
 #define color_num (BGR)
 
 //static bool reset_ppid = false;
@@ -25,10 +26,52 @@ AgingLog::AgingLog()
 //	initAgingLog(led_count, randomLightDown, retest);
 //}
 
-void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
+bool AgingLog::openAgingCsv()
+{
+	try {
+		aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
+		if (aging_file.is_open())
+		{
+			// get length of file:
+			aging_file.seekg(0, aging_file.end);
+			std::streampos length = aging_file.tellg();
+			if (length == 0)
+			{
+				// 添加表头
+				aging_file << "VideoCard," << "Time," << "PPID," << "Type," << "ErrorCode,";
+
+				char buf[10] = { 0 };
+				for (int i = 0; i < color_num; i++)
+				{
+					// 因为1006 错误的存在，所以在初始化aging.csv文件时，无法get 到led count
+					for (int j = 0; j < 22; j++)
+					{
+						sprintf_s(buf, 10, "%02d%02d\t,", i, j);
+						aging_file << buf;
+					}
+				}
+				aging_file << "result0," << "result1" << std::endl;
+				aging_file.flush();
+			}
+			return true;
+		}
+		return false;
+	}
+	catch (std::exception& e)
+	{
+		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
+		throw e;
+	}
+}
+
+void AgingLog::initAgingLog()
 {
 	try 
 	{
+		int led_count = I2C.getLedCount();
+		bool randomLightDown = litoff.getRandomLitOffState();
+		bool retest = cfg.recheckFaileLedTime() > 0;
+
 		if (led_count > 0)
 		{
 			lpLedCount = led_count; // white 暂时不计
@@ -50,32 +93,7 @@ void AgingLog::initAgingLog(int led_count, bool randomLightDown, bool retest)
 			std::fill_n(lpRetest, led_count * color_num, Fail);
 		}
 
-		SPDLOG_SINKS_DEBUG("AgingLog Init led_count:{}, retest:{}", led_count, retest);
-
-		aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
-		if (aging_file.is_open())
-		{
-			// get length of file:
-			aging_file.seekg(0, aging_file.end);
-			std::streampos length = aging_file.tellg();
-			if (length == 0)
-			{
-				// 添加表头
-				aging_file <<"VideoCard,"<< "Time," << "PPID," << "Type,";
-
-				char buf[10] = { 0 };
-				for (int i = 0; i < color_num; i++)
-				{
-					for (int j = 0; j < led_count; j++)
-					{
-						sprintf_s(buf, 10, "%02d%02d\t,", i, j);
-						aging_file << buf;
-					}
-				}
-				aging_file << "result0," << "result1" << std::endl;
-				aging_file.flush();
-			}
-		}
+		SPDLOG_SINKS_DEBUG("AgingLog Init led_count:{}, retest:{}", led_count, retest);		
 	}
 	catch (std::exception& e)
 	{
@@ -164,7 +182,7 @@ void AgingLog::syncSingLedResult2RetestResult()
 	}
 }
 
-void AgingLog::saveAgingLog()
+void AgingLog::saveAgingLog(int error)
 {
 	if (aging_file.is_open()) 
 	{
@@ -176,7 +194,7 @@ void AgingLog::saveAgingLog()
 		////////////////////////////////////////////////////////////////////////////
 		if (randomLightDown)
 		{
-			aging_file <<VideoCardIns.Name()<<","<< t << "\t," << VideoCardIns.PPID() << "\t,"<<"Random,";
+			aging_file <<VideoCardIns.Name()<<","<< t << "\t," << VideoCardIns.PPID() << "\t,"<<"Random," << error << ",";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				// 随机灭掉的灯用-1表示
@@ -198,7 +216,7 @@ void AgingLog::saveAgingLog()
 		}
 		////////////////////////////////////////////////////////////////////////////
 		r = 0;
-		aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";
+		aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal," << error <<",";
 		for (int i = 0; i < lpLedCount * color_num; i++)
 		{
 			r += lpLed[i];
@@ -221,7 +239,7 @@ void AgingLog::saveAgingLog()
 		if (retest)
 		{
 			r = 0;
-			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";
+			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest," << error << ",";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				r += lpRetest[i];

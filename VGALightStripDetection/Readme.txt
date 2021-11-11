@@ -156,3 +156,8 @@ Version Log
    有可能 GetVGAINFO 抓到 1M room 的N卡 PPID后，将N卡误认为是A卡， 但此时ModelName是空，会报1007错误
    所以将Aging.bat 逻辑反转一下， 先抓N卡， 再去抓A卡
 2. 把出入日志的Time 列跟PPID 列调转一下，跟目录Time_PPID 格式保持一致 
+
+[v2.0.1.5] - 2021.11.12
+1.若测试pass，则不再保留过程image； 只在fail的时候保留
+2.针对之前aging.csv一直无法记录1006错误的问题，对逻辑进行调整，程序启动后开启aging.csv， 处理完异常后， 再将异常信息一同写入aging.csv
+3.新增 ERR_GPU_LOAD_FAILURE 异常， 用来细化处理 ERR_RUN_I2C_FAILURE

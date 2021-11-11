@@ -9,7 +9,7 @@
 
 #include "ConfigData.h"
 //#include "nvbase.h"
-//#include "utility.h"
+#include "utility.h"
 #include "AgingLog.h"
 #include "SpdMultipleSinks.h"
 #include "ErrorCode.h"
@@ -1571,6 +1571,13 @@ int showPassorFail()
 		if (AgingInstance.allLedIsOK() == Pass)
 		{
 			pass_msg();
+#if !defined(_DEBUG)
+			// Release 模式下测试时，Pass 不保留图片
+			char delete_cmd[MAX_PATH*2] = { 0 };
+			sprintf_s(delete_cmd, MAX_PATH*2, "del /S /Q %s\\%s\\%s\\*.png>nul", get_current_directory().c_str(), AgingFolder, VideoCardIns.targetFolder());
+			system(delete_cmd);
+			SPDLOG_SINKS_INFO("cmd : {}", delete_cmd);
+#endif
 		}
 		else
 		{
@@ -1619,6 +1626,9 @@ int main(int argc, char* argv[])
 	//std::thread t3(renderTrackbarThread);
 	try
 	{
+		// 程式开启时打开csv, 准备随时接受异常报错
+		AgingInstance.openAgingCsv();
+
 		if (parser.has("@ppid") && parser.has("@name"))
 		{
 			VideoCardIns.PPID(parser.get<std::string>("@ppid"));
@@ -1670,31 +1680,16 @@ int main(int argc, char* argv[])
 			g_wait_capture = true;	//自动拍摄线程开始工作
 		}
 
+		AgingInstance.initAgingLog();
+
 		autoCaptureROI2();
 
-		// 获取Video的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
-		AgingInstance.initAgingLog(I2C.getLedCount(), litoff.getRandomLitOffState(), cfg.recheckFaileLedTime() > 0);
-		//AgingInstance.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
+		mainLightingControl();
 
-#if DEBUG_DETAILS
-		int v = 50;
-		for(int i = 0; i < v; i++)
-#endif
-		{
-			//SinkInstance.pushBasicFileSinkMT(aging.targetFolder());
+		checkTheFailLedAgain();
 
-			mainLightingControl();
+		saveSingleColorResult();
 
-			checkTheFailLedAgain();
-
-			saveSingleColorResult();
-
-			//showPassorFail(aging);
-
-			//aging.flushData();
-			//aging.saveAgingLog();
-			//SinkInstance.popupLastBasicFileSinkMT();
-		}
 	}
 	catch (cv::Exception& e)
 	{
@@ -1725,9 +1720,12 @@ int main(int argc, char* argv[])
 	SPDLOG_SINKS_DEBUG("wait for thread join end");
 
 	// 优先保证测试日志可以写入
-	AgingInstance.saveAgingLog();
+	AgingInstance.saveAgingLog(g_error.error());
 
 	showPassorFail();
+
+	tm.stop();
+	SPDLOG_SINKS_INFO("Tick Time: {}, {}", tm.getTimeSec(), tm.getTimeTicks());
 
 	if (cfg.shutdownTime() >= ePowerOff)
 	{
@@ -1745,8 +1743,7 @@ int main(int argc, char* argv[])
 	{
 		;
 	}
-	tm.stop();
-	SPDLOG_SINKS_INFO("Tick Time: {}, {}", tm.getTimeSec(), tm.getTimeTicks());
+	
 	return g_error.error();
 }
 #endif
