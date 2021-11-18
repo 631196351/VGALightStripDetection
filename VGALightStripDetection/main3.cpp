@@ -12,6 +12,7 @@
 #include "I2CWrap.h"
 #include "RandomLitoff.h"
 #include "CaptureDevices.h"
+#include "utility.h"
 
 using namespace cv;
 using namespace std;
@@ -25,8 +26,6 @@ const char* argkeys =
 
 #define MainThreadIsExit if (g_main_thread_exit >= eExit) { break; }
 #define OnExitFlagReturn if (g_main_thread_exit >= eExit) { return; }
-#define SAVE_ROI_FBMCR
-//#define DEBUG_DETAILS
 
 std::mutex g_set_led_mutex;
 int g_Led = BLUE;
@@ -161,10 +160,13 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 {
 	try
 	{
-		char name[MAX_PATH] = { 0 };
-		sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
-		bool bwrite = cv::imwrite(name, f);
-		SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}, result:{}", name, bwrite);
+		if (cfg.keepDebugImg())
+		{
+			char name[MAX_PATH] = { 0 };
+			sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
+			bool bwrite = cv::imwrite(name, f);
+			SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}, result:{}", name, bwrite);
+		}
 	}
 	EXCEPTION_OPERATOR_CATCH_2;
 }
@@ -345,7 +347,7 @@ void mainLightingControl()
 			{
 				MainThreadIsExit;
 				
-				int camera_index = cfg.lanternIndexToCamera(index);
+				int camera_index = cfg.ledIndexToCamera(index);
 
 				I2C.setSignleColor(colorNum[index], BLACK);
 				Sleep(cfg.intervalTime());
@@ -397,8 +399,8 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 			b = back[x];// back.copyTo(b);
 			f = fore[x];// fore.copyTo(f);
 
-#ifdef SAVE_ROI_FBMCR
 			char name[MAX_PATH] = { 0 };
+			if (cfg.keepDebugImg()) 
 			{
 				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
 				cv::imwrite(name, f);
@@ -406,7 +408,7 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
 				cv::imwrite(name, b);
 			}
-#endif
+
 			cv::subtract(f, b, mask);
 
 			const float* hsv = cfg.hsvColor(color);
@@ -429,12 +431,13 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 			cv::medianBlur(hsv_img_mask, hsv_img_mask, 3);
 
 			cv::GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
-#ifdef SAVE_ROI_FBMCR
+
+			if (cfg.keepDebugImg()) 
 			{
 				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
 				cv::imwrite(name, hsv_img_mask);
 			}
-#endif
+
 			//存储边缘
 			vector<vector<Point> > contours;
 			vector<Rect> boundRect;
@@ -461,10 +464,12 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 			}
 
 			cv::rectangle(f, roi, Scalar(255, 0, 255), 1);
-#ifdef SAVE_ROI_FBMCR
-			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-			cv::imwrite(name, f);
-#endif
+
+			if (cfg.keepDebugImg())
+			{
+				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
+				cv::imwrite(name, f);
+			}
 			SPDLOG_SINKS_DEBUG("{} color {}th ROI x:{},y:{}, width:{}, height:{}", color, x, roi.x, roi.y, roi.width, roi.height);
 			outRect[color][x] = roi;
 		}
@@ -515,12 +520,14 @@ void autoCaptureROI2()
 				}
 
 				Mat frame;
-				char name[MAX_PATH] = { 0 };
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
 				spliceMultipleFrames(fore, frame);
-
-				cv::imwrite(name, frame);
-				pyrDown(frame, frame, Size(frame.cols / g_pyDown, frame.rows / g_pyDown));
+				if (cfg.keepDebugImg())
+				{
+					char name[MAX_PATH] = { 0 };
+					sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
+					cv::imwrite(name, frame);
+				}
+				cv::pyrDown(frame, frame, Size(frame.cols / g_pyDown, frame.rows / g_pyDown));
 				cv::imshow("result", frame);
 				cv::waitKey(33);
 			}
@@ -576,7 +583,7 @@ void checkTheFailLedAgain()
 
 					if (AgingInstance.getSingleLedRetestResult(index, color) == Fail)
 					{
-						int camera_index = cfg.lanternIndexToCamera(index);
+						int camera_index = cfg.ledIndexToCamera(index);
 
 						// 关闭所有灯
 						I2C.resetColor(0, 0, 0);
@@ -677,6 +684,14 @@ int showPassorFail()
 		if (AgingInstance.allLedIsOK() == Pass)
 		{
 			pass_msg();
+			// Release 模式下测试时，Pass 不保留图片
+			if (!cfg.keepDebugImg()) 
+			{
+				char delete_cmd[MAX_PATH * 2] = { 0 };
+				sprintf_s(delete_cmd, MAX_PATH * 2, "del /S /Q %s\\%s\\%s\\*.png>nul", get_current_directory().c_str(), AgingFolder, VideoCardIns.targetFolder());
+				system(delete_cmd);
+				SPDLOG_SINKS_INFO("cmd : {}", delete_cmd);
+			}
 		}
 		else
 		{
@@ -695,7 +710,6 @@ int showPassorFail()
 
 int main(int argc, char* argv[])
 {
-
 	cv::CommandLineParser parser(argc, argv, argkeys);
 	if (parser.has("help"))
 	{
@@ -717,6 +731,9 @@ int main(int argc, char* argv[])
 	
 	try
 	{
+		// 程式开启时打开csv, 准备随时接受异常报错
+		AgingInstance.openAgingCsv();
+
 		if (parser.has("@ppid") && parser.has("@name"))
 		{
 			VideoCardIns.PPID(parser.get<std::string>("@ppid"));
@@ -733,8 +750,19 @@ int main(int argc, char* argv[])
 		SPDLOG_SINKS_INFO("Model Name:{}", VideoCardIns.Name());
 		SPDLOG_SINKS_INFO("PPID:{}", VideoCardIns.PPID());
 		SPDLOG_SINKS_INFO("CaptureNum:{}", CaptureNum);
+
+		// 抓取相机name-id 数据
 		CameraDevices;
 
+		// 优化时间,让call 完nvflash后的delay时间用来打开相机
+		for (int i = 0; i < CaptureNum; i++)
+		{
+			if (!g_captures[i].open(i, CAP_DSHOW))
+			{
+				SPDLOG_SINKS_ERROR("Failed to open {}th camera", i + 1);
+				throw ErrorCodeEx(ERR_CANT_OPEN_CAMERA, "Failed to open camera");
+			}
+		}
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
 
@@ -744,12 +772,7 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < CaptureNum; i++)
 		{
-			if (!g_captures[i].open(i, CAP_DSHOW))
-			{
-				SPDLOG_SINKS_ERROR("Failed to open {}th camera", i + 1);
-				throw ErrorCodeEx(ERR_CANT_OPEN_CAMERA, "Failed to open camera");
-			}
-			else
+			if (g_captures[i].isOpened())
 			{
 				g_captures[i].set(CAP_PROP_FPS, 30);
 				g_captures[i].set(CAP_PROP_FRAME_WIDTH, cfg.frame().width);
@@ -763,17 +786,16 @@ int main(int argc, char* argv[])
 				SPDLOG_SINKS_INFO("g_captures[{}] w:{}, h:{}", i, w, h);
 			}
 		}
+
 		g_wait_capture = true;	//自动拍摄线程开始工作
+
+		AgingInstance.initAgingLog();
 
 		autoCaptureROI2();
 
-		// 获取Video的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
-		AgingInstance.initAgingLog(I2C.getLedCount(), litoff.getRandomLitOffState(), cfg.recheckFaileLedTime() > 0);
+		mainLightingControl();
 
-		{
-			mainLightingControl();
-			checkTheFailLedAgain();
-		}
+		checkTheFailLedAgain();
 	}
 	EXCEPTION_OPERATOR_CATCH_3;
 
@@ -789,9 +811,12 @@ int main(int argc, char* argv[])
 	SPDLOG_SINKS_DEBUG("wait for thread join end");
 
 	// 优先保证测试日志可以写入
-	AgingInstance.saveAgingLog();
+	AgingInstance.saveAgingLog(g_error.error());
 
 	showPassorFail();
+
+	tm.stop();
+	SPDLOG_SINKS_INFO("Tick Time: {}, {}", tm.getTimeSec(), tm.getTimeTicks());
 
 	if (cfg.shutdownTime() >= ePowerOff)
 	{
@@ -809,8 +834,7 @@ int main(int argc, char* argv[])
 	{
 		;
 	}
-	tm.stop();
-	SPDLOG_SINKS_INFO("Tick Time: {}, {}", tm.getTimeSec(), tm.getTimeTicks());
+	
 	return g_error.error();
 }
 #endif // LIGHTSTRIPV3

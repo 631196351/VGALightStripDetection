@@ -36,7 +36,7 @@ I2CWrap::I2CWrap()
 		if (gpu_count > 0)
 			break;
 	}
-	gpu_count <= 0 ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Init VenderDll fail") : (void)0;
+	gpu_count == 0 ? throw ErrorCodeEx(ERR_GPU_LOAD_FAILURE, "Vender load GPU failure") : (void)0;
 
 #else
 	nvi2cinit();

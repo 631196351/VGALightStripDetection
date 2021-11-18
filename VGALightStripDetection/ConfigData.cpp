@@ -63,7 +63,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 		else if (model.find("GAMING") != std::string::npos)
 		{
 			//ROG-STRIX-RTX3080-O10G-GAMING-2I3S
-			_thermo_name = "STRIX" + std::to_string(led_count);
+			_thermo_name = "STRIX-" + std::to_string(led_count);
 		}
 	}
 	else if (model.find("TUF") != std::string::npos)
@@ -99,9 +99,18 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			_skipFrame = asg["SkipFrame"].GetInt();
 			_startColor = (LEDColor)asg["StartColor"].GetInt();
 			_stopColor = (LEDColor)asg["StopColor"].GetInt();
+			_intervalTime = asg["IntervalTime"].GetInt();
 			_randomShutDownLed = asg["RandomShutDownLedNum"].GetInt();
 			_shutdownTime = asg["ShutDownDelayTime"].GetInt();
 			_recheckFaileLedTime = asg["RecheckFaileLedTime"].GetInt();
+
+			const auto& name = asg["VideoCapName"];
+			for (unsigned i = 0; i < name.Size(); ++i)
+			{
+				_videoCapName.push_back(name[i].GetString());
+			}
+
+			_keepDebugImg = asg["KeepDebugImg"].GetBool();
 		}
 
 		if (dom.HasMember(_thermo_name.c_str()) && dom[_thermo_name.c_str()].IsObject())
@@ -136,7 +145,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			if (thermo.HasMember("AlgorithmThreshold") && thermo["AlgorithmThreshold"].IsObject())
 			{
 				const auto& atd = thermo["AlgorithmThreshold"];
-				_intervalTime = atd["IntervalTime"].GetInt();
+				
 				_minContoursArea = atd["MinContoursArea"].GetInt();
 				_ledContoursArea = atd["LedContoursArea"].GetInt();
 				_thresoldBlockSize = atd["AdaptiveThresholdArgBlockSize"].GetInt();
@@ -248,35 +257,23 @@ void ConfigData::recordConfig2WorkStates()
 	SPDLOG_SINKS_INFO("\t HSV-ROI: {}<=s<=255,{}<=v<=255", _hsvROI[0], _hsvROI[1]);
 }
 
-int ConfigData::lanternIndexToCamera(int led_index)
+/// 在此规定 3c.json 中 AgingSetting::VideoCapName 下所列值依次为 [上， 后， 前]
+int ConfigData::ledIndexToCamera(int led_index)
 {
 	if (_overhead.find(led_index) != _overhead.end())
 	{
-		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, camera_str[eCamera_Overhead]);
-		return CameraDevices.cameraIndex(camera_str[eCamera_Overhead]);
+		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, _videoCapName[0]);
+		return CameraDevices.cameraIndex(_videoCapName[0]);
 	}
 	else if (_rear.find(led_index) != _rear.end())
 	{
-		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, camera_str[eCamera_Rear]);
-		return CameraDevices.cameraIndex(camera_str[eCamera_Rear]);
+		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, _videoCapName[1]);
+		return CameraDevices.cameraIndex(_videoCapName[1]);
 	}
 	else if (_front.find(led_index) != _front.end())
 	{
-		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, camera_str[eCamera_Front]);
-		return CameraDevices.cameraIndex(camera_str[eCamera_Front]);
+		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, _videoCapName[2]);
+		return CameraDevices.cameraIndex(_videoCapName[2]);
 	}
 	return -1;
-}
-
-const std::set<int>& ConfigData::cameraViewToLanternIndexSet(unsigned view)
-{
-	switch (view)
-	{
-	case eCamera_Overhead:
-		return _overhead;
-	case eCamera_Front:
-		return _front;
-	case eCamera_Rear:
-		return _rear;
-	}
 }

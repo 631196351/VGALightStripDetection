@@ -153,3 +153,13 @@ Version Log
 3.配置文件中增加抓取ROI 阶段的 s, v 设置
 4.配置文件中增加所视面中需要cover的led 序列
 5.修正I2CWrap中gpu 抓不到时，没有抛出异常的问题
+
+
+[v3.0.2.2] - 2021.11.18
+1. I2CWrap中gpu 抓不到时, 抛出 ERR_GPU_LOAD_FAILURE 异常
+2. 在Aging.csv中新增ErrorCode 列, 用来记录测试过程中异常码(e.g. 1006, 1004)
+3. 在配置档中将三个相机name 进行标记, 依次为"VideoCapName": [ "WL001", "WL002", "WL003" ],
+                                                           上, 后, 前
+4. 将配置档中的"IntervalTime" 由AlgorithmThreshold 移动到AgingSetting下
+5. 配置档新增AgingSetting.KeepDebugImg 开关, 来表示本次测试是否保留过程图片, 避免数据太过庞大
+6. 将打开相机逻辑提前, 减少时间消耗, 用来抵消call 完nvflash 后的delay 时间

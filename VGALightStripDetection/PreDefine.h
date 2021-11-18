@@ -45,7 +45,7 @@ enum
 	VersionMajor = 3,
 	VersionSec = 0,
 	VersionThi = 2,
-	VersionMin = 1
+	VersionMin = 2
 };
 
 enum HSV
@@ -62,9 +62,6 @@ enum
 {
 	CaptureNum = 3
 };
-
-//static const char* camera_str[] = { "Camera_Overhead", "Camera_Front", "Camera_Rear" };
-static const char* camera_str[] = { "Camera_Front", "WL002", "Camera_Back" };
 
 enum
 {

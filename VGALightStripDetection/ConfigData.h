@@ -50,9 +50,12 @@ private:
 	int _thresoldC = -9;
 	int _recheckFaileLedTime = 0;	// 侦测到某个灯Faile后， 再重复测几次
 
+	std::vector<std::string> _videoCapName;
 	std::set<int> _front;
 	std::set<int> _rear;
 	std::set<int> _overhead;
+
+	bool _keepDebugImg = true;
 
 public:
 	inline int intervalTime() const { return _intervalTime; }
@@ -73,14 +76,14 @@ public:
 	inline int recheckFaileLedTime() const { return _recheckFaileLedTime; }
 	inline const float* hsvColor(int color) const { return _hsv[color]; }
 	inline const float* roiHV() const { return _hsvROI; }
+	inline std::string getVideoCapName(int index) const { return _videoCapName[index]; };
+	inline bool keepDebugImg() const { return _keepDebugImg; }
 
 public:
 	//void rect(cv::Rect& r);
 	void rect(cv::Rect roi[][CaptureNum], int colors);
 	void shutdownTime(int t);
-	int lanternIndexToCamera(int led_index);
-
-	const std::set<int>& cameraViewToLanternIndexSet(unsigned view);
+	int ledIndexToCamera(int led_index);
 
 };
 

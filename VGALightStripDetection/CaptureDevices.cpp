@@ -112,10 +112,6 @@ void CaptureDevices::EnumerateDevicesInWindows()
 	}
 }
 
-
-
-
-
 CaptureDevices::CaptureDevices()
 {
 	// IMF 获取到的设备id-name 会概率性的与 opencv open id 不匹配

@@ -1,5 +1,5 @@
 #pragma once
 
-int getVGAInfo(char* ppid, size_t size);
+#include <string>
 
-void createPPIDFolder(const char* ppid);
+std::string get_current_directory();

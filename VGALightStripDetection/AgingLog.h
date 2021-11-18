@@ -27,11 +27,13 @@ class AgingLog
 public:
 	AgingLog();
 	void initAgingLog(int led_count, bool randomLightDown, bool retest = false);
+	void initAgingLog();
 	~AgingLog();
 
 	//void setPPID(char* ppit, int len);
 
 	//inline const char* ppid() { return Video; }
+	void openAgingCsv();
 
 	void setSingleLedResult(int index, int color, int result);
 
@@ -41,7 +43,7 @@ public:
 
 	void syncSingLedResult2RetestResult();
 
-	void saveAgingLog();
+	void saveAgingLog(int error);
 
 	int thisLedIsOK(int color);
 

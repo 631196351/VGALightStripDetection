@@ -5,20 +5,22 @@
         "SkipFrame": 3,
         "StartColor": 0,
         "StopColor": 3,
+        "IntervalTime": 50,
         "RandomShutDownLedNum": 0,
         "ShutDownDelayTime": -1,
-        "RecheckFaileLedTime": 0
+        "RecheckFaileLedTime": 0,
+        "VideoCapName": [ "WL001", "WL002", "WL003" ],
+        "KeepDebugImg": false
     },
     "TUF": {
         "Camera": {
-            "Exposure": -5,
+            "Exposure": -6,
             "Saturation": 65,
             "Front": [],
             "Rear": [],
             "Overhead": [ 1, 2, 3, 4 ]
         },
         "AlgorithmThreshold": {
-            "IntervalTime": 100,
             "MinContoursArea": 100,
             "LedContoursArea": 300,
             "AdaptiveThresholdArgBlockSize": 101,
@@ -33,14 +35,13 @@
     },
     "KO": {
         "Camera": {
-            "Exposure": -5,
+            "Exposure": -6,
             "Saturation": 65,
             "Front": [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14 ],
             "Rear": [],
             "Overhead": [ 5, 6, 7 ]
         },
         "AlgorithmThreshold": {
-            "IntervalTime": 100,
             "MinContoursArea": 100,
             "LedContoursArea": 300,
             "AdaptiveThresholdArgBlockSize": 101,
@@ -55,14 +56,13 @@
     },
     "STRIX-22": {
         "Camera": {
-            "Exposure": -4,
+            "Exposure": -6,
             "Saturation": 65,
             "Front": [],
             "Rear": [],
             "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
         },
         "AlgorithmThreshold": {
-            "IntervalTime": 100,
             "MinContoursArea": 100,
             "LedContoursArea": 500,
             "AdaptiveThresholdArgBlockSize": 101,
@@ -77,14 +77,13 @@
     },
     "STRIX-19": {
         "Camera": {
-            "Exposure": -7,
+            "Exposure": -6,
             "Saturation": 65,
             "Front": [],
             "Rear": [ 16, 17, 18, 19 ],
             "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ]
         },
         "AlgorithmThreshold": {
-            "IntervalTime": 100,
             "MinContoursArea": 100,
             "LedContoursArea": 500,
             "AdaptiveThresholdArgBlockSize": 101,
@@ -99,14 +98,13 @@
     },
     "STRIX-WHITE-22": {
         "Camera": {
-            "Exposure": -7,
+            "Exposure": -6,
             "Saturation": 65,
             "Front": [],
             "Rear": [],
             "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
         },
         "AlgorithmThreshold": {
-            "IntervalTime": 100,
             "MinContoursArea": 100,
             "LedContoursArea": 500,
             "AdaptiveThresholdArgBlockSize": 101,
@@ -121,14 +119,13 @@
     },
     "STRIX-GUNDAM-22": {
         "Camera": {
-            "Exposure": -4,
+            "Exposure": -6,
             "Saturation": 65,
             "Front": [],
             "Rear": [],
             "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
         },
         "AlgorithmThreshold": {
-            "IntervalTime": 100,
             "MinContoursArea": 10,
             "LedContoursArea": 250,
             "AdaptiveThresholdArgBlockSize": 101,
