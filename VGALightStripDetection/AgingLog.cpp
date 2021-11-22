@@ -195,7 +195,7 @@ void AgingLog::saveAgingLog(int error)
 			{
 				// 随机灭掉的灯用-1表示
 				r += lpRandomShutDownLedCache[i];
-				ss << lpRandomShutDownLedCache[i] << ",";
+				ss << "," << lpRandomShutDownLedCache[i];
 			}
 			
 			if (r > 0 || error > ERR_All_IS_WELL)
@@ -206,7 +206,15 @@ void AgingLog::saveAgingLog(int error)
 			{
 				aging_file << "Pass," << r << ",";
 			}
-			aging_file << error << "," << ss.rdbuf() << std::endl;
+			
+			if (lpLedCount > 0)
+			{
+				aging_file << error << ss.rdbuf() << std::endl;
+			}
+			else
+			{
+				aging_file << error << std::endl;
+			}
 			ss.clear();
 
 			SPDLOG_SINKS_DEBUG("AgingLog Save random PPID:{},t:{},r:{}", VideoCardIns.PPID(), t, r);
@@ -218,7 +226,7 @@ void AgingLog::saveAgingLog(int error)
 		for (int i = 0; (i < lpLedCount * color_num) && (lpLed != nullptr); i++)
 		{
 			r += lpLed[i];
-			ss << lpLed[i] << ",";
+			ss << "," << lpLed[i] ;
 		}
 
 		if (r > 0 || error > ERR_All_IS_WELL)
@@ -229,7 +237,15 @@ void AgingLog::saveAgingLog(int error)
 		{
 			aging_file << "Pass," << r <<",";
 		}
-		aging_file << error << "," << ss.rdbuf() << std::endl;
+		
+		if (lpLedCount > 0)
+		{
+			aging_file << error << ss.rdbuf() << std::endl;
+		}
+		else
+		{
+			aging_file << error << std::endl;
+		}
 		ss.clear();
 
 		SPDLOG_SINKS_DEBUG("AgingLog Save normal PPID:{},t:{},r:{}", VideoCardIns.PPID(), t, r);
@@ -242,7 +258,7 @@ void AgingLog::saveAgingLog(int error)
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				r += lpRetest[i];
-				ss << lpRetest[i] << ",";
+				ss << "," << lpRetest[i];
 			}
 
 			if (r > 0 || error > ERR_All_IS_WELL)
@@ -253,7 +269,15 @@ void AgingLog::saveAgingLog(int error)
 			{
 				aging_file << "Pass," << r << ",";
 			}
-			aging_file << error << "," << ss.rdbuf() << std::endl;
+
+			if (lpLedCount > 0)
+			{
+				aging_file << error << ss.rdbuf() << std::endl;
+			}
+			else
+			{
+				aging_file << error << std::endl;
+			}
 			ss.clear();
 			SPDLOG_SINKS_DEBUG("AgingLog Save reset PPID:{},t:{},r:{}", VideoCardIns.PPID(), t, r);
 		}
