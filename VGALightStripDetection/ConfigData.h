@@ -31,7 +31,9 @@ private:
 	int _ledContoursArea =500;
 
 	//int _cameraIndex = 0;
-	int _exposure = -5;	//相机曝光
+	//int _exposure = -5;	//相机曝光
+	std::vector<int> _exposures;
+
 	int _saturation = 65;	// 相机的饱和度
 	cv::Size _frame = cv::Size(848, 480);
 	cv::Rect _roi[CaptureNum];
@@ -61,7 +63,7 @@ public:
 	inline int intervalTime() const { return _intervalTime; }
 	inline int minContoursArea() const { return _minContoursArea; }
 	inline int ledContoursArea() const { return _ledContoursArea; }
-	inline int exposure() const { return _exposure; }
+	//inline int exposure() const { return _exposure; }
 	inline int saturation() const { return _saturation; }
 	inline const cv::Size& frame() const { return _frame; }
 	inline const cv::Rect* rois() const { return _roi; }
@@ -84,7 +86,7 @@ public:
 	void rect(cv::Rect roi[][CaptureNum], int colors);
 	void shutdownTime(int t);
 	int ledIndexToCamera(int led_index);
-
+	int exposure(int cap);
 };
 
 #define cfg ConfigData::instance()

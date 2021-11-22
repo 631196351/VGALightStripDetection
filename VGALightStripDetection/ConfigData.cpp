@@ -120,7 +120,13 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			{
 				const auto& cam = thermo["Camera"];
 				//_cameraIndex = cam["Index"].GetInt();
-				_exposure = cam["Exposure"].GetInt();
+				//_exposure = cam["Exposure"].GetInt();
+				const auto& exposures = cam["Exposure"];
+				for (unsigned i = 0; i < exposures.Size(); ++i)
+				{
+					_exposures.push_back(exposures[i].GetInt());
+				}
+
 				_saturation = cam["Saturation"].GetInt();
 				
 				// 虽然笨拙，但胜在兼容各种机种
@@ -207,6 +213,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 
 void ConfigData::recordConfig2WorkStates()
 {
+	std::string msg;
 	SPDLOG_SINKS_INFO("AgingSetting");
 	SPDLOG_SINKS_INFO("\t startColor : {}", _startColor);
 	SPDLOG_SINKS_INFO("\t stopColor : {}", _stopColor);
@@ -215,13 +222,21 @@ void ConfigData::recordConfig2WorkStates()
 	SPDLOG_SINKS_INFO("\t recheckFaileLedTime : {}", _recheckFaileLedTime);
 
 	SPDLOG_SINKS_INFO("\t Thermo : {}", _thermo_name);
-	SPDLOG_SINKS_INFO("\t Exposure : {}", _exposure);
+	//SPDLOG_SINKS_INFO("\t Exposure : {}", _exposure);
+	for (auto it = _exposures.begin(); it != _exposures.end(); ++it)
+	{
+		msg += std::to_string(*it);
+		msg += ",";
+	}
+	SPDLOG_SINKS_INFO("\t Exposures : {}", msg);
+	msg.clear();
+
 	SPDLOG_SINKS_INFO("\t Saturation : {}", _saturation);
 	SPDLOG_SINKS_INFO("\t SkipFrame : {}", _skipFrame);
 	SPDLOG_SINKS_INFO("\t Width : {}", _frame.width);
 	SPDLOG_SINKS_INFO("\t Hight : {}", _frame.height);
 
-	std::string msg;
+	
 	for (auto it = _front.begin(); it != _front.end(); ++it)
 	{
 		msg += std::to_string(*it);
@@ -276,4 +291,26 @@ int ConfigData::ledIndexToCamera(int led_index)
 		return CameraDevices.cameraIndex(_videoCapName[2]);
 	}
 	return -1;
+}
+
+/// 不同方向的cap使用略微不同的曝光值
+int ConfigData::exposure(int cap_index)
+{
+	std::string cap = CameraDevices.cameraName(cap_index);
+
+	if (cap.compare(_videoCapName[0]) == 0)
+	{
+		return _exposures[0];
+	}
+	else if (cap.compare(_videoCapName[1]) == 0)
+	{
+		return _exposures[1];
+	}
+	else if (cap.compare(_videoCapName[2]) == 0)
+	{
+		return _exposures[2];
+	}
+	else
+		throw std::exception("Can't not find correct exposure");
+
 }

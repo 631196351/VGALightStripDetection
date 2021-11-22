@@ -29,14 +29,14 @@ I2CWrap::I2CWrap()
 		throw ErrorCodeEx(ERR_LOAD_I2C_FAILURE, "Load VGA_Extra_x64.dll Failure");
 	}
 	int gpu_count = 0;
-	for (int i = 0; i < 120; ++i) {
+	for (int i = 0; i < 5; ++i) {
 		(i > 0) ? Sleep(1000) : (void)0;
 		gpu_count = _lpLoadVenderDLL();
 		SPDLOG_SINKS_DEBUG("{}th LoadVenderDLL return GPU count {}", i + 1, gpu_count);
 		if (gpu_count > 0)
 			break;
 	}
-	gpu_count == 0 ? throw ErrorCodeEx(ERR_GPU_LOAD_FAILURE, "Vender load GPU failure") : (void)0;
+	gpu_count <= 0 ? throw ErrorCodeEx(ERR_GPU_LOAD_FAILURE, "Vender load GPU failure") : (void)0;
 
 #else
 	nvi2cinit();
@@ -47,7 +47,7 @@ I2CWrap::I2CWrap()
 #ifdef VENDER_EXTRA
 	bool result = false;
 	// 在2分钟内持续调用i2c, 直到调用成功，否则报 ERR_RUN_I2C_FAILURE 异常
-	for (int i = 0; i < 120; ++i) {
+	for (int i = 0; i < 5; ++i) {
 		(i > 0) ? Sleep(1000) : (void)0;
 		result = _lpVGAWriteICI2C(0xCE, 0x0, (BYTE*)offset, 0, 1, 1, 2, 1);	//set address
 		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i + 1, result);

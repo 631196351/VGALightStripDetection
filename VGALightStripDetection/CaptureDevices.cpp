@@ -102,6 +102,7 @@ void CaptureDevices::EnumerateDevicesInWindows()
 				}
 				deviceId++;
 				_videoCaptures.insert({ deviceName, deviceId });
+				_index2Cap.insert({ deviceId, deviceName });
 				SPDLOG_SINKS_DEBUG("{}th capture {}, DevicePath : {}", deviceId, deviceName, devicePath);
 				pPropBag->Release();
 				pMoniker->Release();
@@ -152,4 +153,13 @@ int CaptureDevices::cameraIndex(const std::string& camera)
 		return -1;
 	else
 		return iter->second;
+}
+
+std::string CaptureDevices::cameraName(const int index)
+{
+	auto i = _index2Cap.find(index);
+	if (i == _index2Cap.end())
+		return std::string();
+	else
+		return i->second;
 }

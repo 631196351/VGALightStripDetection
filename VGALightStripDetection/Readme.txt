@@ -163,3 +163,9 @@ Version Log
 4. 将配置档中的"IntervalTime" 由AlgorithmThreshold 移动到AgingSetting下
 5. 配置档新增AgingSetting.KeepDebugImg 开关, 来表示本次测试是否保留过程图片, 避免数据太过庞大
 6. 将打开相机逻辑提前, 减少时间消耗, 用来抵消call 完nvflash 后的delay 时间
+
+[v3.0.2.3] - 2021.11.22
+1. I2CWrap中gpu 抓不到时, 返回值为小于等于-1, 此时抛出ERR_GPU_LOAD_FAILURE 异常
+2. I2CWrap 中retry 次数缩减为5 秒
+3. 三个摄像头曝光配置分开设定
+4. 调整Aging.csv 格式, 将AllFailCount, FinalResult, ErrorCode 等列提前

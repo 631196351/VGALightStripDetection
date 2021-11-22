@@ -624,7 +624,32 @@ void checkTheFailLedAgain()
 	EXCEPTION_OPERATOR_CATCH_2;
 }
 
-int showPassorFail()
+void getFinalResult()
+{
+	// 走到这里没有突发异常
+	if (g_error.error() == ERR_All_IS_WELL)
+	{
+		// 未发生异常
+		if (AgingInstance.allLedIsOK() == Pass)
+		{
+			// Release 模式下测试时，Pass 不保留图片
+			if (!cfg.keepDebugImg())
+			{
+				char delete_cmd[MAX_PATH * 2] = { 0 };
+				sprintf_s(delete_cmd, MAX_PATH * 2, "del /S /Q %s\\%s\\%s\\*.png>nul", get_current_directory().c_str(), AgingFolder, VideoCardIns.targetFolder());
+				system(delete_cmd);
+				SPDLOG_SINKS_INFO("cmd : {}", delete_cmd);
+			}
+		}
+		else
+		{
+			// 但是发现有灯不良
+			g_error = ErrorCodeEx(ERR_SOME_LED_FAILURE, "some led fail");
+		}
+	}
+}
+
+void showPassorFail()
 {
 	auto pass_msg = []()
 	{
@@ -680,32 +705,12 @@ int showPassorFail()
 
 	if (g_error.error() == ERR_All_IS_WELL)
 	{
-		// 未发生异常
-		if (AgingInstance.allLedIsOK() == Pass)
-		{
-			pass_msg();
-			// Release 模式下测试时，Pass 不保留图片
-			if (!cfg.keepDebugImg()) 
-			{
-				char delete_cmd[MAX_PATH * 2] = { 0 };
-				sprintf_s(delete_cmd, MAX_PATH * 2, "del /S /Q %s\\%s\\%s\\*.png>nul", get_current_directory().c_str(), AgingFolder, VideoCardIns.targetFolder());
-				system(delete_cmd);
-				SPDLOG_SINKS_INFO("cmd : {}", delete_cmd);
-			}
-		}
-		else
-		{
-			g_error = ErrorCodeEx(ERR_SOME_LED_FAILURE, "some led fail");
-			fail_msg();
-		}
+		pass_msg();
 	}
 	else
 	{
-		// 发生了异常
 		fail_msg();
 	}
-
-	return g_error.error();
 }
 
 int main(int argc, char* argv[])
@@ -762,6 +767,7 @@ int main(int argc, char* argv[])
 				SPDLOG_SINKS_ERROR("Failed to open {}th camera", i + 1);
 				throw ErrorCodeEx(ERR_CANT_OPEN_CAMERA, "Failed to open camera");
 			}
+			SPDLOG_SINKS_INFO("Openning {}th cap", i);
 		}
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
@@ -777,13 +783,14 @@ int main(int argc, char* argv[])
 				g_captures[i].set(CAP_PROP_FPS, 30);
 				g_captures[i].set(CAP_PROP_FRAME_WIDTH, cfg.frame().width);
 				g_captures[i].set(CAP_PROP_FRAME_HEIGHT, cfg.frame().height);
-				g_captures[i].set(CAP_PROP_EXPOSURE, cfg.exposure());
+				g_captures[i].set(CAP_PROP_EXPOSURE, cfg.exposure(i));
 				//g_captures[i].set(CAP_PROP_SATURATION, cfg.saturation());
 				g_captures[i].set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
 
-				int w = g_captures[0].get(CAP_PROP_FRAME_WIDTH);
-				int h = g_captures[0].get(CAP_PROP_FRAME_HEIGHT);
-				SPDLOG_SINKS_INFO("g_captures[{}] w:{}, h:{}", i, w, h);
+				int w = g_captures[i].get(CAP_PROP_FRAME_WIDTH);
+				int h = g_captures[i].get(CAP_PROP_FRAME_HEIGHT);
+				int e = g_captures[i].get(CAP_PROP_EXPOSURE);
+				SPDLOG_SINKS_INFO("g_captures[{}] w:{}, h:{}, exposure:{}", i, w, h, e);
 			}
 		}
 
@@ -809,6 +816,9 @@ int main(int argc, char* argv[])
 	t1.join();
 	t2.join();
 	SPDLOG_SINKS_DEBUG("wait for thread join end");
+
+	// 先整理出来一个最终的结果, 好保证可以将errorcode正确写入aging.csv
+	getFinalResult();
 
 	// 优先保证测试日志可以写入
 	AgingInstance.saveAgingLog(g_error.error());
