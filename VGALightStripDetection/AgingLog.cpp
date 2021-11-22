@@ -38,7 +38,7 @@ bool AgingLog::openAgingCsv()
 			if (length == 0)
 			{
 				// 添加表头
-				aging_file << "VideoCard," << "Time," << "PPID," << "Type," << "ErrorCode,";
+				aging_file << "VideoCard, Time, PPID, Type, FinalResult, AllFailCount, ErrorCode,";
 
 				char buf[10] = { 0 };
 				for (int i = 0; i < color_num; i++)
@@ -50,7 +50,7 @@ bool AgingLog::openAgingCsv()
 						aging_file << buf;
 					}
 				}
-				aging_file << "result0," << "result1" << std::endl;
+				aging_file << std::endl;
 				aging_file.flush();
 			}
 			return true;
@@ -189,49 +189,68 @@ void AgingLog::saveAgingLog(int error)
 		int r = 0;
 		struct tm *p = VideoCardIns.getTimestamp();
 		char t[128] = { 0 };
+		std::stringstream ss;
 		sprintf_s(t, 128, "%d%02d%02d%02d%02d%02d", 1900 + p->tm_year, 1 + p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
 
 		////////////////////////////////////////////////////////////////////////////
 		if (randomLightDown)
 		{
-			aging_file <<VideoCardIns.Name()<<","<< t << "\t," << VideoCardIns.PPID() << "\t,"<<"Random," << error << ",";
+			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Random,";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				// 随机灭掉的灯用-1表示
 				r += lpRandomShutDownLedCache[i];
-				aging_file << lpRandomShutDownLedCache[i] << ",";
+				ss << "," << lpRandomShutDownLedCache[i];
 			}
 
-			aging_file << r << ",";
-			if (r < 0)
+			if (r > 0 || error > ERR_All_IS_WELL)
 			{
-				aging_file << "Fail" << std::endl;
+				aging_file << "Fail," << r << ",";
 			}
 			else
 			{
-				aging_file << "Pass" << std::endl;
+				aging_file << "Pass," << r << ",";
 			}
+
+			if (lpLedCount > 0)
+			{
+				aging_file << error << ss.rdbuf() << std::endl;
+			}
+			else
+			{
+				aging_file << error << std::endl;
+			}
+			ss.clear();
 
 			SPDLOG_SINKS_DEBUG("AgingLog Save random PPID:{},t:{},r:{}", VideoCardIns.PPID(), t, r);
 		}
 		////////////////////////////////////////////////////////////////////////////
 		r = 0;
-		aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal," << error <<",";
+		aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";
 		for (int i = 0; i < lpLedCount * color_num; i++)
 		{
 			r += lpLed[i];
-			aging_file << lpLed[i] << ",";
+			ss << "," << lpLed[i] ;
 		}
 
-		aging_file << r << ",";
-		if (r > 0)
+		if (r > 0 || error > ERR_All_IS_WELL)
 		{
-			aging_file << "Fail" << std::endl;
+			aging_file << "Fail," << r << ",";
 		}
 		else
 		{
-			aging_file << "Pass" << std::endl;
+			aging_file << "Pass," << r << ",";
 		}
+
+		if (lpLedCount > 0)
+		{
+			aging_file << error << ss.rdbuf() << std::endl;
+		}
+		else
+		{
+			aging_file << error << std::endl;
+		}
+		ss.clear();
 
 		SPDLOG_SINKS_DEBUG("AgingLog Save normal PPID:{},t:{},r:{}", VideoCardIns.PPID(), t, r);
 
@@ -239,22 +258,31 @@ void AgingLog::saveAgingLog(int error)
 		if (retest)
 		{
 			r = 0;
-			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest," << error << ",";
+			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				r += lpRetest[i];
-				aging_file << lpRetest[i] << ",";
+				ss << ","<< lpRetest[i];
 			}
 
-			aging_file << r << ",";
-			if (r > 0)
+			if (r > 0 || error > ERR_All_IS_WELL)
 			{
-				aging_file << "Fail" << std::endl;
+				aging_file << "Fail," << r << ",";
 			}
 			else
 			{
-				aging_file << "Pass" << std::endl;
+				aging_file << "Pass," << r << ",";
 			}
+
+			if (lpLedCount > 0)
+			{
+				aging_file << error << ss.rdbuf() << std::endl;
+			}
+			else
+			{
+				aging_file << error << std::endl;
+			}
+			ss.clear();
 			SPDLOG_SINKS_DEBUG("AgingLog Save reset PPID:{},t:{},r:{}", VideoCardIns.PPID(), t, r);
 		}
 

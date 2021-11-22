@@ -104,10 +104,13 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 {
 	try 
 	{
-		char name[MAX_PATH] = { 0 };
-		sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
-		bool bwrite = cv::imwrite(name, f);
-		SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}, result:{}", name, bwrite);
+		if (cfg.keepDebugImg())
+		{
+			char name[MAX_PATH] = { 0 };
+			sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
+			bool bwrite = cv::imwrite(name, f);
+			SPDLOG_SINKS_DEBUG("SaveDebugROIImg:{}, result:{}", name, bwrite);
+		}
 	}
 	catch (cv::Exception& e)
 	{
@@ -1330,8 +1333,8 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		b = back;// back.copyTo(b);
 		f = fore;// fore.copyTo(f);
 
-#ifdef SAVE_ROI_FBMCR
 		char name[MAX_PATH] = { 0 };
+		if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, f);
@@ -1339,7 +1342,6 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, b);
 		}
-#endif
 		SPDLOG_SINKS_DEBUG("Frame difference algorithm starts.");
 		cv::subtract(f, b, mask);
 
@@ -1364,12 +1366,11 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 		GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
 
-#ifdef SAVE_ROI_FBMCR
+		if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, hsv_img_mask);
 		}
-#endif
 		//存储边缘
 		vector<vector<Point> > contours;
 		vector<Rect> boundRect;
@@ -1395,20 +1396,16 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 			drawContours(result, contours, i, Scalar(0, 255, 255), 1);
 		}
 
-#ifdef SAVE_ROI_FBMCR
+		if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, result);
+
+			rectangle(f, roi, Scalar(255, 0, 255), 1);
+			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
+			cv::imwrite(name, f);
 		}
-#endif
 
-#ifdef SAVE_ROI_FBMCR
-
-		rectangle(f, roi, Scalar(255, 0, 255), 1);
-		sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color);
-		cv::imwrite(name, f);
-
-#endif
 		return roi;
 	}
 	catch (cv::Exception& e)
@@ -1511,9 +1508,34 @@ int showErrorCode(ErrorCode& e)
 	return e.error();
 }
 
-int showPassorFail()
+void getFinalResult()
 {
-	auto pass_msg = []() 
+	// 走到这里没有突发异常
+	if (g_error.error() == ERR_All_IS_WELL)
+	{
+		// 未发生异常
+		if (AgingInstance.allLedIsOK() == Pass)
+		{
+			// Release 模式下测试时，Pass 不保留图片
+			if (!cfg.keepDebugImg())
+			{
+				char delete_cmd[MAX_PATH * 2] = { 0 };
+				sprintf_s(delete_cmd, MAX_PATH * 2, "del /S /Q %s\\%s\\%s\\*.png>nul", get_current_directory().c_str(), AgingFolder, VideoCardIns.targetFolder());
+				system(delete_cmd);
+				SPDLOG_SINKS_INFO("cmd : {}", delete_cmd);
+			}
+		}
+		else
+		{
+			// 但是发现有灯不良
+			g_error = ErrorCodeEx(ERR_SOME_LED_FAILURE, "some led fail");
+		}
+	}
+}
+
+void showPassorFail()
+{
+	auto pass_msg = []()
 	{
 		SPDLOG_SINKS_INFO("");
 		SPDLOG_SINKS_INFO("");
@@ -1557,41 +1579,22 @@ int showPassorFail()
 		if (litoff.getRandomLitOffState())
 		{
 			// 要是随即灭灯开了，就说明处于测试阶段，直接过
-		}	
+		}
 		else
 		{
 			// 没有开启随机灭灯，但出现了fail，直接卡住
 			system("pause");
-		}	
+		}
 	};
 
 	if (g_error.error() == ERR_All_IS_WELL)
 	{
-		// 未发生异常
-		if (AgingInstance.allLedIsOK() == Pass)
-		{
-			pass_msg();
-#if !defined(_DEBUG)
-			// Release 模式下测试时，Pass 不保留图片
-			char delete_cmd[MAX_PATH*2] = { 0 };
-			sprintf_s(delete_cmd, MAX_PATH*2, "del /S /Q %s\\%s\\%s\\*.png>nul", get_current_directory().c_str(), AgingFolder, VideoCardIns.targetFolder());
-			system(delete_cmd);
-			SPDLOG_SINKS_INFO("cmd : {}", delete_cmd);
-#endif
-		}
-		else
-		{
-			g_error = ErrorCodeEx(ERR_SOME_LED_FAILURE, "some led fail");
-			fail_msg();
-		}
+		pass_msg();
 	}
 	else
 	{
-		// 发生了异常
 		fail_msg();
 	}
-	
-	return g_error.error();
 }
 
 int main(int argc, char* argv[])
@@ -1667,19 +1670,12 @@ int main(int argc, char* argv[])
 			capture.set(CAP_PROP_EXPOSURE, cfg.exposure());
 			capture.set(CAP_PROP_SATURATION, cfg.saturation());
 
-			//capture.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
 			capture.set(CAP_PROP_FOURCC, MAKEFOURCC('M', 'J', 'P', 'G'));
-			//int ex = static_cast<int>(capture.get(CAP_PROP_FOURCC));
-			//Transform from int to char via Bitwise operators
-			//char ext[] = { (char)(ex & 0XFF),(char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24),0 };
-
-
-			//cfg.frame.width = (int)capture.get(CAP_PROP_FRAME_WIDTH);
-			//cfg.frame.height = (int)capture.get(CAP_PROP_FRAME_HEIGHT);
 
 			g_wait_capture = true;	//自动拍摄线程开始工作
 		}
 
+		// 开始工作前分配内存
 		AgingInstance.initAgingLog();
 
 		autoCaptureROI2();
@@ -1688,7 +1684,7 @@ int main(int argc, char* argv[])
 
 		checkTheFailLedAgain();
 
-		saveSingleColorResult();
+		//saveSingleColorResult();
 
 	}
 	catch (cv::Exception& e)
@@ -1718,6 +1714,9 @@ int main(int argc, char* argv[])
 	t2.join();
 	//t3.join();
 	SPDLOG_SINKS_DEBUG("wait for thread join end");
+
+	// 先整理出来一个最终的结果, 好保证可以将errorcode正确写入aging.csv
+	getFinalResult();
 
 	// 优先保证测试日志可以写入
 	AgingInstance.saveAgingLog(g_error.error());

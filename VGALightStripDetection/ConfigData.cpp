@@ -196,6 +196,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			_randomShutDownLed = asg["RandomShutDownLedNum"].GetInt();
 			_shutdownTime = asg["ShutDownDelayTime"].GetInt();
 			_recheckFaileLedTime = asg["RecheckFaileLedTime"].GetInt();
+			_keepDebugImg = asg["KeepDebugImg"].GetBool();
 		}
 
 		if (dom.HasMember(_thermal_name.c_str()) && dom[_thermal_name.c_str()].IsObject())
@@ -291,6 +292,7 @@ void ConfigData::recordConfig2WorkStates()
 	SPDLOG_SINKS_INFO("\t randomShutDownLed : {}", _randomShutDownLed);
 	SPDLOG_SINKS_INFO("\t shutdownTime : {}", _shutdownTime);
 	SPDLOG_SINKS_INFO("\t recheckFaileLedTime : {}", _recheckFaileLedTime);
+	SPDLOG_SINKS_INFO("\t KeepDebugImg : {}", _keepDebugImg);
 
 	SPDLOG_SINKS_INFO("\t Thermal : {}", _thermal_name);
 	SPDLOG_SINKS_INFO("\t Exposure : {}", _exposure);

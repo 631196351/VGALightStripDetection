@@ -54,6 +54,8 @@ private:
 	float _hsv[BGR][6] = { 0 };
 	float _hsvROI[2] = {0};
 
+	bool _keepDebugImg = true;
+
 public:
 	//inline bool debugMode() const { return _debugMode; }
 	inline int intervalTime() const { return _intervalTime; }
@@ -79,6 +81,8 @@ public:
 
 	inline const float* hsvColor(int color) const { return _hsv[color]; }
 	inline const float* roiHV() const { return _hsvROI; }
+
+	inline bool keepDebugImg() const { return _keepDebugImg; }
 
 public:
 	void rect(cv::Rect& r);	

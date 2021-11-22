@@ -8,7 +8,8 @@
         "IntervalTime": 100,
         "RandomShutDownLedNum": 0,
         "ShutDownDelayTime": -1,
-        "RecheckFaileLedTime": 1
+        "RecheckFaileLedTime": 1,
+        "KeepDebugImg": true
     },
     "TUF": {
         "Camera": {
