@@ -1,10 +1,11 @@
 #include <Windows.h>
-
+#include <fstream>
 #include "VideoCard.h"
 
 VideoCard::VideoCard()
 {
 	time(&_time);
+	system("del /F ppid.txt 2>nul");
 }
 
 VideoCard::~VideoCard()
@@ -58,4 +59,16 @@ VideoCard& VideoCard::instance()
 {
 	static VideoCard ri;
 	return ri;
+}
+
+/// 应PE 要求, 将PPID 写入到程式同级目录的ppid.txt中
+void VideoCard::savePPID()
+{
+	std::fstream file("./ppid.txt", std::fstream::out);
+	if (file.is_open())
+	{
+		file << _ppid;
+		file.flush();
+	}
+	file.close();
 }

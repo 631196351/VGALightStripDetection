@@ -162,8 +162,12 @@ Version Log
 2.针对之前aging.csv一直无法记录1006错误的问题，对逻辑进行调整，程序启动后开启aging.csv， 处理完异常后， 再将异常信息一同写入aging.csv
 3.新增 ERR_GPU_LOAD_FAILURE 异常， 用来细化处理 ERR_RUN_I2C_FAILURE
 
-[v2.0.1.6] - 2012.11.22
+[v2.0.1.6] - 2021.11.22
 1. 不保留测试过程图片开关开到配置档中
 2. 调整Aging.csv 格式
 3. 修改I2CWrap 中ERR_RUN_I2C_FAILURE 异常抛出时的条件开关错误
 4. 缩减I2CWrap 中retry load GPU 的次数, 调整为5次
+
+[v2.0.1.7] - 2021.11.24
+1. 程式开启时删除ppid.txt, result.txt
+2. 程式执行完毕后输出ppid.txt, result.txt

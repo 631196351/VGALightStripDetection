@@ -20,6 +20,7 @@ public:
 	inline const char* targetFolder() const { return _ppid_time.c_str(); }
 	inline tm* getTimestamp() const { return localtime(&_time);}
 
+	void savePPID();
 	static VideoCard& instance();
 };
 
