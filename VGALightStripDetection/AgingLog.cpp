@@ -1,4 +1,4 @@
-﻿
+
 //#include <regex>
 #include <time.h>
 #include <io.h>
@@ -284,6 +284,17 @@ void AgingLog::saveAgingLog(int error)
 
 		aging_file.flush();
 	}
+
+	std::fstream file("./result.txt", std::fstream::out);
+	if (file.is_open())
+	{
+		if (error == ERR_All_IS_WELL)
+			file << "PASS";
+		else
+			file << "FAIL";
+		file.flush();
+	}
+	file.close();
 }
 
 int AgingLog::thisLedIsOK(int color)

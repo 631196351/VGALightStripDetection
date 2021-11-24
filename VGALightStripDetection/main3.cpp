@@ -822,6 +822,7 @@ int main(int argc, char* argv[])
 
 	// 优先保证测试日志可以写入
 	AgingInstance.saveAgingLog(g_error.error());
+	VideoCardIns.savePPID();
 
 	showPassorFail();
 
