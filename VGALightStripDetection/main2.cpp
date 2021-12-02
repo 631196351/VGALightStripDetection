@@ -1599,15 +1599,6 @@ void showPassorFail()
 
 int main(int argc, char* argv[])
 {
-	//屏蔽控制台关闭按钮
-	HWND hwnd = GetConsoleWindow();
-	HMENU hmenu = GetSystemMenu(hwnd, false);
-	RemoveMenu(hmenu, SC_CLOSE, MF_BYCOMMAND);
-	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-	ShowWindow(hwnd, SW_SHOWNORMAL);
-	DestroyMenu(hmenu);
-	ReleaseDC(hwnd, NULL);
-
 	cv::CommandLineParser parser(argc, argv, argkeys);
 	if (parser.has("help"))
 	{

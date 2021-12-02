@@ -3,7 +3,10 @@
 #include "SpdMultipleSinks.h"
 #include "PreDefine.h"
 #include "RandomLitoff.h"
+
+#if !defined(VENDER_EXTRA)
 #include "nvbase.h"
+#endif
 
 // LED 灯的地址
 BYTE REG[22] = { 0x60, 0x63, 0x66, 0x69, 0x6c, 0x6f, 0x72, 0x75, 0x78, 0x7b, 0x7e
@@ -11,7 +14,7 @@ BYTE REG[22] = { 0x60, 0x63, 0x66, 0x69, 0x6c, 0x6f, 0x72, 0x75, 0x78, 0x7b, 0x7
 
 BYTE uOffset[12] = { 0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00 };
 
-I2CWrap::I2CWrap()
+I2CWrap::I2CWrap():_ledCount(eHolderLedCount)
 {
 #ifdef VENDER_EXTRA
 	_hDLL = LoadLibrary(L"VGA_Extra_x64.dll");
@@ -42,37 +45,37 @@ I2CWrap::I2CWrap()
 	nvi2cinit();
 #endif
 
-	// 从寄存器中获取LED 灯数量
-	BYTE offset[2] = { 0x1D,0x0C };
-#ifdef VENDER_EXTRA
-	bool result = false;
-	// 在2分钟内持续调用i2c, 直到调用成功，否则报 ERR_RUN_I2C_FAILURE 异常
-	for (int i = 0; i < 5; ++i) {
-		(i > 0) ? Sleep(1000) : (void)0;
-		result = _lpVGAWriteICI2C(0xCE, 0x0, (BYTE*)offset, 0, 1, 1, 2, 1);	//set address
-		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i + 1, result);
-		if (result)
-			break;
-	}
-	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to get led count") : (void)0;
+//	// 从寄存器中获取LED 灯数量
+//	BYTE offset[2] = { 0x1D,0x0C };
+//#ifdef VENDER_EXTRA
+//	bool result = false;
+//	// 在2分钟内持续调用i2c, 直到调用成功，否则报 ERR_RUN_I2C_FAILURE 异常
+//	for (int i = 0; i < 5; ++i) {
+//		(i > 0) ? Sleep(1000) : (void)0;
+//		result = _lpVGAWriteICI2C(0xCE, 0x0, (BYTE*)offset, 0, 1, 1, 2, 1);	//set address
+//		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i + 1, result);
+//		if (result)
+//			break;
+//	}
+//	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to get led count") : (void)0;
+//
+//#else
+//	NvAPI_Status result;
+//	for (int i = 0; i < 5; ++i) {
+//		result = nvi2cWriteBlock(0xCE, 0x0, offset, 2);
+//		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i+1, result);
+//		if (result == NVAPI_OK)
+//			break;
+//	}
+//	result != NVAPI_OK ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to get led count") : (void)0;
+//
+//#endif
 
-#else
-	NvAPI_Status result;
-	for (int i = 0; i < 5; ++i) {
-		result = nvi2cWriteBlock(0xCE, 0x0, offset, 2);
-		SPDLOG_SINKS_DEBUG("{}th time to call write i2c, return {}", i+1, result);
-		if (result == NVAPI_OK)
-			break;
-	}
-	result != NVAPI_OK ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to get led count") : (void)0;
-
-#endif
-
-#ifdef VENDER_EXTRA
-	_lpVGAReadICI2C(0xCE, 0x08, (BYTE&)_ledCount, 0, 1, 1, 1, 1);
-#else
-	nvi2cReadBlock(0xCE, 0x08, (NvU8*)&_ledCount, 1);
-#endif
+//#ifdef VENDER_EXTRA
+//	_lpVGAReadICI2C(0xCE, 0x08, (BYTE&)_ledCount, 0, 1, 1, 1, 1);
+//#else
+//	nvi2cReadBlock(0xCE, 0x08, (NvU8*)&_ledCount, 1);
+//#endif
 	SPDLOG_SINKS_DEBUG("Number of LEDs : {}", _ledCount);
 }
 

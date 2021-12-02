@@ -42,10 +42,10 @@ enum
 
 enum
 {
-	VersionMajor = 2,
+	VersionMajor = 4,
 	VersionSec = 0,
 	VersionThi = 1,
-	VersionMin = 7
+	VersionMin = 1
 };
 
 enum HSV
@@ -56,4 +56,10 @@ enum HSV
 	eVmin = 3,
 	eHmin2 = 4,
 	eHmax2 = 5
+};
+
+enum 
+{
+	// VGA Holder only 5 led
+	eHolderLedCount = 5
 };

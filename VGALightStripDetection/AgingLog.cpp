@@ -41,7 +41,7 @@ bool AgingLog::openAgingCsv()
 				aging_file << "VideoCard, Time, PPID, Type, FinalResult, AllFailCount, ErrorCode,";
 
 				char buf[10] = { 0 };
-				for (int i = 0; i < color_num; i++)
+				for (int i = 0; i < eHolderLedCount; i++)
 				{
 					// 因为1006 错误的存在，所以在初始化aging.csv文件时，无法get 到led count
 					for (int j = 0; j < 22; j++)

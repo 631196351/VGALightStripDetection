@@ -1,4 +1,4 @@
-﻿{
+{
     "AgingSetting": {
         "Width": 1280,
         "Hight": 720,
@@ -11,7 +11,7 @@
         "RecheckFaileLedTime": 1,
         "KeepDebugImg": true
     },
-    "TUF": {
+    "HOLDER": {
         "Camera": {
             "Index": 0,
             "Exposure": -4,
@@ -27,63 +27,6 @@
                 "g": [ 80, 180, 102, 40 ],
                 "r": [ 320, 360, 102, 40, 0, 30 ],
                 "roi": [102, 64]
-            }
-        }
-    },
-    "STRIX": {
-        "Camera": {
-            "Index": 0,
-            "Exposure": -4,
-            "Saturation": 65
-        },
-        "AlgorithmThreshold": {
-            "MinContoursArea": 100,
-            "LedContoursArea": 300,
-            "AdaptiveThresholdArgBlockSize": 101,
-            "AdaptiveThresholdArgC": -9,
-            "HSV": {
-                "b": [ 180, 280, 102, 40 ],
-                "g": [ 80, 180, 102, 40 ],
-                "r": [ 320, 360, 102, 40, 0, 30 ],
-                "roi": [ 102, 64 ]
-            }
-        }
-    },
-    "STRIX-WHITE-22": {
-        "Camera": {
-            "Index": 0,
-            "Exposure": -6,
-            "Saturation": 65
-        },
-        "AlgorithmThreshold": {
-            "MinContoursArea": 100,
-            "LedContoursArea": 300,
-            "AdaptiveThresholdArgBlockSize": 101,
-            "AdaptiveThresholdArgC": -9,
-            "HSV": {
-                "b": [ 190, 270, 102, 40 ],
-                "g": [ 80, 170, 102, 40 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ],
-                "roi": [ 102, 64 ]
-            }
-        }
-    },
-    "STRIX-GUNDAM-22": {
-        "Camera": {
-            "Index": 0,
-            "Exposure": -4,
-            "Saturation": 65
-        },
-        "AlgorithmThreshold": {
-            "MinContoursArea": 10,
-            "LedContoursArea": 250,
-            "AdaptiveThresholdArgBlockSize": 101,
-            "AdaptiveThresholdArgC": -9,
-            "HSV": {
-                "b": [ 190, 270, 102, 40 ],
-                "g": [ 80, 170, 102, 20 ],
-                "r": [ 330, 360, 102, 40, 0, 30 ],
-                "roi": [ 102, 64 ]
             }
         }
     }

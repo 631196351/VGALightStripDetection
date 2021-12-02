@@ -171,3 +171,7 @@ Version Log
 [v2.0.1.7] - 2021.11.24
 1. 程式开启时删除ppid.txt, result.txt
 2. 程式执行完毕后输出ppid.txt, result.txt
+
+
+[v4.0.1.1] - 2021.12.02
+1.开始支持VGA HOLDER 
