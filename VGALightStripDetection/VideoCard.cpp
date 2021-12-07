@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <fstream>
 #include "VideoCard.h"
+#include "ErrorCode.h"
 
 VideoCard::VideoCard()
 {
@@ -13,22 +14,21 @@ VideoCard::~VideoCard()
 
 }
 
-void VideoCard::PPID(std::string ppid)
+void VideoCard::PPID(std::string ppid_file_path)
 {
-	_ppid = ppid;
+
+	std::fstream file(ppid_file_path, std::fstream::in);
+	if (file.is_open())
+	{
+		file >> _ppid;
+	}
+	file.close();
+
 	if (_ppid.empty())
 	{
-		char p[64] = { 0 };
-		GUID guid;
-		CoCreateGuid(&guid);
-
-		snprintf(p, 64, "%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X",
-			guid.Data1, guid.Data2, guid.Data3,
-			guid.Data4[0], guid.Data4[1],
-			guid.Data4[2], guid.Data4[3],
-			guid.Data4[4], guid.Data4[5],
-			guid.Data4[6], guid.Data4[7]);
-		_ppid = p;
+		char e[_MAX_PATH] = { 0 };
+		sprintf_s(e, _MAX_PATH, "PPID Empty! %s", ppid_file_path.c_str());
+		throw ErrorCodeEx(ERR_PPID_EMPTY, e);
 	}
 
 	struct tm *p = localtime(&_time);

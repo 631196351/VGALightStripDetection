@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 enum LEDColor
 {
@@ -45,7 +45,7 @@ enum
 	VersionMajor = 4,
 	VersionSec = 0,
 	VersionThi = 1,
-	VersionMin = 1
+	VersionMin = 2
 };
 
 enum HSV

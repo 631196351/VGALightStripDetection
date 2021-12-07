@@ -1,10 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>"210381723300448" "TUF-RX6800XT-O16G-I3S"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>C:\Users\Administrator\Desktop\VGALightStripDetection\x64\ppid.txt</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup>
     <ShowAllFiles>false</ShowAllFiles>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommandArguments>C:\Users\Administrator\Desktop\VGALightStripDetection\x64\ppid.txt</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

@@ -38,13 +38,14 @@ bool AgingLog::openAgingCsv()
 			if (length == 0)
 			{
 				// 添加表头
-				aging_file << "VideoCard, Time, PPID, Type, FinalResult, AllFailCount, ErrorCode,";
+				aging_file << "Time, PPID, Type, FinalResult, AllFailCount, ErrorCode,";
 
+				int led_count = I2C.getLedCount();
 				char buf[10] = { 0 };
-				for (int i = 0; i < eHolderLedCount; i++)
+				for (int i = 0; i < color_num; i++)
 				{
 					// 因为1006 错误的存在，所以在初始化aging.csv文件时，无法get 到led count
-					for (int j = 0; j < 22; j++)
+					for (int j = 0; j < led_count; j++)
 					{
 						sprintf_s(buf, 10, "%02d%02d\t,", i, j);
 						aging_file << buf;
@@ -195,7 +196,7 @@ void AgingLog::saveAgingLog(int error)
 		////////////////////////////////////////////////////////////////////////////
 		if (randomLightDown)
 		{
-			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Random,";
+			aging_file << t << "\t," << VideoCardIns.PPID() << "\t," << "Random,";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				// 随机灭掉的灯用-1表示
@@ -226,7 +227,7 @@ void AgingLog::saveAgingLog(int error)
 		}
 		////////////////////////////////////////////////////////////////////////////
 		r = 0;
-		aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";
+		aging_file << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";
 		for (int i = 0; i < lpLedCount * color_num; i++)
 		{
 			r += lpLed[i];
@@ -258,7 +259,7 @@ void AgingLog::saveAgingLog(int error)
 		if (retest)
 		{
 			r = 0;
-			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";
+			aging_file << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				r += lpRetest[i];

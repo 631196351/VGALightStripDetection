@@ -2,6 +2,8 @@
 #include <string>
 #include <time.h>
 
+/// 在plan-c 分支中, VideoCard 其实是面向 ROG-WINGWALL-HOLDER 来做的
+/// 这里的ppid其实就是每个 ROG-WINGWALL-HOLDER 自身的ppid
 class VideoCard
 {
 	time_t _time;

@@ -31,8 +31,7 @@ using namespace std;
 const char* argkeys =
 "{help h ?|<none>| Print help message.}"
 "{version v|<none>|Print version.}"
-"{@ppid p  |<none>| Video card PPID: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}"
-"{@name n  |<none>| Video card Name: VGALightStripDetection.exe 210381723300448 'NVIDIA GeForce RTX 3070'}"
+"{@ppid p  |<none>| ROG-WINGWALL-HOLDER PPID file path: VGALightStripDetection.exe 'D:\\Program Files\\ppid.txt'}"
 "{lit-off lo|| Manually lit off the lights randomly eg: --lo='1,2,3,4,5'}";
 
 //Mat g_frame;
@@ -54,6 +53,7 @@ ErrorCode g_error = ErrorCode(ERR_All_IS_WELL, "All is well");
 
 int showErrorCode(ErrorCode& e);	// 声明
 
+#if false
 int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 {
 	int min_dist;
@@ -99,12 +99,13 @@ int min_distance_of_rectangles(const Rect& rect1, const Rect& rect2)
 
 	return min_dist;
 }
+#endif
 
 void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpSuffix)
 {
 	try 
 	{
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			char name[MAX_PATH] = { 0 };
 			sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
@@ -1334,7 +1335,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		f = fore;// fore.copyTo(f);
 
 		char name[MAX_PATH] = { 0 };
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, f);
@@ -1366,7 +1367,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 		GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
 
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, hsv_img_mask);
@@ -1396,7 +1397,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 			drawContours(result, contours, i, Scalar(0, 255, 255), 1);
 		}
 
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, result);
@@ -1623,13 +1624,12 @@ int main(int argc, char* argv[])
 		// 程式开启时打开csv, 准备随时接受异常报错
 		AgingInstance.openAgingCsv();
 
-		if (parser.has("@ppid") && parser.has("@name"))
+		if (parser.has("@ppid"))
 		{
 			VideoCardIns.PPID(parser.get<std::string>("@ppid"));
-			VideoCardIns.Name(parser.get<std::string>("@name"));
+			VideoCardIns.Name("ROG-WINGWALL-HOLDER");
 
 			SinkInstance.addPPID2FileSinkMT(VideoCardIns.targetFolder());
-
 		}
 		else
 		{

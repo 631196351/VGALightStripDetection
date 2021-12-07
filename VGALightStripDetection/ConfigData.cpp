@@ -1,4 +1,4 @@
-﻿#include <fstream>
+#include <fstream>
 #include <regex>
 #include <vector>
 #include <rapidjson/document.h>

@@ -175,3 +175,11 @@ Version Log
 
 [v4.0.1.1] - 2021.12.02
 1.开始支持VGA HOLDER 
+
+[v4.0.1.2] - 2021.12.07
+1. 外部call 程式, 传入ROG-WINGWALL-HOLDER PPID 文件路径作为参数
+2. 移除多余的keepDebugImg() 逻辑, 让真正fail 时, 可以保留图片
+3. 调整部分文件编码为UTF-8 without BOM 格式
+4. 调整 Aging.bat call 方式, 不再需要抓取显卡PPID 和 Model Name
+5. Aging.csv 格式中提出Model Name 列, PPID 列保存为传入的ROG-WINGWALL-HOLDER PPID 
+6. 添加 ERR_PPID_EMPTY 异常
