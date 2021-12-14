@@ -104,7 +104,7 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 {
 	try 
 	{
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			char name[MAX_PATH] = { 0 };
 			sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
@@ -1334,7 +1334,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		f = fore;// fore.copyTo(f);
 
 		char name[MAX_PATH] = { 0 };
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, f);
@@ -1366,7 +1366,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 
 		GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
 
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, hsv_img_mask);
@@ -1396,7 +1396,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 			drawContours(result, contours, i, Scalar(0, 255, 255), 1);
 		}
 
-		if (cfg.keepDebugImg())
+		//if (cfg.keepDebugImg())
 		{
 			sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d_contours.png", AgingFolder, VideoCardIns.targetFolder(), color);
 			cv::imwrite(name, result);
