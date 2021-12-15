@@ -216,6 +216,7 @@ void ConfigData::recordConfig2WorkStates()
 	SPDLOG_SINKS_INFO("\t SkipFrame : {}", _skipFrame);
 	SPDLOG_SINKS_INFO("\t Width : {}", _frame.width);
 	SPDLOG_SINKS_INFO("\t Hight : {}", _frame.height);
+	SPDLOG_SINKS_INFO("\t FPS : {}", _cameraFps);
 
 	SPDLOG_SINKS_INFO("\t IntervalTime : {}", _intervalTime);
 	SPDLOG_SINKS_INFO("\t MinContoursArea : {}", _minContoursArea);
