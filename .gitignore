@@ -1,9 +1,12 @@
 /.vs/
 /x64/
 /VGALightStripDetection/x64
+/VGALightStripDetection/Camera FPS/x64
 /VGALightStripDetection/aging_failure_image
 /VGALightStripDetection/aging_original_image
 /VGALightStripDetection/aging_rect_image
 /VGALightStripDetection/video
 /VGALightStripDetection/aging.csv
+/VGALightStripDetection/result.txt
+/VGALightStripDetection/ppid.txt
 /VGALightStripDetection/GetVGAINFO/PPID.log

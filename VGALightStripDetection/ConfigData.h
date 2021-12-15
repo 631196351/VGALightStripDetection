@@ -30,7 +30,7 @@ private:
 	// 原本设定的阈值是1000， 在测试Tuf系列机种时发现， 因摄像头与灯带夹角比较小时，成像面积在500左右，所以砍半设置
 	// 在测试f94 3090系列时，灯带纹路成像面积在300左右，
 	int _ledContoursArea =500;
-
+	int _cameraFps = 30;
 	int _cameraIndex = 0;
 	int _exposure = -5;	//相机曝光
 	int _saturation = 65;	// 相机的饱和度
@@ -64,6 +64,7 @@ public:
 	//inline int minROIContoursArea() const { return _minROIContoursArea; }
 	inline int ledContoursArea() const { return _ledContoursArea; }
 	inline int cameraIndex() const { return _cameraIndex;}
+	inline int cameraFps() const { return _cameraFps; }
 	inline int exposure() const { return _exposure; }
 	inline int saturation() const { return _saturation; }
 	inline const cv::Size& frame() const { return _frame; }
@@ -89,4 +90,4 @@ public:
 	void shutdownTime(int t);
 };
 
-#define cfg ConfigData::instance()
+#define kConfig ConfigData::instance()

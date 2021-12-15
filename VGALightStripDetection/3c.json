@@ -2,6 +2,7 @@
     "AgingSetting": {
         "Width": 1280,
         "Hight": 720,
+        "FPS": 60,
         "StartColor": 0,
         "StopColor": 3,
         "SkipFrame": 3,

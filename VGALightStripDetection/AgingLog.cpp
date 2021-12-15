@@ -70,7 +70,7 @@ void AgingLog::initAgingLog()
 	{
 		int led_count = I2C.getLedCount();
 		bool randomLightDown = litoff.getRandomLitOffState();
-		bool retest = cfg.recheckFaileLedTime() > 0;
+		bool retest = kConfig.recheckFaileLedTime() > 0;
 
 		if (led_count > 0)
 		{

@@ -5,16 +5,32 @@ VisualStudioVersion = 15.0.28307.1321
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VGALightStripDetection", "VGALightStripDetection\VGALightStripDetection.vcxproj", "{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Camera FPS", "Camera FPS\Camera FPS.vcxproj", "{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Debug|x64.ActiveCfg = Debug|x64
 		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Debug|x64.Build.0 = Debug|x64
+		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Debug|x86.ActiveCfg = Debug|Win32
+		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Debug|x86.Build.0 = Debug|Win32
 		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Release|x64.ActiveCfg = Release|x64
 		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Release|x64.Build.0 = Release|x64
+		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Release|x86.ActiveCfg = Release|Win32
+		{5FDD6EF4-CC95-4627-81C0-804C5ED953FE}.Release|x86.Build.0 = Release|Win32
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Debug|x64.ActiveCfg = Debug|x64
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Debug|x64.Build.0 = Debug|x64
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Debug|x86.ActiveCfg = Debug|Win32
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Debug|x86.Build.0 = Debug|Win32
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Release|x64.ActiveCfg = Release|x64
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Release|x64.Build.0 = Release|x64
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Release|x86.ActiveCfg = Release|Win32
+		{EB9E1921-ADDF-44E4-B199-40F7C3C1B857}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
