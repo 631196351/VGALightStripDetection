@@ -36,20 +36,22 @@ int g_main_thread_exit = eNotExit;
 int g_recheckFaileLedTime = 0;
 int showErrorCode(ErrorCode& e);	// 声明
 ErrorCode g_error = ErrorCode(ERR_All_IS_WELL, "All is well");
-std::vector<VideoCapture> g_captures(CaptureNum);
-std::vector<Mat> g_fore(CaptureNum);
-std::vector<Mat> g_back(CaptureNum);
+//std::vector<VideoCapture> g_captures(CaptureNum);
+cv::Mat g_fore;
+cv::Mat g_back;
 
 const int g_pyDown = 2;	//下采样倍率
 
 void spliceMultipleFrames(std::vector<Mat>& frames, Mat& result)
 {
-	int w = g_captures[0].get(CAP_PROP_FRAME_WIDTH);
-	int h = g_captures[0].get(CAP_PROP_FRAME_HEIGHT);
-	result = Mat(Size(w, h* CaptureNum), CV_8UC3, Scalar::all(0));
+	//int w = g_captures[0].get(CAP_PROP_FRAME_WIDTH);
+	//int h = g_captures[0].get(CAP_PROP_FRAME_HEIGHT);
+	int w = kConfig.frame().width;
+	int h = kConfig.frame().height;
+	result = Mat(Size(w, h * CaptureNum), CV_8UC3, Scalar::all(0));
 	for (int i = 0; i < frames.size(); ++i)
 	{
-		Mat roi = result(Rect(0, i*h, w, h));
+		Mat roi = result(Rect(0, i * h, w, h));
 		frames[i].copyTo(roi);
 	}
 }
@@ -58,21 +60,12 @@ void getFrame( std::vector<Mat>& f)
 {
 	EXCEPTION_OPERATOR_TRY
 	{
-		Mat img;
 		SPDLOG_SINKS_DEBUG("Get Frame");
-		for (int i = 0; i < cfg.skipFrame(); ++i)
+		for (int i = 0; i < kConfig.skipFrame(); ++i)
 		{
-			for (int j = 0; j < CaptureNum; ++j)
-			{
-				g_captures[j].read(img);
-				SPDLOG_SINKS_DEBUG("{}th capture's {}th frame", j, i);
-				if (img.empty())
-					throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
-				if (i + 1 >= cfg.skipFrame())
-				{
-					img.copyTo(f[j]);
-				}
-			}
+			kCameraDevices.read_iterator(f, (bool)(i + 1 >= kConfig.skipFrame()));
+			SPDLOG_SINKS_DEBUG("{}th capture's frame", i);
+
 		}
 	}
 	EXCEPTION_OPERATOR_CATCH_2;
@@ -82,19 +75,11 @@ void getSingleFrame(cv::Mat& f,int camera = 0)
 {
 	EXCEPTION_OPERATOR_TRY
 	{
-		Mat img;
 		SPDLOG_SINKS_DEBUG("Get Frame");
-		for (int i = 0; i < cfg.skipFrame(); ++i)
+		for (int i = 0; i < kConfig.skipFrame(); ++i)
 		{
-			g_captures[camera].read(img);
+			kCameraDevices.read(camera, f, (i + 1 >= kConfig.skipFrame()));
 			SPDLOG_SINKS_DEBUG("{}th capture's {}th frame", camera, i);
-			if (img.empty())
-				throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
-			if (i + 1 >= cfg.skipFrame())
-			{
-				const Rect* rois = cfg.rois();
-				img(rois[camera]).copyTo(f);
-			}
 		}
 	}
 	EXCEPTION_OPERATOR_CATCH_2;
@@ -112,28 +97,22 @@ void autoGetCaptureFrame()
 			MainThreadIsExit;
 			if (g_wait_capture)
 			{
-				int w = g_captures[0].get(CAP_PROP_FRAME_WIDTH);
-				int h = g_captures[0].get(CAP_PROP_FRAME_HEIGHT);
+				int w = kConfig.frame().width;
+				int h = kConfig.frame().height;
 
-				Mat video = Mat(Size(w, h* CaptureNum), CV_8UC3, Scalar::all(0));
-				for (int i = 0; i < CaptureNum; ++i)
-				{
-					Mat img = Mat(Size(w, h), CV_8UC3, Scalar::all(0));
-					g_captures[i].read(img);
-					if (img.empty())
-						throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
-					Mat roi = video(Rect(0, i*h, w, h));
-					img.copyTo(roi);
-				}
+				cv::Mat video;
+				std::vector<cv::Mat> frames(CaptureNum);
+				kCameraDevices.read_iterator(frames, true);
+				spliceMultipleFrames(frames, video);
 
-				sprintf_s(txt, 128, "Power Off: %d", cfg.shutdownTime());
+				sprintf_s(txt, 128, "Power Off: %d", kConfig.shutdownTime());
 				putText(video, txt, Point(0, (video.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1);
-				//if (!cfg.rect().empty())
-				//	rectangle(video, cfg.rect(), Scalar(0, 255, 255), 5);
+				//if (!kConfig.rect().empty())
+				//	rectangle(video, kConfig.rect(), Scalar(0, 255, 255), 5);
 				pyrDown(video, video, Size(video.cols / g_pyDown, video.rows / g_pyDown));
 				imshow("video", video);
 
-				key = cv::waitKey(33);
+				key = cv::waitKey(kCameraDevices.waitTime());
 				if (key == 0x1b)	// Esc 键
 				{
 					g_main_thread_exit = eExitWithKey;
@@ -141,7 +120,7 @@ void autoGetCaptureFrame()
 				}
 				else if (key == 0x30)	// 字符 0
 				{
-					cfg.shutdownTime(eNotPowerOff);
+					kConfig.shutdownTime(eNotPowerOff);
 					SPDLOG_SINKS_DEBUG("AutoGetCaptureFrame not poweroff");
 				}
 			}
@@ -160,7 +139,7 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 {
 	try
 	{
-		if (cfg.keepDebugImg())
+		//if (kConfig.keepDebugImg())
 		{
 			char name[MAX_PATH] = { 0 };
 			sprintf_s(name, MAX_PATH, "%s/%s/%02d_%02d%02d_%s.png", AgingFolder, VideoCardIns.targetFolder(), g_recheckFaileLedTime, currentColor, currentIndex, lpSuffix);
@@ -193,8 +172,8 @@ void findFrameContours()
 
 				Mat mask, mask_hsv, hsv_img_mask;
 				Mat frame, back;
-				g_fore[0].copyTo(frame);
-				g_back[0].copyTo(back);
+				g_fore.copyTo(frame);
+				g_back.copyTo(back);
 
 				if (frame.empty() || back.empty())
 				{
@@ -211,11 +190,10 @@ void findFrameContours()
 
 					saveDebugROIImg(back, currentColor, currentIndex, "back");
 				}
-				SPDLOG_SINKS_DEBUG("Frame difference algorithm starts.");
 
 				cv::subtract(frame, back, mask);
 
-				const float* hsv = cfg.hsvColor(currentColor);
+				const float* hsv = kConfig.hsvColor(currentColor);
 
 				cv::cvtColor(mask, mask_hsv, COLOR_BGR2HSV);
 
@@ -229,7 +207,7 @@ void findFrameContours()
 					hsv_img_mask += hsv_img_mask_r;
 				}
 
-				cv::adaptiveThreshold(hsv_img_mask, hsv_img_mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
+				cv::adaptiveThreshold(hsv_img_mask, hsv_img_mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, kConfig.thresoldBlockSize(), kConfig.thresoldC());
 
 				cv::medianBlur(hsv_img_mask, hsv_img_mask, 3);
 
@@ -249,7 +227,7 @@ void findFrameContours()
 				vector<Vec4i> hierarchy;
 				Mat result = Mat::zeros(frame.size(), frame.type());
 				cv::findContours(hsv_img_mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
-				SPDLOG_SINKS_DEBUG("Find {} Contours", contours.size());
+				//SPDLOG_SINKS_DEBUG("Find {} Contours", contours.size());
 
 				Rect rect;
 				for (int i = 0; i < contours.size(); ++i)
@@ -261,7 +239,7 @@ void findFrameContours()
 
 					//SPDLOG_SINKS_DEBUG("{}th rect.area:{}", i, r.area());
 					// 轮廓面积校验
-					if (r.area() < cfg.minContoursArea())
+					if (r.area() < kConfig.minContoursArea())
 						continue;
 
 					rect |= r;
@@ -271,7 +249,7 @@ void findFrameContours()
 
 				saveDebugROIImg(result, currentColor, currentIndex, "contours");
 				//得到灯的轮廓
-				if (rect.area() > cfg.ledContoursArea())
+				if (rect.area() > kConfig.ledContoursArea())
 				{
 					cv::rectangle(frame, rect, Scalar(0, 255, 255), 1);
 					// 第一遍测试结果和复测结果分开
@@ -325,7 +303,6 @@ void mainLightingControl()
 	OnExitFlagReturn;
 	try
 	{
-		SPDLOG_SINKS_DEBUG("---------------- MainLightingControl ----------------");
 		cv::TickMeter t;
 		t.start();
 		cv::Mat back;
@@ -339,23 +316,24 @@ void mainLightingControl()
 		// 关闭所有灯
 		I2C.resetColor(0, 0, 0);
 
-		for (int color = cfg.c1(); color < cfg.c2(); ++color)
+		for (int color = kConfig.c1(); color < kConfig.c2(); ++color)
 		{
 			MainThreadIsExit;
 
 			for (int index = 0; index < I2C.getLedCount(); index++)
 			{
 				MainThreadIsExit;
-				
-				int camera_index = cfg.ledIndexToCamera(index);
+				SPDLOG_SINKS_DEBUG("---------------- MainLightingControl ----------------");
+
+				int camera_index = kConfig.ledIndexToCamera(index);
 
 				I2C.setSignleColor(colorNum[index], BLACK);
-				Sleep(cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
 				SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 				getSingleFrame(back, camera_index);
 
 				litoff.IsLitOff(index) ? (void)0 : I2C.setSignleColor(index, color);
-				Sleep(cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
 				SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 				getSingleFrame(fore, camera_index);
 
@@ -366,8 +344,8 @@ void mainLightingControl()
 				//g_CameraIndex = camera_index;
 				//deepCopyMat(back, g_back);
 				//deepCopyMat(fore, g_fore);
-				back.copyTo(g_back[0]);
-				fore.copyTo(g_fore[0]);
+				back.copyTo(g_back);
+				fore.copyTo(g_fore);
 				g_set_led_mutex.unlock();
 				Sleep(10); // 让出CPU时间
 			}
@@ -387,91 +365,96 @@ void mainLightingControl()
 }
 
 
-void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, int color, Rect outRect[][CaptureNum])
+void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, int color, ColorROI& outRect)
 {
 	try
 	{
-		SPDLOG_SINKS_DEBUG("****************frameDiff2ROI****************");
-		for (int x = 0; x < CaptureNum; ++x)
+		// x 表示第几个立面
+		for (int x = 0; x < back.size(); ++x)
 		{
 			Mat b, f, mask, mask_hsv, hsv_img_mask;
 			Rect roi;
 			b = back[x];// back.copyTo(b);
 			f = fore[x];// fore.copyTo(f);
-
-			char name[MAX_PATH] = { 0 };
-			if (cfg.keepDebugImg()) 
+			if (!b.empty() && !f.empty()) 
 			{
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, f);
+				char name[MAX_PATH] = { 0 };
+				//if (kConfig.keepDebugImg())
+				{
+					sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_fore.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
+					cv::imwrite(name, f);
 
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, b);
+					sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_back.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
+					cv::imwrite(name, b);
+				}
+
+				cv::subtract(f, b, mask);
+
+				const float* hsv = kConfig.hsvColor(color);
+				const float* roi_hv = kConfig.roiHV();
+
+				cv::cvtColor(mask, mask_hsv, COLOR_BGR2HSV);
+
+				cv::inRange(mask_hsv, Scalar(hsv[eHmin], roi_hv[0], roi_hv[1]), Scalar(hsv[eHmax], 255, 255), hsv_img_mask);
+
+				if (color == RED)
+				{
+					Mat hsv_img_mask_r;
+
+					cv::inRange(mask_hsv, Scalar(hsv[eHmin2], roi_hv[0], roi_hv[1]), Scalar(hsv[eHmax2], 255, 255), hsv_img_mask_r);
+					hsv_img_mask += hsv_img_mask_r;
+				}
+
+				cv::adaptiveThreshold(hsv_img_mask, hsv_img_mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, kConfig.thresoldBlockSize(), kConfig.thresoldC());
+
+				cv::medianBlur(hsv_img_mask, hsv_img_mask, 3);
+
+				cv::GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
+
+				//if (kConfig.keepDebugImg())
+				{
+					sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
+					cv::imwrite(name, hsv_img_mask);
+				}
+
+				//存储边缘
+				vector<vector<Point> > contours;
+				vector<Rect> boundRect;
+				vector<Vec4i> hierarchy;
+				Mat result = Mat::zeros(f.size(), f.type());
+				cv::findContours(hsv_img_mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
+				//SPDLOG_SINKS_DEBUG("Find {} Contours", contours.size());
+
+				for (int i = 0; i < contours.size(); ++i)
+				{
+					// 生成最小包围矩形
+					vector<Point> contours_poly;
+					approxPolyDP(Mat(contours[i]), contours_poly, 3, true);
+					Rect r = boundingRect(contours_poly);
+
+					//SPDLOG_SINKS_DEBUG("{}th rect.area:{}", i, r.area());
+					// 轮廓面积校验
+					if (r.area() < kConfig.minContoursArea())
+						continue;
+
+					roi |= r;
+
+					drawContours(result, contours, i, Scalar(0, 255, 255), 1);
+				}
+
+				cv::rectangle(f, roi, Scalar(255, 0, 255), 1);
+
+				//if (kConfig.keepDebugImg())
+				{
+					sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
+					cv::imwrite(name, f);
+				}
+				SPDLOG_SINKS_DEBUG("{} color {}th Facade ROI x:{},y:{}, width:{}, height:{}", color_str[color], x, roi.x, roi.y, roi.width, roi.height);
+				//outRect[color][x] = roi;
 			}
-
-			cv::subtract(f, b, mask);
-
-			const float* hsv = cfg.hsvColor(color);
-			const float* roi_hv = cfg.roiHV();
-
-			cv::cvtColor(mask, mask_hsv, COLOR_BGR2HSV);
-
-			cv::inRange(mask_hsv, Scalar(hsv[eHmin], roi_hv[0], roi_hv[1]), Scalar(hsv[eHmax], 255, 255), hsv_img_mask);
-
-			if (color == RED)
-			{
-				Mat hsv_img_mask_r;
-
-				cv::inRange(mask_hsv, Scalar(hsv[eHmin2], roi_hv[0], roi_hv[1]), Scalar(hsv[eHmax2], 255, 255), hsv_img_mask_r);
-				hsv_img_mask += hsv_img_mask_r;
-			}
-
-			cv::adaptiveThreshold(hsv_img_mask, hsv_img_mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
-
-			cv::medianBlur(hsv_img_mask, hsv_img_mask, 3);
-
-			cv::GaussianBlur(hsv_img_mask, hsv_img_mask, cv::Size(3, 3), 0);
-
-			if (cfg.keepDebugImg()) 
-			{
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_mask.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, hsv_img_mask);
-			}
-
-			//存储边缘
-			vector<vector<Point> > contours;
-			vector<Rect> boundRect;
-			vector<Vec4i> hierarchy;
-			Mat result = Mat::zeros(f.size(), f.type());
-			cv::findContours(hsv_img_mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
-			SPDLOG_SINKS_DEBUG("Find {} Contours", contours.size());
-
-			for (int i = 0; i < contours.size(); ++i)
-			{
-				// 生成最小包围矩形
-				vector<Point> contours_poly;
-				approxPolyDP(Mat(contours[i]), contours_poly, 3, true);
-				Rect r = boundingRect(contours_poly);
-
-				//SPDLOG_SINKS_DEBUG("{}th rect.area:{}", i, r.area());
-				// 轮廓面积校验
-				if (r.area() < cfg.minContoursArea())
-					continue;
-
-				roi |= r;
-
-				drawContours(result, contours, i, Scalar(0, 255, 255), 1);
-			}
-
-			cv::rectangle(f, roi, Scalar(255, 0, 255), 1);
-
-			if (cfg.keepDebugImg())
-			{
-				sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d%02d_result.png", AgingFolder, VideoCardIns.targetFolder(), color, x);
-				cv::imwrite(name, f);
-			}
-			SPDLOG_SINKS_DEBUG("{} color {}th ROI x:{},y:{}, width:{}, height:{}", color, x, roi.x, roi.y, roi.width, roi.height);
-			outRect[color][x] = roi;
+			
+			// 抓ROI时, 第xth空帧就意味着该立面不需要开启相机, 所以就不会有ROI,即放个空Rect做对齐用
+			outRect[color].push_back(roi);
 		}
 	}
 	EXCEPTION_OPERATOR_CATCH_2;
@@ -484,13 +467,15 @@ void autoCaptureROI2()
 	// Rect 相交 取最小区域，最后结果就只有半个ROI
 	std::vector<Mat> back(CaptureNum), fore(CaptureNum);
 
-	Rect roi[BGR][CaptureNum];
+	//Rect roi[BGR][CaptureNum];
+	ColorROI roi(BGR);
 
-	auto checkROI = [&](Rect* roi) -> bool
+	auto checkROI = [&](int color) mutable -> bool
 	{
+		FacadeROI& r = roi[color];
 		int notEmpty = 0;
 		for (int i = 0; i < CaptureNum; ++i)
-			if (!roi[i].empty())
+			if (!r[i].empty())
 				++notEmpty;
 		return notEmpty > 0;
 	};
@@ -502,18 +487,20 @@ void autoCaptureROI2()
 		{
 			for (int color = BLUE; color < WHITE; ++color)
 			{
+				SPDLOG_SINKS_DEBUG("****************Get ROI****************");
+				SPDLOG_SINKS_DEBUG("lit-off {}th color", color);
 				I2C.resetColor(BLACK);
-				Sleep(cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
 				getFrame(back);
 
 				SPDLOG_SINKS_DEBUG("lit-on {}th color", color);
 				I2C.resetColor(color);
-				Sleep(cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
 				getFrame(fore);
 
 				frameDiff2ROI(back, fore, color, roi);
 
-				if (!checkROI(roi[color]))
+				if (!checkROI(color))
 				{
 					SPDLOG_SINKS_ERROR("{}th color roi empty", color);
 					throw ErrorCodeEx(ERR_POSTRUE_CORRECTION_ERROR, "Please readjust the camera or graphics card posture");
@@ -521,7 +508,7 @@ void autoCaptureROI2()
 
 				Mat frame;
 				spliceMultipleFrames(fore, frame);
-				if (cfg.keepDebugImg())
+				//if (kConfig.keepDebugImg())
 				{
 					char name[MAX_PATH] = { 0 };
 					sprintf_s(name, MAX_PATH, "%s/%s/roi_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
@@ -529,10 +516,10 @@ void autoCaptureROI2()
 				}
 				cv::pyrDown(frame, frame, Size(frame.cols / g_pyDown, frame.rows / g_pyDown));
 				cv::imshow("result", frame);
-				cv::waitKey(33);
+				cv::waitKey(1);
 			}
 
-			cfg.rect(roi, BGR);
+			kConfig.rect(roi);
 			cv::destroyWindow("result");
 			break;
 		}
@@ -544,18 +531,17 @@ int showErrorCode(ErrorCode& e)
 {
 	SPDLOG_SINKS_ERROR("Catch Error : {}", e.what());
 	g_main_thread_exit = eExitWithException;
-	cfg.shutdownTime(eNotPowerOff);
+	kConfig.shutdownTime(eNotPowerOff);
 	g_error = e;
 	cv::destroyAllWindows();
-	SPDLOG_SINKS_DEBUG("g_main_thread_exit = {}, cfg.shutdownTime = {}", g_main_thread_exit, cfg.shutdownTime());
+	SPDLOG_SINKS_DEBUG("g_main_thread_exit = {}, kConfig.shutdownTime = {}", g_main_thread_exit, kConfig.shutdownTime());
 	return e.error();
 }
-
 
 void checkTheFailLedAgain()
 {
 	OnExitFlagReturn;
-	if (cfg.recheckFaileLedTime() <= 0)
+	if (kConfig.recheckFaileLedTime() <= 0)
 		return;
 
 	try
@@ -566,14 +552,14 @@ void checkTheFailLedAgain()
 
 		AgingInstance.syncSingLedResult2RetestResult();
 
-		while (g_recheckFaileLedTime < cfg.recheckFaileLedTime())
+		while (g_recheckFaileLedTime < kConfig.recheckFaileLedTime())
 		{
 			g_set_led_mutex.lock();
 			g_recheckFaileLedTime++;
 			g_set_led_mutex.unlock();
-			SPDLOG_SINKS_DEBUG("Need to retest {} times, now is the {}th time", cfg.recheckFaileLedTime(), g_recheckFaileLedTime);
+			SPDLOG_SINKS_DEBUG("Need to retest {} times, now is the {}th time", kConfig.recheckFaileLedTime(), g_recheckFaileLedTime);
 
-			for (int color = cfg.c1(); color < cfg.c2(); ++color)
+			for (int color = kConfig.c1(); color < kConfig.c2(); ++color)
 			{
 				MainThreadIsExit;
 
@@ -583,16 +569,16 @@ void checkTheFailLedAgain()
 
 					if (AgingInstance.getSingleLedRetestResult(index, color) == Fail)
 					{
-						int camera_index = cfg.ledIndexToCamera(index);
+						int camera_index = kConfig.ledIndexToCamera(index);
 
 						// 关闭所有灯
 						I2C.resetColor(0, 0, 0);
-						Sleep(cfg.intervalTime());
+						Sleep(kConfig.intervalTime());
 						getSingleFrame(back, camera_index);
 						SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 
 						I2C.setSignleColor(index, color);
-						Sleep(cfg.intervalTime());
+						Sleep(kConfig.intervalTime());
 						getSingleFrame(fore, camera_index);
 						SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 
@@ -600,8 +586,8 @@ void checkTheFailLedAgain()
 						g_Index = index;
 						g_Led = color;
 						g_wait = true;
-						back.copyTo(g_back[0]);
-						fore.copyTo(g_fore[0]);
+						back.copyTo(g_back);
+						fore.copyTo(g_fore);
 
 						SPDLOG_SINKS_DEBUG("Lit the {}th {} light", index, color);
 						g_set_led_mutex.unlock();
@@ -633,7 +619,7 @@ void getFinalResult()
 		if (AgingInstance.allLedIsOK() == Pass)
 		{
 			// Release 模式下测试时，Pass 不保留图片
-			if (!cfg.keepDebugImg())
+			if (!kConfig.keepDebugImg())
 			{
 				char delete_cmd[MAX_PATH * 2] = { 0 };
 				sprintf_s(delete_cmd, MAX_PATH * 2, "del /S /Q %s\\%s\\%s\\*.png>nul", get_current_directory().c_str(), AgingFolder, VideoCardIns.targetFolder());
@@ -756,43 +742,14 @@ int main(int argc, char* argv[])
 		SPDLOG_SINKS_INFO("PPID:{}", VideoCardIns.PPID());
 		SPDLOG_SINKS_INFO("CaptureNum:{}", CaptureNum);
 
-		// 抓取相机name-id 数据
-		CameraDevices;
-
-		// 优化时间,让call 完nvflash后的delay时间用来打开相机
-		for (int i = 0; i < CaptureNum; i++)
-		{
-			if (!g_captures[i].open(i, CAP_DSHOW))
-			{
-				SPDLOG_SINKS_ERROR("Failed to open {}th camera", i + 1);
-				throw ErrorCodeEx(ERR_CANT_OPEN_CAMERA, "Failed to open camera");
-			}
-			SPDLOG_SINKS_INFO("Openning {}th cap", i);
-		}
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
 
-		cfg.readConfigFile(VideoCardIns.Name(), I2C.getLedCount());
+		kConfig.readConfigFile(VideoCardIns.Name(), I2C.getLedCount());
 
-		litoff.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
+		litoff.setRandomLitOffState(kConfig.randomLitOffProbability(), parser.get<std::string>("lo"));
 
-		for (int i = 0; i < CaptureNum; i++)
-		{
-			if (g_captures[i].isOpened())
-			{
-				g_captures[i].set(CAP_PROP_FPS, 30);
-				g_captures[i].set(CAP_PROP_FRAME_WIDTH, cfg.frame().width);
-				g_captures[i].set(CAP_PROP_FRAME_HEIGHT, cfg.frame().height);
-				g_captures[i].set(CAP_PROP_EXPOSURE, cfg.exposure(i));
-				//g_captures[i].set(CAP_PROP_SATURATION, cfg.saturation());
-				g_captures[i].set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
-
-				int w = g_captures[i].get(CAP_PROP_FRAME_WIDTH);
-				int h = g_captures[i].get(CAP_PROP_FRAME_HEIGHT);
-				int e = g_captures[i].get(CAP_PROP_EXPOSURE);
-				SPDLOG_SINKS_INFO("g_captures[{}] w:{}, h:{}, exposure:{}", i, w, h, e);
-			}
-		}
+		kCameraDevices;
 
 		g_wait_capture = true;	//自动拍摄线程开始工作
 
@@ -829,19 +786,19 @@ int main(int argc, char* argv[])
 	tm.stop();
 	SPDLOG_SINKS_INFO("Tick Time: {}, {}", tm.getTimeSec(), tm.getTimeTicks());
 
-	if (cfg.shutdownTime() >= ePowerOff)
+	if (kConfig.shutdownTime() >= ePowerOff)
 	{
 		char shutdown[128] = { 0 };
-		sprintf_s(shutdown, 128, "shutdown -s -t %d", cfg.shutdownTime());
+		sprintf_s(shutdown, 128, "shutdown -s -t %d", kConfig.shutdownTime());
 		system(shutdown);
 	}
-	else if (cfg.shutdownTime() == eReStart)
+	else if (kConfig.shutdownTime() == eReStart)
 	{
 		char shutdown[128] = { 0 };
 		sprintf_s(shutdown, 128, "shutdown -r -t 2");
 		system(shutdown);
 	}
-	else if (cfg.shutdownTime() == eNotPowerOff)
+	else if (kConfig.shutdownTime() == eNotPowerOff)
 	{
 		;
 	}

@@ -16,20 +16,31 @@ ConfigData::~ConfigData()
 {
 }
 
-void ConfigData::rect(cv::Rect roi[][CaptureNum], int colors)
+void ConfigData::rect(ColorROI& roi)
 {
 	int w = 0;
 	int h = 0;
-	for (int i = 0; i < CaptureNum; ++i)
+	//int size = kCameraDevices.size();
+	//for (int i = 0; i < size; ++i)
+	FacadeROI& facade = roi[BLUE];
+	for(int i = 0; i < facade.size(); ++i)
 	{
-		_roi[i] = ((roi[BLUE][i] | roi[GREEN][i]) & roi[RED][i]) & cv::Rect(0, 0, _frame.width, _frame.height * CaptureNum);
+		// 将多颜色下， 抓到的同一立面的ROI进行合并
+		// 若kCameraDevices.size() == 1， 表示只有1个立面，基本上是Top 立面
+		// 将BGR三色下， 抓到的Top立面的ROI进行合并
+		// 若kCameraDevices.size() == 2， 表示只有2个立面，基本上是Top 立面和Rear 立面
+		// 将BGR三色下， 抓到的Top立面和Rear立面的ROI分别进行合并
+		// 若kCameraDevices.size() == 3， 表示只有3个立面，基本上是Top 立面，Rear 立面， Front 立面
+		// 将BGR三色下， 抓到的Top立面，Rear立面，Front 立面的ROI分别进行合并
+
+		_roi[i] = ((roi[BLUE][i] | roi[GREEN][i]) & roi[RED][i]) & cv::Rect(0, 0, _frame.width, _frame.height * facade.size());
 		SPDLOG_SINKS_DEBUG("ConfigData ROI {}th : x:{},y:{}, width:{}, height:{}", i, _roi[i].x, _roi[i].y, _roi[i].width, _roi[i].height);
 		w = cv::max(w, _roi[i].width);
 		h += _roi[i].height;
 	}
 
-	_rect2 = cv::Rect(0, 0, w, h);
-	SPDLOG_SINKS_DEBUG("ConfigData rect2 : x:{},y:{}, width:{}, height:{}", _rect2.x, _rect2.y, _rect2.width, _rect2.height);
+	//_rect2 = cv::Rect(0, 0, w, h);
+	//SPDLOG_SINKS_DEBUG("ConfigData rect2 : x:{},y:{}, width:{}, height:{}", _rect2.x, _rect2.y, _rect2.width, _rect2.height);
 }
 
 void ConfigData::shutdownTime(int t)
@@ -96,6 +107,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			const auto& asg = dom["AgingSetting"];
 			_frame.width = asg["Width"].GetInt();
 			_frame.height = asg["Hight"].GetInt();
+			_cameraFps = asg["FPS"].GetInt();
 			_skipFrame = asg["SkipFrame"].GetInt();
 			_startColor = (LEDColor)asg["StartColor"].GetInt();
 			_stopColor = (LEDColor)asg["StopColor"].GetInt();
@@ -235,7 +247,7 @@ void ConfigData::recordConfig2WorkStates()
 	SPDLOG_SINKS_INFO("\t SkipFrame : {}", _skipFrame);
 	SPDLOG_SINKS_INFO("\t Width : {}", _frame.width);
 	SPDLOG_SINKS_INFO("\t Hight : {}", _frame.height);
-
+	SPDLOG_SINKS_INFO("\t FPS : {}", _cameraFps);
 	
 	for (auto it = _front.begin(); it != _front.end(); ++it)
 	{
@@ -278,26 +290,23 @@ int ConfigData::ledIndexToCamera(int led_index)
 	if (_overhead.find(led_index) != _overhead.end())
 	{
 		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, _videoCapName[0]);
-		return CameraDevices.cameraIndex(_videoCapName[0]);
+		return kCameraDevices.cameraIndex(_videoCapName[0]);
 	}
 	else if (_rear.find(led_index) != _rear.end())
 	{
 		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, _videoCapName[1]);
-		return CameraDevices.cameraIndex(_videoCapName[1]);
+		return kCameraDevices.cameraIndex(_videoCapName[1]);
 	}
 	else if (_front.find(led_index) != _front.end())
 	{
 		SPDLOG_SINKS_DEBUG("led_index : {}, camera : {}", led_index, _videoCapName[2]);
-		return CameraDevices.cameraIndex(_videoCapName[2]);
+		return kCameraDevices.cameraIndex(_videoCapName[2]);
 	}
 	return -1;
 }
 
-/// 不同方向的cap使用略微不同的曝光值
-int ConfigData::exposure(int cap_index)
+int ConfigData::exposure(const std::string& cap)
 {
-	std::string cap = CameraDevices.cameraName(cap_index);
-
 	if (cap.compare(_videoCapName[0]) == 0)
 	{
 		return _exposures[0];
@@ -312,5 +321,24 @@ int ConfigData::exposure(int cap_index)
 	}
 	else
 		throw std::exception("Can't not find correct exposure");
-
+}
+/// 根据相机设备名称, 从配置档中获取对应的灯珠数量
+/// 若相机对应的灯珠数量为0, 则返回false, 表示不需要打开该相机
+/// 若相机对应的灯珠数量>0, 则返回true, 表示需要打开该相机
+bool ConfigData::captureOpenState(const std::string& capture_name)
+{
+	if (capture_name.compare(_videoCapName[0]) == 0)
+	{
+		//true if the container is empty, false otherwise
+		return !_overhead.empty();
+	}
+	else if (capture_name.compare(_videoCapName[1]) == 0)
+	{
+		return !_rear.empty();
+	}
+	else if (capture_name.compare(_videoCapName[2]) == 0)
+	{
+		return !_front.empty();
+	}
+	return true;
 }

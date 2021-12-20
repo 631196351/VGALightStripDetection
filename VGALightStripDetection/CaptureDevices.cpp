@@ -9,6 +9,9 @@
 #include <codecvt>
 #include <locale>
 
+#include "ConfigData.h"
+#include "ErrorCode.h"
+
 using convert_t = std::codecvt_utf8<wchar_t>;
 std::wstring_convert<convert_t, wchar_t> strconverter;
 
@@ -115,25 +118,28 @@ void CaptureDevices::EnumerateDevicesInWindows()
 
 CaptureDevices::CaptureDevices()
 {
-	// IMF 获取到的设备id-name 会概率性的与 opencv open id 不匹配
-	// 这里换成 COM 形式获取
-	//_deviceList.EnumerateDevices();
-	//
-	//unsigned count = _deviceList.Count();
-	//wchar_t *szFriendlyName = NULL;
-	//SPDLOG_SINKS_DEBUG("capture count :{}", count);
-	//for (unsigned i = 0; i < count; ++i)
-	//{
-	//	_deviceList.GetDeviceName(i, &szFriendlyName);
-	//
-	//	std::string t = to_string(szFriendlyName);
-	//	_videoCaptures.insert({ t, i });
-	//	SPDLOG_SINKS_DEBUG("capture name :{}", t);
-	//
-	//	CoTaskMemFree(szFriendlyName);
-	//	szFriendlyName = NULL;
-	//}
 	EnumerateDevicesInWindows();
+	
+	for (auto& c : _videoCaptures)
+	{
+		SPDLOG_SINKS_INFO("Init {} camera start", c.first);
+		// 目标立面不开启相机时, 放一个空相机上去
+		auto& _pair = _captures.insert(std::make_pair(c.second, cv::VideoCapture()));
+		if (kConfig.captureOpenState(c.first))
+		{
+			auto& camera = _pair.first->second;
+			camera.open(c.second);
+			camera.set(cv::CAP_PROP_FPS, kConfig.cameraFps());
+			camera.set(cv::CAP_PROP_FRAME_WIDTH, kConfig.frame().width);
+			camera.set(cv::CAP_PROP_FRAME_HEIGHT, kConfig.frame().height);
+			camera.set(cv::CAP_PROP_EXPOSURE, kConfig.exposure(c.first));
+			camera.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+		}
+		SPDLOG_SINKS_INFO("Init {} camera stop", c.first);
+	}
+
+	_waitTime = 1000 / kConfig.cameraFps();
+	SPDLOG_SINKS_INFO("Capture wait time {}s", _waitTime);
 }
 
 CaptureDevices::~CaptureDevices()
@@ -162,4 +168,61 @@ std::string CaptureDevices::cameraName(const int index)
 		return std::string();
 	else
 		return i->second;
+}
+
+/// @brief 从指定相机中抓取一张图像出来
+/// @param index 表示相机序列
+/// @param image 为输出图像
+/// @param filling 表示是否要对输出图像根据对应的ROI进行裁剪
+/// @return 图像抓取成功返回true, 否则返回false
+bool CaptureDevices::read(int index, cv::Mat& image, bool filling)
+{
+	bool result = false;
+	auto& c = _captures.find(index);
+	if (c != _captures.end() && c->second.isOpened())
+	{
+		result = c->second.read(image);
+		cv::waitKey(_waitTime);
+		if (image.empty())
+			throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
+
+		if (filling)
+		{
+			const cv::Rect* rois = kConfig.rois();
+			image(rois[index]).copyTo(image);
+		}
+	}
+	return result;
+}
+
+/// @brief 从所有相机中抓取一张图
+/// @param f 表示输出图像集合
+/// @param filling 表示是本次调用是否需要将图像输出到f中
+bool CaptureDevices::read_iterator(std::vector<cv::Mat>& f, bool filling)
+{
+	int index = 0;
+	for (auto& c : _captures)
+	{
+		if (c.second.isOpened())
+		{
+			cv::Mat img;
+			c.second.read(img);
+			cv::waitKey(_waitTime);
+			if (img.empty())
+				throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
+			if (filling)
+			{
+				img.copyTo(f[index]);
+			}
+		}
+		else
+		{
+			// 该立面的相机不处于打开状态
+			// 为了autoCaptureROI2() B-G-R三色来圈取灯带的ROI 能够和相机的index对齐
+			// 在这里放一张空照片,来假装我已经抓到该立面的图了
+			f[index] = cv::Mat();
+		}
+		++index;
+	}
+	return true;
 }

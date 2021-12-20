@@ -1,7 +1,8 @@
-﻿{
+{
     "AgingSetting": {
-        "Width": 800,
-        "Hight": 600,
+        "Width": 1280,
+        "Hight": 720,
+        "FPS": 60,
         "SkipFrame": 3,
         "StartColor": 0,
         "StopColor": 3,
@@ -9,12 +10,12 @@
         "RandomShutDownLedNum": 0,
         "ShutDownDelayTime": -1,
         "RecheckFaileLedTime": 1,
-        "VideoCapName": [ "WL001", "WL002", "WL003" ],
-        "KeepDebugImg": true
+        "VideoCapName": [ "Top", "Rear", "Front" ],
+        "KeepDebugImg": false
     },
     "TUF": {
         "Camera": {
-            "Exposure": [-4, -4, -4],
+            "Exposure": [-6, -6, -6],
             "Saturation": 65,
             "Front": [],
             "Rear": [],
@@ -35,7 +36,7 @@
     },
     "KO": {
         "Camera": {
-            "Exposure": [-6, -4, -4],
+            "Exposure": [-6, -6, -6],
             "Saturation": 65,
             "Front": [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14 ],
             "Rear": [7],
@@ -56,7 +57,7 @@
     },
     "STRIX-22": {
         "Camera": {
-            "Exposure": [-4, -4, -4],
+            "Exposure": [-6, -6, -6],
             "Saturation": 65,
             "Front": [],
             "Rear": [],

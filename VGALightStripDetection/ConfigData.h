@@ -6,6 +6,12 @@
 
 //#define VGA_PPID_LENGTH 20
 
+
+// 第一维表示B, G, R三种颜色
+// 第二维表示每种颜色在各个立面的ROI
+using FacadeROI = std::vector<cv::Rect>;
+using ColorROI = std::vector<FacadeROI>;
+
 class ConfigData
 {
 public:
@@ -29,7 +35,7 @@ private:
 	// 原本设定的阈值是1000， 在测试Tuf系列机种时发现， 因摄像头与灯带夹角比较小时，成像面积在500左右，所以砍半设置
 	// 在测试f94 3090系列时，灯带纹路成像面积在300左右，
 	int _ledContoursArea =500;
-
+	int _cameraFps = 30;
 	//int _cameraIndex = 0;
 	//int _exposure = -5;	//相机曝光
 	std::vector<int> _exposures;
@@ -37,7 +43,7 @@ private:
 	int _saturation = 65;	// 相机的饱和度
 	cv::Size _frame = cv::Size(848, 480);
 	cv::Rect _roi[CaptureNum];
-	cv::Rect _rect2 = cv::Rect();
+	//cv::Rect _rect2 = cv::Rect();
 	int _skipFrame = 3;
 	
 	float _hsv[BGR][6] = { 0 };	// BG后各有2个字节冗余
@@ -63,11 +69,12 @@ public:
 	inline int intervalTime() const { return _intervalTime; }
 	inline int minContoursArea() const { return _minContoursArea; }
 	inline int ledContoursArea() const { return _ledContoursArea; }
+	inline int cameraFps() const { return _cameraFps; }
 	//inline int exposure() const { return _exposure; }
 	inline int saturation() const { return _saturation; }
 	inline const cv::Size& frame() const { return _frame; }
 	inline const cv::Rect* rois() const { return _roi; }
-	inline const cv::Rect& rect2() const { return _rect2; }
+	//inline const cv::Rect& rect2() const { return _rect2; }
 	inline int skipFrame() const { return _skipFrame; }
 	inline LEDColor c1() const { return _startColor; }
 	inline LEDColor c2() const { return _stopColor; }
@@ -83,10 +90,11 @@ public:
 
 public:
 	//void rect(cv::Rect& r);
-	void rect(cv::Rect roi[][CaptureNum], int colors);
+	void rect(ColorROI& roi);
 	void shutdownTime(int t);
 	int ledIndexToCamera(int led_index);
-	int exposure(int cap);
+	int exposure(const std::string& cap);
+	bool captureOpenState(const std::string& capture_name);
 };
 
-#define cfg ConfigData::instance()
+#define kConfig ConfigData::instance()

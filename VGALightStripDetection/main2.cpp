@@ -1,4 +1,4 @@
-﻿//#define LIGHTSTRIPV2
+//#define LIGHTSTRIPV2
 #ifdef LIGHTSTRIPV2 
 #include <opencv2/opencv.hpp>
 //#include <stdio.h>
@@ -22,8 +22,8 @@
 using namespace cv;
 using namespace std;
 
-//#define DebugMode(oper) if(cfg.debugMode() == true){oper;};
-//#define IfDebugMode if(cfg.debugMode() == true)
+//#define DebugMode(oper) if(kConfig.debugMode() == true){oper;};
+//#define IfDebugMode if(kConfig.debugMode() == true)
 #define MainThreadIsExit if (g_main_thread_exit >= eExit) { break; }
 #define OnExitFlagReturn if (g_main_thread_exit >= eExit) { return; }
 #define DEBUG_DETAILS false
@@ -125,7 +125,7 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 #if false
 void renderTrackbarThread()
 {
-	if (!cfg.showTrackBarWnd)
+	if (!kConfig.showTrackBarWnd)
 		return;
 	int empty_w = 400, empty_h = 100;
 	Mat empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
@@ -146,17 +146,17 @@ void renderTrackbarThread()
 
 		int t = pos - 50;
 
-		if (cfg.thresoldC < t && t % 2 == 0)
+		if (kConfig.thresoldC < t && t % 2 == 0)
 		{
-			cfg.thresoldC = t + 1;
+			kConfig.thresoldC = t + 1;
 		}
-		else if (cfg.thresoldC > t && t % 2 == 0)
+		else if (kConfig.thresoldC > t && t % 2 == 0)
 		{
-			cfg.thresoldC = t - 1;
+			kConfig.thresoldC = t - 1;
 		}
 		else
 		{
-			cfg.thresoldC = t;
+			kConfig.thresoldC = t;
 		}
 	};
 
@@ -165,11 +165,11 @@ void renderTrackbarThread()
 			pos = 3;
 		if (pos % 2 == 0)
 		{
-			cfg.thresoldBlockSize = pos + 1;
+			kConfig.thresoldBlockSize = pos + 1;
 		}
 		else
 		{
-			cfg.thresoldBlockSize = pos;
+			kConfig.thresoldBlockSize = pos;
 		}
 	};
 
@@ -183,7 +183,7 @@ void renderTrackbarThread()
 		if (g_Led >= AllColor)// 防止越界
 			continue;
 
-		//HsvColor& hsv = cfg.hsvColor[g_Led];
+		//HsvColor& hsv = kConfig.hsvColor[g_Led];
 		//createTrackbar("lowHue", "Toolkit", &hsv.h[5], hsv.h[4]);
 		//createTrackbar("higHue", "Toolkit", &hsv.h[6], hsv.h[4]);
 		//
@@ -193,7 +193,7 @@ void renderTrackbarThread()
 		//createTrackbar("lowVal", "Toolkit", &hsv.v[5], hsv.v[4]);
 		//createTrackbar("higVal", "Toolkit", &hsv.v[6], hsv.v[4]);
 		//
-		//int& thresold = cfg.bgrColorThres[g_Led];
+		//int& thresold = kConfig.bgrColorThres[g_Led];
 		//cv::createTrackbar("thresold", "Toolkit", &thresold, 255);
 
 		cv::createTrackbar("AdaptiveThresholdArgBlockSize", "Toolkit", &thresoldBlockSize, 255, func_block_size);
@@ -218,10 +218,10 @@ void renderTrackbarThread()
 		//sprintf_s(buf, 128, "Real High HSV (%d, %d, %d)", hh, sh, vh);
 		//putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 
-		sprintf_s(buf, 128, "AdaptiveThresholdArgBlockSize = %d", cfg.thresoldBlockSize);
+		sprintf_s(buf, 128, "AdaptiveThresholdArgBlockSize = %d", kConfig.thresoldBlockSize);
 		putText(empty, buf, Point(0, empty.rows / 4 * 3), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 
-		sprintf_s(buf, 128, "AdaptiveThresholdArgC = %d", cfg.thresoldC);
+		sprintf_s(buf, 128, "AdaptiveThresholdArgC = %d", kConfig.thresoldC);
 		putText(empty, buf, Point(0, empty.rows / 4 * 1), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 255), 1);
 		imshow("Toolkit", empty);
 		empty = Mat::zeros(Size(empty_w, empty_h), CV_8UC3);
@@ -237,7 +237,7 @@ void getFrame(Mat& f, bool cutFrame = true)
 	{
 		Mat t;
 		SPDLOG_SINKS_DEBUG("Get Frame");
-		for (int i = 0; i < cfg.skipFrame(); i++)
+		for (int i = 0; i < kConfig.skipFrame(); i++)
 		{
 			capture.read(t);
 			cv::waitKey(33);
@@ -246,7 +246,7 @@ void getFrame(Mat& f, bool cutFrame = true)
 		t.copyTo(f);
 		if (cutFrame)
 		{
-			f = f(cfg.rect());
+			f = f(kConfig.rect());
 		}
 	}
 	catch (cv::Exception& e)
@@ -283,10 +283,10 @@ void autoGetCaptureFrame()
 				if (camera.empty())
 					throw ErrorCodeEx(ERR_ORIGIN_FRAME_EMPTY_EXCEPTION, "Original frame empty, check camera usb");
 
-				sprintf_s(txt, 128, "Power Off: %d", cfg.shutdownTime());
+				sprintf_s(txt, 128, "Power Off: %d", kConfig.shutdownTime());
 				cv::putText(camera, txt, Point(0, (camera.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1);
-				if(!cfg.rect().empty())
-					rectangle(camera, cfg.rect(), Scalar(0, 255, 255), 5);
+				if(!kConfig.rect().empty())
+					rectangle(camera, kConfig.rect(), Scalar(0, 255, 255), 5);
 				cv::imshow("camera", camera);
 
 				key = cv::waitKey(33);
@@ -297,7 +297,7 @@ void autoGetCaptureFrame()
 				}
 				else if (key == 0x30)	// 字符 0
 				{
-					cfg.shutdownTime(eNotPowerOff);
+					kConfig.shutdownTime(eNotPowerOff);
 					SPDLOG_SINKS_DEBUG("AutoGetCaptureFrame not poweroff");
 				}
 			}
@@ -339,7 +339,7 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 
 			SPDLOG_SINKS_DEBUG("{}th rect.area:{}", index, rect.area());
 			// 轮廓面积校验
-			if (rect.area() < cfg.minContoursArea())
+			if (rect.area() < kConfig.minContoursArea())
 				continue;
 			
 			// 校验轮廓颜色
@@ -361,7 +361,7 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 			{
 				p = b / (b + g + r);
 				// 亮bule时，b通道要占多数，其他情况一律抹掉该轮廓
-				if (b > cfg.bgrThres(BLUE) && b > g && b > r && p > cfg.bgrPercentage(BLUE)) {
+				if (b > kConfig.bgrThres(BLUE) && b > g && b > r && p > kConfig.bgrPercentage(BLUE)) {
 					colorCorrect = true;
 				}
 				else if ((1.0 - p) < 0.02) {
@@ -372,7 +372,7 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 			else if (currentColor == GREEN)
 			{
 				p = g / (b + g + r);
-				if (g > cfg.bgrThres(GREEN) && g > b && g > r && p > cfg.bgrPercentage(GREEN)) {
+				if (g > kConfig.bgrThres(GREEN) && g > b && g > r && p > kConfig.bgrPercentage(GREEN)) {
 					colorCorrect = true;
 				}
 				else if ((1.0 - p) < 0.02) {
@@ -382,7 +382,7 @@ void checkContoursColor(Mat frame, Mat mask, Mat result, int currentColor, vecto
 			else if (currentColor == RED)
 			{
 				p = r / (b + g + r);
-				if (r > cfg.bgrThres(RED) && r > b && r > g && p > cfg.bgrPercentage(RED)) {
+				if (r > kConfig.bgrThres(RED) && r > b && r > g && p > kConfig.bgrPercentage(RED)) {
 					colorCorrect = true;
 				}
 				else if ((1.0 - p) < 0.02) {
@@ -488,7 +488,7 @@ void findFrameContours()
 				SPDLOG_SINKS_DEBUG("frame_gray - back_gray = mask");
 
 				//cv::threshold(mask, mask, 0, 255, THRESH_BINARY | THRESH_OTSU);
-				cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
+				cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, kConfig.thresoldBlockSize(), kConfig.thresoldC());
 				//GaussianBlur(mask, mask, Size(5, 5), 0);
 
 				//形态学处理
@@ -533,7 +533,7 @@ void findFrameContours()
 					// 合并轮廓
 					// 在已有轮廓中找距离最近的那一个,并进行标记
 					int t = -1;
-					int min_gap = cfg.minContoursSpace();	//用来记录离自己最近的距离
+					int min_gap = kConfig.minContoursSpace();	//用来记录离自己最近的距离
 
 					for (int j = 0; j < boundRect.size(); j++)
 					{
@@ -544,7 +544,7 @@ void findFrameContours()
 
 						int gap = min_distance_of_rectangles(rect, boundRect[j]);
 
-						if (gap <= cfg.minContoursSpace())
+						if (gap <= kConfig.minContoursSpace())
 						{
 							if (gap <= min_gap)
 							{
@@ -580,7 +580,7 @@ void findFrameContours()
 						continue;
 
 					// 合并轮廓时会将被合并轮廓抹掉
-					if (r.area() > cfg.ledContoursArea())
+					if (r.area() > kConfig.ledContoursArea())
 					{
 						rectangle(original_frame, r, Scalar(0, 255, 255), 3);
 						// 第一遍测试结果和复测结果分开
@@ -611,9 +611,9 @@ void findFrameContours()
 				}
 
 				// 首次侦测且开启随机灭灯情况进入
-				if (/*cfg.randomLitOffProbability() > 0*/litoff.getRandomLitOffState() && g_recheckFaileLedTime == 0)
+				if (/*kConfig.randomLitOffProbability() > 0*/litoff.getRandomLitOffState() && g_recheckFaileLedTime == 0)
 				{
-					//if (g_randomShutDownLed >= cfg.randomLitOffProbability())
+					//if (g_randomShutDownLed >= kConfig.randomLitOffProbability())
 					if(!litoff.IsLitOff(currentIndex))
 						AgingInstance.setSingleLedRandomShutDownResult(currentIndex, currentColor, Pass);
 					else
@@ -670,7 +670,7 @@ void mainLightingControl()
 		// 关闭所有灯
 		I2C.resetColor(0, 0, 0);
 
-		for (int color = cfg.c1(); color < cfg.c2(); ++color)
+		for (int color = kConfig.c1(); color < kConfig.c2(); ++color)
 		{
 			MainThreadIsExit;
 
@@ -680,22 +680,22 @@ void mainLightingControl()
 
 				I2C.setSignleColor(colorNum[index], 0, 0, 0);
 				SPDLOG_SINKS_DEBUG("Turn off the {}th Led", colorNum[index]);
-				Sleep(cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
 				SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
 				getFrame(internal_back);
 
 				//int r = rng.uniform(0, 101);	//[0, 101)
-				//SPDLOG_SINKS_DEBUG("The random number generated is {} ,RandomShutDownLedNum is {}", r, cfg.randomLitOffProbability());
-				//if (r >= cfg.randomLitOffProbability())
+				//SPDLOG_SINKS_DEBUG("The random number generated is {} ,RandomShutDownLedNum is {}", r, kConfig.randomLitOffProbability());
+				//if (r >= kConfig.randomLitOffProbability())
 				//if(AgingInstance.getThisLedLitOffState(index))
 				{
 					I2C.setSignleColor(index, color);
 					SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
-					Sleep(cfg.intervalTime());
+					Sleep(kConfig.intervalTime());
 				}
 
-				//Sleep(cfg.intervalTime);
-				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime);
+				//Sleep(kConfig.intervalTime);
+				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", kConfig.intervalTime);
 
 				g_set_led_mutex.lock();
 				g_Index = index;
@@ -745,13 +745,13 @@ void mainLightingControl()
 void checkTheFailLedAgain()
 {
 	OnExitFlagReturn;
-	if (cfg.recheckFaileLedTime() <= 0)
+	if (kConfig.recheckFaileLedTime() <= 0)
 		return;
 	try
 	{
 		SPDLOG_SINKS_DEBUG("---------------- Check the Failed Led Again 1 ----------------");
 
-		//int g_recheckFaileLedTime = cfg.recheckFaileLedTime;
+		//int g_recheckFaileLedTime = kConfig.recheckFaileLedTime;
 		Mat internal_back;	// 暂存back
 		//RNG rng(time(NULL));
 		//std::vector<int> colorNum(I2C.getLedCount());
@@ -762,14 +762,14 @@ void checkTheFailLedAgain()
 		//colorNum[0] = I2C.getLedCount() - 1;
 		AgingInstance.syncSingLedResult2RetestResult();
 
-		while (g_recheckFaileLedTime < cfg.recheckFaileLedTime())
+		while (g_recheckFaileLedTime < kConfig.recheckFaileLedTime())
 		{
 			g_set_led_mutex.lock();
 			g_recheckFaileLedTime++;
 			g_set_led_mutex.unlock();
-			SPDLOG_SINKS_DEBUG("Need to retest {} times, now is the {}th time", cfg.recheckFaileLedTime(), g_recheckFaileLedTime);
+			SPDLOG_SINKS_DEBUG("Need to retest {} times, now is the {}th time", kConfig.recheckFaileLedTime(), g_recheckFaileLedTime);
 
-			for (int color = cfg.c1(); color < cfg.c2(); ++color)
+			for (int color = kConfig.c1(); color < kConfig.c2(); ++color)
 			{
 				MainThreadIsExit;
 
@@ -783,8 +783,8 @@ void checkTheFailLedAgain()
 						I2C.resetColor(0, 0, 0);
 						SPDLOG_SINKS_DEBUG("Turn off {} Led", I2C.getLedCount());
 
-						Sleep(cfg.intervalTime());
-						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+						Sleep(kConfig.intervalTime());
+						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", kConfig.intervalTime());
 
 						getFrame(internal_back);
 						SPDLOG_SINKS_DEBUG("Get the background of the {}th Led ", index);
@@ -792,8 +792,8 @@ void checkTheFailLedAgain()
 						I2C.setSignleColor(index, color);
 						SPDLOG_SINKS_DEBUG("Turn on the {}th {} Led", index, color);
 
-						Sleep(cfg.intervalTime());
-						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+						Sleep(kConfig.intervalTime());
+						SPDLOG_SINKS_DEBUG("Sleep {} millisecond", kConfig.intervalTime());
 
 						g_set_led_mutex.lock();
 						g_Index = index;
@@ -855,25 +855,25 @@ void saveSingleColorResult()
 		{
 			SPDLOG_SINKS_DEBUG("---------------- save single led color 1 -----------------");
 
-			for (int color = cfg.c1(); color < cfg.c2(); ++color)
+			for (int color = kConfig.c1(); color < kConfig.c2(); ++color)
 			{
 				MainThreadIsExit;
 				// 一个轮回保存一个灯色
 				I2C.resetColor(color);
 				SPDLOG_SINKS_DEBUG("Turn on all {} led, color {}", I2C.getLedCount(), color);
-				Sleep(cfg.intervalTime());
-				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
+				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", kConfig.intervalTime());
 
 				Mat frame;
 				getFrame(frame);	// get current frame
 				char name[_MAX_PATH] = { 0 };
 				sprintf_s(name, _MAX_PATH, "%s/%s/all_color_%02d.png", AgingFolder, VideoCardIns.targetFolder(), color);
 				cv::putText(frame, AgingInstance.thisLedIsOK(color) == Pass ? "PASS" : "FAIL", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255), 2);
-				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime());
+				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", kConfig.intervalTime());
 				imwrite(name, frame);
 
 				//I2C.resetColor(0, 0, 0);
-				//Sleep(cfg.intervalTime());
+				//Sleep(kConfig.intervalTime());
 			}
 			I2C.resetColor(0, 0, 0);	//确保结束后灯是灭的
 			SPDLOG_SINKS_DEBUG("---------------- save single led color 2 -----------------");
@@ -910,7 +910,7 @@ void checkROIContoursColor(Mat frame, Mat mask, Mat result, int currentColor, ve
 
 			SPDLOG_SINKS_DEBUG("{}th rect.area:{}", index, rect.area());
 			// 轮廓面积校验
-			if (rect.area() < cfg.minROIContoursArea())
+			if (rect.area() < kConfig.minROIContoursArea())
 				continue;
 
 			// 校验轮廓颜色
@@ -932,7 +932,7 @@ void checkROIContoursColor(Mat frame, Mat mask, Mat result, int currentColor, ve
 			{
 				p = b / (b + g + r);
 				// 亮bule时，b通道要占多数，其他情况一律抹掉该轮廓
-				if (b > cfg.bgrThres(BLUE) && b > g && b > r && p > cfg.bgrPercentage(BLUE)) {
+				if (b > kConfig.bgrThres(BLUE) && b > g && b > r && p > kConfig.bgrPercentage(BLUE)) {
 					colorCorrect = true;
 				}
 				else if ((1.0 - p) < 0.02) {
@@ -943,7 +943,7 @@ void checkROIContoursColor(Mat frame, Mat mask, Mat result, int currentColor, ve
 			else if (currentColor == GREEN)
 			{
 				p = g / (b + g + r);
-				if (g > cfg.bgrThres(GREEN) && g > b && g > r && p > cfg.bgrPercentage(GREEN)) {
+				if (g > kConfig.bgrThres(GREEN) && g > b && g > r && p > kConfig.bgrPercentage(GREEN)) {
 					colorCorrect = true;
 				}
 				else if ((1.0 - p) < 0.02) {
@@ -953,7 +953,7 @@ void checkROIContoursColor(Mat frame, Mat mask, Mat result, int currentColor, ve
 			else if (currentColor == RED)
 			{
 				p = r / (b + g + r);
-				if (r > cfg.bgrThres(RED) && r > b && r > g && p > cfg.bgrPercentage(RED)) {
+				if (r > kConfig.bgrThres(RED) && r > b && r > g && p > kConfig.bgrPercentage(RED)) {
 					colorCorrect = true;
 				}
 				else if ((1.0 - p) < 0.02) {
@@ -1045,8 +1045,8 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		}
 #endif
 		//cv::threshold(mask, mask, 0, 255, THRESH_BINARY | THRESH_OTSU);
-		cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
-		//SPDLOG_SINKS_DEBUG("AdaptiveThreshold BlockSize = {} C = {}", cfg.thresoldBlockSize(), cfg.thresoldC());
+		cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, kConfig.thresoldBlockSize(), kConfig.thresoldC());
+		//SPDLOG_SINKS_DEBUG("AdaptiveThreshold BlockSize = {} C = {}", kConfig.thresoldBlockSize(), kConfig.thresoldC());
 		//GaussianBlur(mask, mask, Size(5, 5), 0);
 
 		//形态学处理
@@ -1090,7 +1090,7 @@ Rect frameDiff2ROI(const Mat& back, const Mat& fore, int color)
 		//	// 在已有轮廓中找距离最近的那一个,并进行标记
 		//	int t = -1;
 		//	//int min_gap = 5;	//修补因灯带格子而导致的轮廓裂隙
-		//	int min_gap = cfg.minContoursSpace();
+		//	int min_gap = kConfig.minContoursSpace();
 		//
 		//	for (int j = 0; j < boundRect.size(); j++)
 		//	{
@@ -1187,8 +1187,8 @@ void frameDiff2ROI(const Mat& back, const Mat& fore, int color, const Rect& roi)
 		SPDLOG_SINKS_DEBUG("frame_gray - back_gray = mask");
 
 		//cv::threshold(mask, mask, 0, 255, THRESH_BINARY | THRESH_OTSU);
-		cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, cfg.thresoldBlockSize(), cfg.thresoldC());
-		//SPDLOG_SINKS_DEBUG("AdaptiveThreshold BlockSize = {} C = {}", cfg.thresoldBlockSize(), cfg.thresoldC());
+		cv::adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, kConfig.thresoldBlockSize(), kConfig.thresoldC());
+		//SPDLOG_SINKS_DEBUG("AdaptiveThreshold BlockSize = {} C = {}", kConfig.thresoldBlockSize(), kConfig.thresoldC());
 		//GaussianBlur(mask, mask, Size(5, 5), 0);
 
 		//形态学处理
@@ -1219,7 +1219,7 @@ void frameDiff2ROI(const Mat& back, const Mat& fore, int color, const Rect& roi)
 			// 合并轮廓
 			// 在已有轮廓中找距离最近的那一个,并进行标记
 			int t = -1;
-			int min_gap = cfg.minContoursSpace();	//用来记录离自己最近的距离
+			int min_gap = kConfig.minContoursSpace();	//用来记录离自己最近的距离
 
 			for (int j = 0; j < boundRect.size(); j++)
 			{
@@ -1230,7 +1230,7 @@ void frameDiff2ROI(const Mat& back, const Mat& fore, int color, const Rect& roi)
 
 				int gap = min_distance_of_rectangles(rect, boundRect[j]);
 
-				if (gap <= cfg.minContoursSpace())
+				if (gap <= kConfig.minContoursSpace())
 				{
 					if (gap <= min_gap)
 					{
@@ -1257,7 +1257,7 @@ void frameDiff2ROI(const Mat& back, const Mat& fore, int color, const Rect& roi)
 				*it &= roi;
 				SPDLOG_SINKS_DEBUG("Mixed Contours - x:{} y:{} width:{} height:{} area:{}", it->x, it->y, it->width, it->height, it->area());
 
-				if (!it->empty() && it->area() > cfg.minContoursArea())
+				if (!it->empty() && it->area() > kConfig.minContoursArea())
 				{
 					//rectangle(f, *it, Scalar(0, 0, 255), 1);
 					it++;
@@ -1301,13 +1301,13 @@ void autoCaptureROI()
 	// 危险区域设定，距离窗口边框 N px 认定为危险区，在此危险区内的首尾灯轮廓皆被认定为超出窗口
 	int d = 2;
 	int d_tb = 150;	// 上下部分的危险区域设定较大些， 让捕获到的灯带轮廓小一些
-	Rect t(0, 0, cfg.frame().width, d_tb);
-	Rect r(cfg.frame().width - d, 0, d, cfg.frame().height);
-	Rect b(0, cfg.frame().height - d_tb, cfg.frame().width, d_tb);
-	Rect l(0, 0, d, cfg.frame().height);
+	Rect t(0, 0, kConfig.frame().width, d_tb);
+	Rect r(kConfig.frame().width - d, 0, d, kConfig.frame().height);
+	Rect b(0, kConfig.frame().height - d_tb, kConfig.frame().width, d_tb);
+	Rect l(0, 0, d, kConfig.frame().height);
 	auto InDangerZone = [=](cv::Rect rect) ->bool {
 		
-		// 极端情况下tl(), br() 返回的点会刚刚卡在cfg.frame.width or cfg.frame.height的边界线上
+		// 极端情况下tl(), br() 返回的点会刚刚卡在kConfig.frame.width or kConfig.frame.height的边界线上
 		// 而这种情况下 contains 是不会认为点在rect内的
 		// 退而求其次， 左上角点往外走一步， 右下角点往里走一步，让他们刚好卡在rect内
 		Point tl = rect.tl() + Point(1, 1);
@@ -1338,8 +1338,8 @@ void autoCaptureROI()
 		{
 			break;
 		}
-		//for (int color = cfg.startColor; color < cfg.stopColor; ++color)
-		for (int color = cfg.c1(); color < cfg.c2() + 1; ++color)
+		//for (int color = kConfig.startColor; color < kConfig.stopColor; ++color)
+		for (int color = kConfig.c1(); color < kConfig.c2() + 1; ++color)
 		{
 			if (exit >= eExit)
 			{
@@ -1356,8 +1356,8 @@ void autoCaptureROI()
 				I2C.resetColor(color);
 
 				SPDLOG_SINKS_DEBUG("After reset {} color", color);
-				//Sleep(cfg.intervalTime);
-				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime);
+				//Sleep(kConfig.intervalTime);
+				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", kConfig.intervalTime);
 				getFrame(fore, false);
 				SPDLOG_SINKS_DEBUG("Get the foreground frame");
 				//cv::imshow("result", fore);
@@ -1379,8 +1379,8 @@ void autoCaptureROI()
 				I2C.setSignleColor(I2C.getLedCount() - 1, color);
 
 				SPDLOG_SINKS_DEBUG("After reset {} color", color);
-				//Sleep(cfg.intervalTime);
-				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", cfg.intervalTime);
+				//Sleep(kConfig.intervalTime);
+				//SPDLOG_SINKS_DEBUG("Sleep {} millisecond", kConfig.intervalTime);
 				getFrame(fore2, false);
 				SPDLOG_SINKS_DEBUG("Get the foreground frame");
 				frameDiff2ROI(back2, fore2, color, roi[color]);
@@ -1428,10 +1428,10 @@ void autoCaptureROI()
 			if (/*key == 0x0d ||*/ correctLoopTime >= 1)	// 回车键
 			{
 				Rect r = roi[BLUE] | roi[BLUE] | roi[RED];
-				cfg.rect(r);
-				SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", cfg.rect().x, cfg.rect().y, cfg.rect().width, cfg.rect().height);
-				//cfg.resetRect = false;
-				cfg.saveConfigData();
+				kConfig.rect(r);
+				SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", kConfig.rect().x, kConfig.rect().y, kConfig.rect().width, kConfig.rect().height);
+				//kConfig.resetRect = false;
+				kConfig.saveConfigData();
 				cv::destroyWindow("result");
 				exit = eExit;
 			}
@@ -1441,8 +1441,8 @@ void autoCaptureROI()
 			//	SPDLOG_SINKS_DEBUG("Give up reset ROI");
 			//	cv::destroyAllWindows();
 			//
-			//	cfg.resetRect = false;	// 关闭重置按钮
-			//	cfg.saveConfigData();
+			//	kConfig.resetRect = false;	// 关闭重置按钮
+			//	kConfig.saveConfigData();
 			//	exit = eExit;
 			//}
 		}
@@ -1458,9 +1458,9 @@ void autoCaptureROI2()
 	Rect roi[BGR];
 	int key = 0;
 	int correctLoopTime = 0;	// 被算法验证过 N 次没问题就可以认为找到恰当的轮廓了
-	//int color = cfg.c1();
+	//int color = kConfig.c1();
 	int color = RED;
-	Minefield mine(cfg.frame());
+	Minefield mine(kConfig.frame());
 
 	while (true)
 	{
@@ -1534,10 +1534,10 @@ void autoCaptureROI2()
 		if (/*key == 0x0d ||*/ correctLoopTime >= 1)	// 回车键
 		{
 			Rect r = roi[BLUE] | roi[GREEN] | roi[RED];
-			cfg.rect(r);
-			SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", cfg.rect().x, cfg.rect().y, cfg.rect().width, cfg.rect().height);
-			//cfg.resetRect = false;
-			//cfg.saveConfigData();
+			kConfig.rect(r);
+			SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", kConfig.rect().x, kConfig.rect().y, kConfig.rect().width, kConfig.rect().height);
+			//kConfig.resetRect = false;
+			//kConfig.saveConfigData();
 			cv::destroyWindow("result");
 			//exit = eExit;
 			break;
@@ -1565,12 +1565,12 @@ void autoCaptureROI2()
 			for (int color = BLUE; color < WHITE; ++color)
 			{
 				I2C.resetColor(BLACK);
-				Sleep(cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
 				getFrame(back, false);
 
 				SPDLOG_SINKS_DEBUG("lit-on {}th color", color);
 				I2C.resetColor(color);
-				Sleep(cfg.intervalTime());
+				Sleep(kConfig.intervalTime());
 				getFrame(fore, false);
 
 				roi[color] = frameDiff2ROI(back, fore, color);
@@ -1586,8 +1586,8 @@ void autoCaptureROI2()
 			cv::waitKey(33);
 
 			Rect r = (roi[BLUE] | roi[GREEN]) & roi[RED];
-			cfg.rect(r);
-			SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", cfg.rect().x, cfg.rect().y, cfg.rect().width, cfg.rect().height);
+			kConfig.rect(r);
+			SPDLOG_SINKS_DEBUG("After ROI:({},{}), width:{}, height:{}", kConfig.rect().x, kConfig.rect().y, kConfig.rect().width, kConfig.rect().height);
 			cv::destroyWindow("result");
 			break;
 
@@ -1626,10 +1626,10 @@ int showErrorCode(ErrorCode& e)
 {
 	SPDLOG_SINKS_ERROR("Catch Error : {}", e.what());
 	g_main_thread_exit = eExitWithException;
-	cfg.shutdownTime(eNotPowerOff);
+	kConfig.shutdownTime(eNotPowerOff);
 	g_error = e;
 	cv::destroyAllWindows();
-	SPDLOG_SINKS_DEBUG("g_main_thread_exit = {}, cfg.shutdownTime = {}", g_main_thread_exit, cfg.shutdownTime());
+	SPDLOG_SINKS_DEBUG("g_main_thread_exit = {}, kConfig.shutdownTime = {}", g_main_thread_exit, kConfig.shutdownTime());
 	return e.error();
 }
 
@@ -1761,11 +1761,11 @@ int main(int argc, char* argv[])
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
 
-		cfg.readConfigFile(VideoCardIns.Name());
+		kConfig.readConfigFile(VideoCardIns.Name());
 
-		litoff.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
+		litoff.setRandomLitOffState(kConfig.randomLitOffProbability(), parser.get<std::string>("lo"));
 
-		capture.open(cfg.cameraIndex());
+		capture.open(kConfig.cameraIndex());
 		if (!capture.isOpened())
 		{
 			throw ErrorCodeEx(ERR_CANT_OPEN_CAMERA, "Failed to open camera");
@@ -1774,10 +1774,10 @@ int main(int argc, char* argv[])
 		{
 			//capture.set(CAP_PROP_SETTINGS, 1);
 			capture.set(CAP_PROP_FPS, 30);
-			capture.set(CAP_PROP_FRAME_WIDTH, cfg.frame().width);
-			capture.set(CAP_PROP_FRAME_HEIGHT, cfg.frame().height);
-			capture.set(CAP_PROP_EXPOSURE, cfg.exposure());
-			capture.set(CAP_PROP_SATURATION, cfg.saturation());
+			capture.set(CAP_PROP_FRAME_WIDTH, kConfig.frame().width);
+			capture.set(CAP_PROP_FRAME_HEIGHT, kConfig.frame().height);
+			capture.set(CAP_PROP_EXPOSURE, kConfig.exposure());
+			capture.set(CAP_PROP_SATURATION, kConfig.saturation());
 
 			//capture.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
 			capture.set(CAP_PROP_FOURCC, MAKEFOURCC('M', 'J', 'P', 'G'));
@@ -1786,8 +1786,8 @@ int main(int argc, char* argv[])
 			//char ext[] = { (char)(ex & 0XFF),(char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24),0 };
 
 
-			//cfg.frame.width = (int)capture.get(CAP_PROP_FRAME_WIDTH);
-			//cfg.frame.height = (int)capture.get(CAP_PROP_FRAME_HEIGHT);
+			//kConfig.frame.width = (int)capture.get(CAP_PROP_FRAME_WIDTH);
+			//kConfig.frame.height = (int)capture.get(CAP_PROP_FRAME_HEIGHT);
 
 			g_wait_capture = true;	//自动拍摄线程开始工作
 		}
@@ -1795,8 +1795,8 @@ int main(int argc, char* argv[])
 		autoCaptureROI2();
 
 		// 获取Video的逻辑放在open camera 之后，让相机先去初始化，调整焦距等
-		AgingInstance.initAgingLog(I2C.getLedCount(), litoff.getRandomLitOffState(), cfg.recheckFaileLedTime() > 0);
-		//AgingInstance.setRandomLitOffState(cfg.randomLitOffProbability(), parser.get<std::string>("lo"));
+		AgingInstance.initAgingLog(I2C.getLedCount(), litoff.getRandomLitOffState(), kConfig.recheckFaileLedTime() > 0);
+		//AgingInstance.setRandomLitOffState(kConfig.randomLitOffProbability(), parser.get<std::string>("lo"));
 
 #if DEBUG_DETAILS
 		int v = 50;
@@ -1851,19 +1851,19 @@ int main(int argc, char* argv[])
 
 	showPassorFail();
 
-	if (cfg.shutdownTime() >= ePowerOff)
+	if (kConfig.shutdownTime() >= ePowerOff)
 	{
 		char shutdown[128] = { 0 };
-		sprintf_s(shutdown, 128, "shutdown -s -t %d", cfg.shutdownTime());
+		sprintf_s(shutdown, 128, "shutdown -s -t %d", kConfig.shutdownTime());
 		system(shutdown);
 	}
-	else if (cfg.shutdownTime() == eReStart)
+	else if (kConfig.shutdownTime() == eReStart)
 	{
 		char shutdown[128] = { 0 };
 		sprintf_s(shutdown, 128, "shutdown -r -t 2");
 		system(shutdown);
 	}
-	else if (cfg.shutdownTime() == eNotPowerOff)
+	else if (kConfig.shutdownTime() == eNotPowerOff)
 	{
 		;
 	}

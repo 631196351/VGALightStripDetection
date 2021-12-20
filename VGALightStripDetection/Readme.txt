@@ -169,3 +169,12 @@ Version Log
 2. I2CWrap 中retry 次数缩减为5 秒
 3. 三个摄像头曝光配置分开设定
 4. 调整Aging.csv 格式, 将AllFailCount, FinalResult, ErrorCode 等列提前
+
+
+[v3.0.2.4] - 2021.12.20
+1. #define kConfig ConfigData::instance()
+2. 将相机帧率控制开到3c.json 配置档中, waitKey() 时间按照 1000/fps 计算
+3. 完善 CaptureDevices, 将cv::VideoCapture 封装其中, 承担获取相机设备信息, 初始化相机设备, 从相机中抓图功能
+4. main3 中围绕CaptureDevices进行调整, 获取ROI, 抓图
+5. 针对 [v3.0.2.2].5 的行为微调, 只在最后pass 时, 删除过程图片
+6. std::vector<Mat> g_fore(CaptureNum), g_back(CaptureNum); 缩减为Mat单个全局对象

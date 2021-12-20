@@ -1,10 +1,10 @@
-﻿#include "Minefield.h"
+#include "Minefield.h"
 
 Minefield::Minefield(cv::Size r)
 {
 #if false
 	// 危险区域设定，距离窗口边框 N px 认定为危险区，在此危险区内的首尾灯轮廓皆被认定为超出窗口
-	Rect box(0, (int)(cfg.frame.height * 0.25), cfg.frame.width, (int)(cfg.frame.height * 0.5));
+	Rect box(0, (int)(kConfig.frame.height * 0.25), kConfig.frame.width, (int)(kConfig.frame.height * 0.5));
 	auto InBox = [=](const cv::Rect& rect) ->bool {
 		if (rect != (box & rect))
 		{
@@ -33,7 +33,7 @@ Minefield::~Minefield()
 bool Minefield::inMinefield(const cv::Rect& r)
 {
 
-	// 极端情况下tl(), br() 返回的点会刚刚卡在cfg.frame.width or cfg.frame.height的边界线上
+	// 极端情况下tl(), br() 返回的点会刚刚卡在kConfig.frame.width or kConfig.frame.height的边界线上
 	// 而这种情况下 contains 是不会认为点在rect内的
 	// 退而求其次， 左上角点往外走一步， 右下角点往里走一步，让他们刚好卡在rect内
 	cv::Point tl = r.tl() + cv::Point(1, 1);
