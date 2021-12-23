@@ -48,11 +48,17 @@ void spliceMultipleFrames(std::vector<Mat>& frames, Mat& result)
 	//int h = g_captures[0].get(CAP_PROP_FRAME_HEIGHT);
 	int w = kConfig.frame().width;
 	int h = kConfig.frame().height;
-	result = Mat(Size(w, h * CaptureNum), CV_8UC3, Scalar::all(0));
-	for (int i = 0; i < frames.size(); ++i)
+	result = Mat(Size(w, h * kCameraDevices.openCount()), CV_8UC3, Scalar::all(0));
+	
+	int i = 0;
+	for (auto& f : frames)
 	{
-		Mat roi = result(Rect(0, i * h, w, h));
-		frames[i].copyTo(roi);
+		if (!f.empty())
+		{
+			Mat roi = result(Rect(0, i * h, w, h));
+			f.copyTo(roi);
+			i++;
+		}
 	}
 }
 

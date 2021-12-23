@@ -14,6 +14,7 @@ class CaptureDevices
 	VideoCapturesIndex2Name _index2Cap;
 	VideoCaptures _captures;
 	unsigned _waitTime = 33;
+	unsigned _openedCount = 0;
 
 	CaptureDevices();
 
@@ -29,6 +30,7 @@ public:
 	bool read(int index, cv::Mat& image, bool filling = false);
 	bool read_iterator(std::vector<cv::Mat>& f, bool filling = false);
 	inline unsigned waitTime() const { return _waitTime; }
+	inline unsigned openCount() const { return _openedCount; }
 private:
 	void EnumerateDevicesInWindows();
 

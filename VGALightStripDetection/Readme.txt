@@ -178,3 +178,9 @@ Version Log
 4. main3 中围绕CaptureDevices进行调整, 获取ROI, 抓图
 5. 针对 [v3.0.2.2].5 的行为微调, 只在最后pass 时, 删除过程图片
 6. std::vector<Mat> g_fore(CaptureNum), g_back(CaptureNum); 缩减为Mat单个全局对象
+
+
+[v3.0.2.5] - 2021.12.23
+1. 在CaptureDevices 中记录当前需要开启相机数量 _openedCount, 开出对应get 接口
+2. 在CaptureDevices 中创建map<int, VideoCapture> 时, 替换使用c++ 11 std::map::emplace 接口, 来减少创建对象时的拷贝构造
+3. 在main3.cpp 中根据 kCameraDevices.openCount() 来创建Mat 内存, 让显示过程更加友好, 不至于在测试strix 还会多余显示两个黑窗口

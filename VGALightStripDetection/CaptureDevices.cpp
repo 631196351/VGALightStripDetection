@@ -124,7 +124,7 @@ CaptureDevices::CaptureDevices()
 	{
 		SPDLOG_SINKS_INFO("Init {} camera start", c.first);
 		// 目标立面不开启相机时, 放一个空相机上去
-		auto& _pair = _captures.insert(std::make_pair(c.second, cv::VideoCapture()));
+		auto& _pair = _captures.emplace(c.second, cv::VideoCapture());
 		if (kConfig.captureOpenState(c.first))
 		{
 			auto& camera = _pair.first->second;
@@ -134,6 +134,7 @@ CaptureDevices::CaptureDevices()
 			camera.set(cv::CAP_PROP_FRAME_HEIGHT, kConfig.frame().height);
 			camera.set(cv::CAP_PROP_EXPOSURE, kConfig.exposure(c.first));
 			camera.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+			_openedCount++;
 		}
 		SPDLOG_SINKS_INFO("Init {} camera stop", c.first);
 	}
