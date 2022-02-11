@@ -184,3 +184,9 @@ Version Log
 1. 在CaptureDevices 中记录当前需要开启相机数量 _openedCount, 开出对应get 接口
 2. 在CaptureDevices 中创建map<int, VideoCapture> 时, 替换使用c++ 11 std::map::emplace 接口, 来减少创建对象时的拷贝构造
 3. 在main3.cpp 中根据 kCameraDevices.openCount() 来创建Mat 内存, 让显示过程更加友好, 不至于在测试strix 还会多余显示两个黑窗口
+
+[v3.0.2.6] - 2022.02.11
+1. 添加 errno-1013 : ERR_CAMERA_NOT_MATCH_JSON_FILE；传入一个从设备管理器中抓出来的相机 DeviceName cap
+    来将cap 和配置档中配置的相机DeviceName进行匹配， 以此来获取该摄像头所需要的exposure
+    如果该 cap 和配置档中的记录不匹配， 则报出ERR_CAMERA_NOT_MATCH_JSON_FILE异常
+    请求OP 帮忙检查插入的相机程序是否正确
