@@ -138,5 +138,26 @@
                 "roi": [ 102, 64 ]
             }
         }
+    },
+    "STRIX-LC-18": {
+        "Camera": {
+            "Exposure": [-6, -6, -6],
+            "Saturation": 65,
+            "Front": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            "Rear": [11, 12, 13, 14, 15, 16, 17, 18],
+            "Overhead": []
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 10,
+            "LedContoursArea": 250,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
     }
 }

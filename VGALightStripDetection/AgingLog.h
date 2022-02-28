@@ -4,6 +4,8 @@
 
 #define VGA_PPID_LENGTH 64
 
+// 本模块维护 输出结果CSV 文件
+
 enum { Pass = 0, Fail = 1, RandomShutDownLed = -1 };
 
 class AgingLog
@@ -27,20 +29,27 @@ class AgingLog
 public:
 	AgingLog();
 	void initAgingLog(int led_count, bool randomLightDown, bool retest = false);
+
+	// 根据灯珠数量动态分配数组容器空间
 	void initAgingLog();
 	~AgingLog();
 
 	//void setPPID(char* ppit, int len);
 
 	//inline const char* ppid() { return Video; }
+	// 打开CSV 文件
 	void openAgingCsv();
 
+	// 将亮color 时， 第index颗灯结果保存到lpLed
 	void setSingleLedResult(int index, int color, int result);
 
+	// 将亮color 时， 第index颗灯结果保存到lpRandomShutDownLedCache
 	void setSingleLedRandomShutDownResult(int index, int color, int result);
 
+	// 将亮color 时， 第index颗灯结果保存到lpRetest
 	void setSingleLedRetestResult(int index, int color, int result);
 
+	// 为了不污染lpLed， 将lpLed copy 到lpRetest
 	void syncSingLedResult2RetestResult();
 
 	void saveAgingLog(int error);
@@ -51,6 +60,7 @@ public:
 
 	int getSingleLedRetestResult(int index, int color);
 
+	// 返回所有灯珠的结果
 	int allLedIsOK();
 
 	/// 保存Log, 抹除上一次的测试结果数据，时间戳刷新； 

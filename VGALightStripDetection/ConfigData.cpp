@@ -76,6 +76,11 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			//ROG-STRIX-RTX3080-O10G-GAMING-2I3S
 			_thermo_name = "STRIX-" + std::to_string(led_count);
 		}
+		else if (model.find("LC") != std::string::npos)
+		{
+			//ROG-STRIX-LC-RTX6800-O16G-UI2S
+			_thermo_name = "STRIX-LC" + std::to_string(led_count);
+		}
 	}
 	else if (model.find("TUF") != std::string::npos)
 	{

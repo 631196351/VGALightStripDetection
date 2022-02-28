@@ -1,5 +1,6 @@
 ﻿#pragma once
-
+// 全局的预定义变量定义文件
+// 主要 LEDColor 定义
 enum LEDColor
 {
 	BLUE,
@@ -15,6 +16,7 @@ enum LEDColor
 static const char* color_str[] = { "Blue", "Green", "Red", "White" };
 
 // 用来过滤像素点的阈值
+// 已廢棄
 enum
 {
 	W_Threshold = 250,
@@ -23,8 +25,10 @@ enum
 	B_Threshold = 250
 };
 
+// 定义一个存放结果的文件夹name
 #define AgingFolder "aging_rect_image"
 
+// 可以在log里看到程式为何退出
 enum
 {
 	eNotExit = 0,	//未侦测到退出指令
@@ -33,6 +37,7 @@ enum
 	eExitWithException = 3	// 异常退出
 };
 
+// 关机指令
 enum
 {
 	ePowerOff = 0,	// 程式执行完延时关机
@@ -40,6 +45,7 @@ enum
 	eReStart = -2	// 程式执行完重启
 };
 
+// version
 enum
 {
 	VersionMajor = 3,
@@ -47,6 +53,7 @@ enum
 	VersionThi = 2,
 	VersionMin = 5
 };
+
 
 enum HSV
 {
@@ -58,16 +65,18 @@ enum HSV
 	eHmax2 = 5
 };
 
+// 最大支持多少摄像头
 enum 
 {
 	CaptureNum = 3
 };
 
+// 定义摄像头下标(未用)
 enum
 {
-	eCamera_Overhead,
-	eCamera_Front,
-	eCamera_Rear,
+	eCamera_Overhead,	//上
+	eCamera_Front,		//前
+	eCamera_Rear,		//后
 	eCamera_All
 };
 

@@ -55,8 +55,8 @@ void spliceMultipleFrames(std::vector<Mat>& frames, Mat& result)
 	{
 		if (!f.empty())
 		{
-			Mat roi = result(Rect(0, i * h, w, h));
-			f.copyTo(roi);
+			Mat roi = result(Rect(0, i * h, w, h)); 
+			f.copyTo(roi); 
 			i++;
 		}
 	}
@@ -69,7 +69,7 @@ void getFrame( std::vector<Mat>& f)
 		SPDLOG_SINKS_DEBUG("Get Frame");
 		for (int i = 0; i < kConfig.skipFrame(); ++i)
 		{
-			kCameraDevices.read_iterator(f, (bool)(i + 1 >= kConfig.skipFrame()));
+			kCameraDevices.read_iterator(f, (bool)(i + 1 >= kConfig.skipFrame()));  //跳3 frame
 			SPDLOG_SINKS_DEBUG("{}th capture's frame", i);
 
 		}
@@ -84,13 +84,14 @@ void getSingleFrame(cv::Mat& f,int camera = 0)
 		SPDLOG_SINKS_DEBUG("Get Frame");
 		for (int i = 0; i < kConfig.skipFrame(); ++i)
 		{
-			kCameraDevices.read(camera, f, (i + 1 >= kConfig.skipFrame()));
+			kCameraDevices.read(camera, f, (i + 1 >= kConfig.skipFrame())); //根据roi获得裁剪图片
 			SPDLOG_SINKS_DEBUG("{}th capture's {}th frame", camera, i);
 		}
 	}
 	EXCEPTION_OPERATOR_CATCH_2;
 }
 
+// Camera Thread 
 void autoGetCaptureFrame()
 {
 	int key = 0;
@@ -103,20 +104,20 @@ void autoGetCaptureFrame()
 			MainThreadIsExit;
 			if (g_wait_capture)
 			{
-				int w = kConfig.frame().width;
-				int h = kConfig.frame().height;
+				int w = kConfig.frame().width;  //cv::Size::width
+				int h = kConfig.frame().height;	//cv::Size::height
 
 				cv::Mat video;
 				std::vector<cv::Mat> frames(CaptureNum);
 				kCameraDevices.read_iterator(frames, true);
 				spliceMultipleFrames(frames, video);
 
-				sprintf_s(txt, 128, "Power Off: %d", kConfig.shutdownTime());
-				putText(video, txt, Point(0, (video.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1);
+				sprintf_s(txt, 128, "Power Off: %d", kConfig.shutdownTime());//关机时间
+				putText(video, txt, Point(0, (video.rows / 8)), FONT_HERSHEY_TRIPLEX, 1, Scalar(0, 255, 255), 1); // 把字符串放到圖片上
 				//if (!kConfig.rect().empty())
 				//	rectangle(video, kConfig.rect(), Scalar(0, 255, 255), 5);
-				pyrDown(video, video, Size(video.cols / g_pyDown, video.rows / g_pyDown));
-				imshow("video", video);
+				pyrDown(video, video, Size(video.cols / g_pyDown, video.rows / g_pyDown)); //把圖片縮小二分之一
+				imshow("video", video); //video是3个摄像头中抓到的image 拼接成一張image
 
 				key = cv::waitKey(kCameraDevices.waitTime());
 				if (key == 0x1b)	// Esc 键
@@ -156,6 +157,7 @@ void saveDebugROIImg(Mat& f, int currentColor, int currentIndex, const char* lpS
 	EXCEPTION_OPERATOR_CATCH_2;
 }
 
+// work 线程， 用来处理两张图片， 找到灯珠轮廓是否满足要求
 void findFrameContours()
 {
 	while (true)
@@ -178,7 +180,7 @@ void findFrameContours()
 
 				Mat mask, mask_hsv, hsv_img_mask;
 				Mat frame, back;
-				g_fore.copyTo(frame);
+				g_fore.copyTo(frame); //g_fore和g_back从main 綫程獲得数据 mainLightingControl
 				g_back.copyTo(back);
 
 				if (frame.empty() || back.empty())
@@ -199,7 +201,7 @@ void findFrameContours()
 
 				cv::subtract(frame, back, mask);
 
-				const float* hsv = kConfig.hsvColor(currentColor);
+				const float* hsv = kConfig.hsvColor(currentColor); 
 
 				cv::cvtColor(mask, mask_hsv, COLOR_BGR2HSV);
 
@@ -248,7 +250,7 @@ void findFrameContours()
 					if (r.area() < kConfig.minContoursArea())
 						continue;
 
-					rect |= r;
+					rect |= r;//多个小轮廓进行一个合并操作
 
 					drawContours(result, contours, i, Scalar(0, 255, 255), 1);
 				}
@@ -306,6 +308,7 @@ void findFrameContours()
 
 void mainLightingControl()
 {
+	// if 用户在抓ROI的时候exit，这里就也直接返回exit
 	OnExitFlagReturn;
 	try
 	{
@@ -318,7 +321,7 @@ void mainLightingControl()
 		{
 			colorNum[i] = i - 1;
 		}
-		colorNum[0] = I2C.getLedCount() - 1;
+		colorNum[0] = I2C.getLedCount() - 1; //???colorNum
 		// 关闭所有灯
 		I2C.resetColor(0, 0, 0);
 
@@ -343,7 +346,7 @@ void mainLightingControl()
 				SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 				getSingleFrame(fore, camera_index);
 
-				g_set_led_mutex.lock();
+				g_set_led_mutex.lock(); //??????
 				g_Index = index;
 				g_Led = color;
 				g_wait = true;
@@ -370,7 +373,7 @@ void mainLightingControl()
 	EXCEPTION_OPERATOR_CATCH_2;
 }
 
-
+//Main Thread 中autoCaptureROI2()中抓取ROI的具体算法
 void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, int color, ColorROI& outRect)
 {
 	try
@@ -410,7 +413,8 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 					cv::inRange(mask_hsv, Scalar(hsv[eHmin2], roi_hv[0], roi_hv[1]), Scalar(hsv[eHmax2], 255, 255), hsv_img_mask_r);
 					hsv_img_mask += hsv_img_mask_r;
 				}
-
+				//blockSize, C 这两个参数是通过opencv slider窗口debug出来的
+				//目前发现blockSize = 101, C = -9 最能突出灯珠特征
 				cv::adaptiveThreshold(hsv_img_mask, hsv_img_mask, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, kConfig.thresoldBlockSize(), kConfig.thresoldC());
 
 				cv::medianBlur(hsv_img_mask, hsv_img_mask, 3);
@@ -466,6 +470,7 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 	EXCEPTION_OPERATOR_CATCH_2;
 }
 
+// Main Thread 抓取ROI
 void autoCaptureROI2()
 {
 	// B-G-R三色来圈取灯带ROI
@@ -476,7 +481,7 @@ void autoCaptureROI2()
 	//Rect roi[BGR][CaptureNum];
 	ColorROI roi(BGR);
 
-	auto checkROI = [&](int color) mutable -> bool
+	auto checkROI = [&](int color) mutable -> bool ///?????????mutable
 	{
 		FacadeROI& r = roi[color];
 		int notEmpty = 0;
@@ -504,7 +509,7 @@ void autoCaptureROI2()
 				Sleep(kConfig.intervalTime());
 				getFrame(fore);
 
-				frameDiff2ROI(back, fore, color, roi);
+				frameDiff2ROI(back, fore, color, roi); //back和fore两张image，去获取保存roi
 
 				if (!checkROI(color))
 				{
@@ -729,6 +734,7 @@ int main(int argc, char* argv[])
 	try
 	{
 		// 程式开启时打开csv, 准备随时接受异常报错
+		// 确保在发生异常时， csv中可以记录显卡基本的ppid, module name, errno
 		AgingInstance.openAgingCsv();
 
 		if (parser.has("@ppid") && parser.has("@name"))
@@ -736,7 +742,7 @@ int main(int argc, char* argv[])
 			VideoCardIns.PPID(parser.get<std::string>("@ppid"));
 			VideoCardIns.Name(parser.get<std::string>("@name"));
 
-			SinkInstance.addPPID2FileSinkMT(VideoCardIns.targetFolder());
+			SinkInstance.addPPID2FileSinkMT(VideoCardIns.targetFolder());// init log module
 		}
 		else
 		{
@@ -751,20 +757,28 @@ int main(int argc, char* argv[])
 		// 避免亮光影响相机初始化
 		I2C.resetColor(0, 0, 0);
 
+		// init config module
 		kConfig.readConfigFile(VideoCardIns.Name(), I2C.getLedCount());
-
+		// 随机灭灯模块初始化
 		litoff.setRandomLitOffState(kConfig.randomLitOffProbability(), parser.get<std::string>("lo"));
-
+		
 		kCameraDevices;
 
 		g_wait_capture = true;	//自动拍摄线程开始工作
 
+		// 对结果集容器进行size的大小动态分配
 		AgingInstance.initAgingLog();
 
+
+		// 下面开始正式工作
+
+		// 1. 去抓ROI
 		autoCaptureROI2();
 
+		// 2. 每颗灯进行侦测
 		mainLightingControl();
 
+		// 3. 看看有没有fail， 有fail进行复测
 		checkTheFailLedAgain();
 	}
 	EXCEPTION_OPERATOR_CATCH_3;

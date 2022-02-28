@@ -58,7 +58,7 @@ private:
 	int _thresoldC = -9;
 	int _recheckFaileLedTime = 0;	// 侦测到某个灯Faile后， 再重复测几次
 
-	std::vector<std::string> _videoCapName;
+	std::vector<std::string> _videoCapName;	// 配置档中记录的相机设备name和需要同设备管理器中的相机设备name保持一致
 	std::set<int> _front;
 	std::set<int> _rear;
 	std::set<int> _overhead;
