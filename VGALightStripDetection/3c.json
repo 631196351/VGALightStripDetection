@@ -97,6 +97,27 @@
             }
         }
     },
+    "STRIX-8": {
+        "Camera": {
+            "Exposure": [-4, -4, -4],
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [1, 2, 3, 4, 5, 6, 7, 8]
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 100,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
+    },
     "STRIX-WHITE-22": {
         "Camera": {
             "Exposure": [-6, -6, -6],
