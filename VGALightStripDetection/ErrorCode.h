@@ -22,6 +22,7 @@ enum eError
 	ERR_PARSE_JSON_SYNTAX,			// 配置文件解析错误
 	ERR_CONFIG_DATA_NOT_EXIST,		// 配置文件中没有该机种的配置参数
 	ERR_GPU_LOAD_FAILURE,			// Vender load GPU 失败
+	ERR_CAMERA_NOT_MATCH_JSON_FILE,	// 相机设备名称与3c.json不匹配
 
 	ERR_CRITICAL_LEVEL_1 = 2000,	// NOT Terminate AP 
 	ERR_ORIGIN_FRAME_EMPTY_EXCEPTION,	//当前帧空帧异常	

@@ -141,6 +141,12 @@ CaptureDevices::CaptureDevices()
 
 	_waitTime = 1000 / kConfig.cameraFps();
 	SPDLOG_SINKS_INFO("Capture wait time {}s", _waitTime);
+
+	if (_captures.empty())
+	{
+		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
+		throw ErrorCodeEx(ERR_CANT_OPEN_CAMERA, "Failed to open camera");
+	}
 }
 
 CaptureDevices::~CaptureDevices()

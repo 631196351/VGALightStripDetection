@@ -103,6 +103,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 	{
 		_thermo_name = "KO";
 	}
+	SPDLOG_SINKS_DEBUG("Thermo Name : {}", _thermo_name);
 
 	std::ifstream in("3c.json");
 	if (!in.is_open())
@@ -320,6 +321,10 @@ int ConfigData::ledIndexToCamera(int led_index)
 	return -1;
 }
 
+// 传入一个从设备管理器中抓出来的相机 DeviceName cap
+// 来将cap 和配置档中配置的相机DeviceName进行匹配， 以此来获取该摄像头所需要的exposure
+// 如果该 cap 和配置档中的记录不匹配， 则报出ERR_CAMERA_NOT_MATCH_JSON_FILE异常
+// 请求OP 帮忙检查插入的相机程序是否正确
 int ConfigData::exposure(const std::string& cap)
 {
 	if (cap.compare(_videoCapName[0]) == 0)
@@ -335,7 +340,10 @@ int ConfigData::exposure(const std::string& cap)
 		return _exposures[2];
 	}
 	else
-		throw std::exception("Can't not find correct exposure");
+	{
+		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
+		throw ErrorCodeEx(ERR_CAMERA_NOT_MATCH_JSON_FILE, "Camera device name does not match 3c.json");
+	}
 }
 /// 根据相机设备名称, 从配置档中获取对应的灯珠数量
 /// 若相机对应的灯珠数量为0, 则返回false, 表示不需要打开该相机
