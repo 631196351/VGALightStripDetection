@@ -13,13 +13,34 @@
         "VideoCapName": [ "Top", "Rear", "Front" ],
         "KeepDebugImg": false
     },
-    "TUF": {
+    "TUF-4": {
         "Camera": {
             "Exposure": [-6, -6, -6],
             "Saturation": 65,
             "Front": [],
             "Rear": [],
             "Overhead": [ 1, 2, 3, 4 ]
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 100,
+            "LedContoursArea": 300,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
+    },
+    "TUF-13": {
+        "Camera": {
+            "Exposure": [-6, -6, -6],
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13 ]
         },
         "AlgorithmThreshold": {
             "MinContoursArea": 100,

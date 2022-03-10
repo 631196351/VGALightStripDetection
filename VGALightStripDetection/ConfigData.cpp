@@ -97,7 +97,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 		//TUF-RTX3090-O24G-2I3S
 		//TUF-RTX3090-24G-2I3S-PD
 		//TUF-RTX3060-12G-GAMING-2I3S
-		_thermo_name = "TUF";
+		_thermo_name = "TUF-" + std::to_string(led_count);
 	}
 	else if (model.find("KO") != std::string::npos)
 	{
