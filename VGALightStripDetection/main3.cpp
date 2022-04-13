@@ -314,8 +314,7 @@ void mainLightingControl()
 	{
 		cv::TickMeter t;
 		t.start();
-		cv::Mat back;
-		cv::Mat fore;
+
 		std::vector<int> colorNum(I2C.getLedCount());
 		for (int i = 1; i < I2C.getLedCount(); i++)
 		{
@@ -335,6 +334,8 @@ void mainLightingControl()
 				SPDLOG_SINKS_DEBUG("---------------- MainLightingControl ----------------");
 
 				int camera_index = kConfig.ledIndexToCamera(index);
+				cv::Mat back;
+				cv::Mat fore;
 
 				I2C.setSignleColor(colorNum[index], BLACK);
 				Sleep(kConfig.intervalTime());
@@ -346,6 +347,9 @@ void mainLightingControl()
 				SPDLOG_SINKS_DEBUG("Get the foreground of the {}th Led ", index);
 				getSingleFrame(fore, camera_index);
 
+				//back = Mat::zeros(back.cols,back.rows, CV_64FC1);
+				//fore = Mat::zeros(fore.cols, fore.rows, CV_64FC1);
+				 
 				g_set_led_mutex.lock(); //??????
 				g_Index = index;
 				g_Led = color;
@@ -558,8 +562,6 @@ void checkTheFailLedAgain()
 	try
 	{
 		SPDLOG_SINKS_DEBUG("---------------- Check the Failed Led Again 1 ----------------");
-		cv::Mat back;
-		cv::Mat fore;
 
 		AgingInstance.syncSingLedResult2RetestResult();
 
@@ -582,6 +584,8 @@ void checkTheFailLedAgain()
 					{
 						int camera_index = kConfig.ledIndexToCamera(index);
 
+						cv::Mat back;
+						cv::Mat fore;
 						// 关闭所有灯
 						I2C.resetColor(0, 0, 0);
 						Sleep(kConfig.intervalTime());
