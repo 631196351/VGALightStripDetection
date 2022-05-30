@@ -15,7 +15,7 @@
     },
     "TUF-4": {
         "Camera": {
-            "Exposure": [-6, -6, -6],
+            "Exposure": [-4, -4, -4],
             "Saturation": 65,
             "Front": [],
             "Rear": [],
@@ -36,11 +36,11 @@
     },
     "TUF-13": {
         "Camera": {
-            "Exposure": [-6, -6, -6],
+            "Exposure": [-4, -4, -4],
             "Saturation": 65,
             "Front": [],
             "Rear": [],
-            "Overhead": [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13 ]
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 ]
         },
         "AlgorithmThreshold": {
             "MinContoursArea": 100,
