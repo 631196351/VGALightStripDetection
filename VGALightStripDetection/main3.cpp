@@ -753,7 +753,8 @@ int main(int argc, char* argv[])
 			throw ErrorCodeEx(ERR_INCOMPLETE_ARGS, "Incomplete required parameters(ppid or model name)");
 		}
 
-		SPDLOG_SINKS_INFO("-------------version {}.{}.{}.{}-------------", VersionMajor, VersionSec, VersionThi, VersionMin);
+		//PDLOG_SINKS_INFO("-------------version {}.{}.{}.{}-------------", VersionMajor, VersionSec, VersionThi, VersionMin);
+		kConfig.readVersion();//读配置档中的版本号
 		SPDLOG_SINKS_INFO("Model Name:{}", VideoCardIns.Name());
 		SPDLOG_SINKS_INFO("PPID:{}", VideoCardIns.PPID());
 		SPDLOG_SINKS_INFO("CaptureNum:{}", CaptureNum);

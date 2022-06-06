@@ -23,11 +23,13 @@ public:
 	void readConfigFile();
 	void saveConfigData();
 #endif
+	void readVersion();
 	void readConfigFile(std::string model, unsigned led_count);
 	void recordConfig2WorkStates();
 
 private:
 	std::string _thermo_name;
+	std::string _version;
 private:
 	int _intervalTime = 100;		// 灯珠亮灭的间隔时间
 	int _minContoursArea = 50;
@@ -87,6 +89,7 @@ public:
 	inline const float* roiHV() const { return _hsvROI; }
 	inline std::string getVideoCapName(int index) const { return _videoCapName[index]; };
 	inline bool keepDebugImg() const { return _keepDebugImg; }
+	inline std::string version() const { return _version; }
 
 public:
 	//void rect(cv::Rect& r);

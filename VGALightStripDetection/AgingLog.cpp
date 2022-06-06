@@ -37,7 +37,7 @@ void AgingLog::openAgingCsv()
 		if (length == 0)
 		{
 			// 添加表头
-			aging_file << "VideoCard, Time, PPID, Type, FinalResult, AllFailCount, ErrorCode,";
+			aging_file << "Vesion, VideoCard, Time, PPID, Type, FinalResult, AllFailCount, ErrorCode,";
 
 			char buf[10] = { 0 };
 			for (int i = 0; i < color_num; i++)
@@ -190,7 +190,8 @@ void AgingLog::saveAgingLog(int error)
 		////////////////////////////////////////////////////////////////////////////
 		if (randomLightDown)
 		{
-			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Random,";
+			//aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Random,";
+			aging_file << kConfig.version() << "," << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Random,";//增加版本号
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				// 随机灭掉的灯用-1表示
@@ -222,7 +223,8 @@ void AgingLog::saveAgingLog(int error)
 		////////////////////////////////////////////////////////////////////////////
 		// 若发生1004错误时, lpLed是还没有完成内存分配的
 		r = 0;
-		aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";
+		//aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";
+		aging_file << kConfig.version() << "," << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";//增加版本号
 		for (int i = 0; (i < lpLedCount * color_num) && (lpLed != nullptr); i++)
 		{
 			r += lpLed[i];
@@ -254,7 +256,8 @@ void AgingLog::saveAgingLog(int error)
 		if (retest)
 		{
 			r = 0;
-			aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";
+			//aging_file << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";
+			aging_file << kConfig.version() << "," << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";//增加版本号
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
 				r += lpRetest[i];

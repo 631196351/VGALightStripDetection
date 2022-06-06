@@ -54,6 +54,26 @@ ConfigData& ConfigData::instance()
 	return instance;
 }
 
+void ConfigData::readVersion() {
+	std::ifstream in("3c.json");
+	if (!in.is_open())
+	{
+		SPDLOG_NOTES_THIS_FUNC_EXCEPTION;
+		throw ErrorCodeEx(ERR_OPEN_CONFIG_FILE, "Open 3c.json file error!");
+	}
+
+	std::string json_string;
+	json_string.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+	in.close();
+	rapidjson::Document dom;
+
+	if (!dom.Parse(json_string.c_str()).HasParseError())
+	{		
+		_version = dom["Version"].GetString();
+		SPDLOG_SINKS_INFO("-------------version {}-------------", _version);
+	}
+}
+
 void ConfigData::readConfigFile(std::string model, unsigned led_count)
 {
 	//model.assign(model.begin() + 4, model.end());
