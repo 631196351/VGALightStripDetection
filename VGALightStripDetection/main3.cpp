@@ -670,6 +670,12 @@ void showPassorFail()
 		SPDLOG_SINKS_INFO("PPP           AAA     AAA         SSSSS            SSSSS");
 		SPDLOG_SINKS_INFO("");
 		SPDLOG_SINKS_INFO("");
+
+		//读取3C配置档里面的AutoCloseConsole，true自动关闭，false不关闭(新版本)
+		if (!kConfig.autoCloseConsole())
+		{
+			system("pause");
+		}
 	};
 
 	auto fail_msg = []()
@@ -697,9 +703,11 @@ void showPassorFail()
 		{
 			// 要是随即灭灯开了，就说明处于测试阶段，直接过
 		}
-		else
-		{
-			// 没有开启随机灭灯，但出现了fail，直接卡住
+
+		// 没有开启随机灭灯，但出现了fail，直接卡住(老版本 fail 控制台不关闭)
+		//读取3C配置档里面的AutoCloseConsole，true自动关闭，false不关闭(新版本)
+		if(!kConfig.autoCloseConsole())
+		{			
 			system("pause");
 		}
 	};

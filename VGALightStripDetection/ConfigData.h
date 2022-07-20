@@ -66,6 +66,7 @@ private:
 	std::set<int> _overhead;
 
 	bool _keepDebugImg = true;
+	bool _autoCloseConsole = true;
 
 public:
 	inline int intervalTime() const { return _intervalTime; }
@@ -90,7 +91,7 @@ public:
 	inline std::string getVideoCapName(int index) const { return _videoCapName[index]; };
 	inline bool keepDebugImg() const { return _keepDebugImg; }
 	inline std::string version() const { return _version; }
-
+	inline bool autoCloseConsole() const { return _autoCloseConsole; }
 public:
 	//void rect(cv::Rect& r);
 	void rect(ColorROI& roi);
