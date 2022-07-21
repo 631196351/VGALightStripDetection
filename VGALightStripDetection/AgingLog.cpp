@@ -63,7 +63,8 @@ void AgingLog::initAgingLog()
 {
 	EXCEPTION_OPERATOR_TRY
 	{
-		int led_count = I2C.getLedCount();
+		/*int led_count = I2C.getLedCount(); 设置数量22为了填充表格*/
+		int led_count = 22;
 		bool randomLightDown = litoff.getRandomLitOffState();
 		bool retest = kConfig.recheckFaileLedTime() > 0;
 
@@ -153,6 +154,16 @@ void AgingLog::setSingleLedRetestResult(int index, int color, int result)
 	}
 }
 
+void AgingLog::setSingleLedResultEmpty(int index, int color, int result)
+{
+	int i = index + lpLedCount * (color);
+	if (i < lpLedCount * color_num)
+	{
+		lpLed[i] = result;
+		lpRetest[i] = result;
+	}
+}
+
 void AgingLog::setSingleLedRandomShutDownResult(int index, int color, int result)
 {
 	if (randomLightDown) {
@@ -227,7 +238,9 @@ void AgingLog::saveAgingLog(int error)
 		aging_file << kConfig.version() << "," << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Normal,";//增加版本号
 		for (int i = 0; (i < lpLedCount * color_num) && (lpLed != nullptr); i++)
 		{
-			r += lpLed[i];
+			if (lpLed[i] == 1) {
+				r += lpLed[i];
+			}			
 			ss << "," << lpLed[i] ;
 		}
 
@@ -260,7 +273,9 @@ void AgingLog::saveAgingLog(int error)
 			aging_file << kConfig.version() << "," << VideoCardIns.Name() << "," << t << "\t," << VideoCardIns.PPID() << "\t," << "Retest,";//增加版本号
 			for (int i = 0; i < lpLedCount * color_num; i++)
 			{
-				r += lpRetest[i];
+				if (lpRetest[i] == 1) {
+					r += lpRetest[i];
+				}				
 				ss << "," << lpRetest[i];
 			}
 
@@ -429,7 +444,7 @@ void AgingLog::serialize()
 		for (int j = 0; j < lpLedCount; ++j)
 		{
 			int x = j + lpLedCount * (c);
-			if (lpLed[x] > 0)
+			if (lpLed[x] == 1)
 			{
 				s += std::to_string(j + 1);	// 下标从1 开始显示
 				s += ", ";

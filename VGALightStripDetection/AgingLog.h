@@ -49,6 +49,9 @@ public:
 	// 将亮color 时， 第index颗灯结果保存到lpRetest
 	void setSingleLedRetestResult(int index, int color, int result);
 
+	//填补表格中不足22颗灯中，结果保存空（led num = 4， 表格中5-22的结果用-1填充）
+	void setSingleLedResultEmpty(int index, int color, int result);
+
 	// 为了不污染lpLed， 将lpLed copy 到lpRetest
 	void syncSingLedResult2RetestResult();
 

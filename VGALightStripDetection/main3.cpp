@@ -280,6 +280,16 @@ void findFrameContours()
 					SPDLOG_SINKS_DEBUG("Contours x:{} y:{} width:{} height:{} area:{}, RecheckFaileLedTime:{} --> Fail", rect.x, rect.y, rect.width, rect.height, rect.area(), g_recheckFaileLedTime);
 				}
 
+
+				////如果当前是最后一颗灯，就把led num 到 22 颗的检测结果设置为空
+				if (currentIndex == I2C.getLedCount() - 1) {
+					int index = currentIndex + 1;
+					for (int i = index; i < 22; i++) {
+						AgingInstance.setSingleLedResultEmpty(i, currentColor, 12345);
+					}	
+				}
+				
+
 				// 首次侦测且开启随机灭灯情况进入
 				if (litoff.getRandomLitOffState() && g_recheckFaileLedTime == 0)
 				{
