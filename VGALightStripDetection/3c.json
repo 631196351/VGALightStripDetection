@@ -1,7 +1,5 @@
-
 {
-    "Version": "3.0.2.123456789",
-    "AutoCloseConsole": true,
+    "Version": "v3.0.3.0",
     "AgingSetting": {
         "Width": 1280,
         "Hight": 720,
@@ -14,7 +12,8 @@
         "ShutDownDelayTime": -1,
         "RecheckFaileLedTime": 1,
         "VideoCapName": [ "Top", "Rear", "Front" ],
-        "KeepDebugImg": false
+        "KeepDebugImg": false,
+        "AutoCloseConsole": true
     },
     "TUF-4": {
         "Camera": {

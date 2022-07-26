@@ -138,7 +138,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 	rapidjson::Document dom;
 	if (!dom.Parse(json_string.c_str()).HasParseError())
 	{
-		_autoCloseConsole = dom["AutoCloseConsole"].GetBool();
+		
 		if (dom.HasMember("AgingSetting") && dom["AgingSetting"].IsObject())
 		{
 			const auto& asg = dom["AgingSetting"];
@@ -160,6 +160,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			}
 
 			_keepDebugImg = asg["KeepDebugImg"].GetBool();
+			_autoCloseConsole = asg["AutoCloseConsole"].GetBool();
 		}
 
 		if (dom.HasMember(_thermo_name.c_str()) && dom[_thermo_name.c_str()].IsObject())
