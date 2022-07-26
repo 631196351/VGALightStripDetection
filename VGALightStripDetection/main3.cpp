@@ -285,7 +285,7 @@ void findFrameContours()
 				if (currentIndex == I2C.getLedCount() - 1) {
 					int index = currentIndex + 1;
 					for (int i = index; i < 22; i++) {
-						AgingInstance.setSingleLedResultEmpty(i, currentColor, 12345);
+						AgingInstance.setSingleLedResultEmpty(i, currentColor, -1);
 					}	
 				}
 				

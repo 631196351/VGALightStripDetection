@@ -28,7 +28,8 @@ AgingLog::AgingLog()
 
 void AgingLog::openAgingCsv()
 {
-	aging_file.open("./aging.csv", std::fstream::out | std::fstream::app);
+
+	aging_file.open("./aging.csv", std::fstream::out);
 	if (aging_file.is_open())
 	{
 		// get length of file:
@@ -103,6 +104,7 @@ AgingLog& AgingLog::aging()
 	static AgingLog aginglog;
 	return aginglog;
 }
+
 
 AgingLog::~AgingLog()
 {
@@ -187,6 +189,7 @@ void AgingLog::syncSingLedResult2RetestResult()
 		memcpy_s(lpRetest, len, lpLed, len);
 	}
 }
+
 
 void AgingLog::saveAgingLog(int error)
 {
@@ -334,7 +337,10 @@ int AgingLog::thisLedIsOK(int color)
 		// r > 0, 未灭灯却判定灭灯，即轮廓不足， 导致误判成灭灯
 		//r += (lpLed[i] + lpRandomShutDownLedCache[i]);
 
-		r1 += lpLed[i];
+		if (lpLed[i] == 1) {
+			r1 += lpLed[i];
+		}
+		
 		if (randomLightDown)
 		{
 			r2 += lpRandomShutDownLedCache[i];
@@ -342,7 +348,9 @@ int AgingLog::thisLedIsOK(int color)
 
 		if (retest)
 		{
-			r3 += lpRetest[i];
+			if (lpRetest[i] == 1) {
+				r3 += lpRetest[i];
+			}		
 		}
 	}
 
@@ -371,7 +379,11 @@ int AgingLog::allLedIsOK()
 	int c = lpLedCount * color_num;
 	for (int i = 0; i < c; i++)
 	{
-		r1 += lpLed[i];
+
+		if (lpLed[i] == 1) {
+			r1 += lpLed[i];
+		}
+		
 		//if (randomLightDown)
 		//{
 		//	r2 += lpRandomShutDownLedCache[i];
@@ -379,7 +391,9 @@ int AgingLog::allLedIsOK()
 
 		if (retest)
 		{
-			r3 += lpRetest[i];
+			if (lpRetest[i] == 1) {
+				r3 += lpRetest[i];
+			}
 		}
 		// 随机灭灯的结果同实际测出来的结果不匹配， 发生了误判
 		//if (lpLed[i] != abs(lpRandomShutDownLedCache[i]))
