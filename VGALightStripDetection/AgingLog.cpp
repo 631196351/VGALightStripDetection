@@ -44,7 +44,7 @@ void AgingLog::openAgingCsv()
 			for (int i = 0; i < color_num; i++)
 			{
 				// 因为1006 错误的存在，所以在初始化aging.csv文件时，无法get 到led count
-				for (int j = 0; j < 22; j++)
+				for (int j = 0; j < 30; j++)
 				{
 					sprintf_s(buf, 10, "%02d%02d\t,", i, j);
 					aging_file << buf;
@@ -65,7 +65,7 @@ void AgingLog::initAgingLog()
 	EXCEPTION_OPERATOR_TRY
 	{
 		/*int led_count = I2C.getLedCount(); 设置数量22为了填充表格*/
-		int led_count = 22;
+		int led_count = 30;
 		bool randomLightDown = litoff.getRandomLitOffState();
 		bool retest = kConfig.recheckFaileLedTime() > 0;
 

@@ -6,8 +6,15 @@
 #include "nvbase.h"
 
 // LED 灯的地址
+#if 0
 BYTE REG[22] = { 0x60, 0x63, 0x66, 0x69, 0x6c, 0x6f, 0x72, 0x75, 0x78, 0x7b, 0x7e
 				, 0x81, 0x84, 0x87, 0x8a, 0x8d, 0x90, 0x93, 0x96, 0x99, 0x9c, 0x9f };
+#else
+BYTE REG[30] = { 0x60, 0x63, 0x66, 0x69, 0x6c, 0x6f, 0x72, 0x75, 0x78, 0x7b, 0x7e,
+				 0x81, 0x84, 0x87, 0x8a, 0x8d, 0x90, 0x93, 0x96, 0x99, 0x9c, 0x9f,
+				 0xa2, 0xa5, 0xa8, 0xab, 0xae, 0xb1, 0xb4, 0xb7
+};
+#endif
 
 BYTE uOffset[12] = { 0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00,0xFF,0x00,0x00 };
 
@@ -165,6 +172,54 @@ void I2CWrap::setSignleColor(int led, BYTE r, BYTE g, BYTE b)
 	result = nvi2cWriteBlock(0xCE, 0x01, uOffset, 1);
 	result != NVAPI_OK ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
 #endif
+}
+
+void I2CWrap::reset8051()
+{
+	bool result = false;
+
+	uOffset[0] = 0x80;
+	uOffset[1] = 0x21;
+#ifdef VENDER_EXTRA
+	result = _lpVGAWriteICI2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#else
+	result = nvi2cWriteBlock(0xCE, 0x0, uOffset, 2);
+	result != NVAPI_OK ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#endif
+
+
+	uOffset[0] = 0x05;
+#ifdef VENDER_EXTRA
+	result = _lpVGAWriteICI2C(0xCE, 0x1, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
+	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#else
+	result = nvi2cWriteBlock(0xCE, 0x1, uOffset, 1);
+	result != NVAPI_OK ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#endif
+
+
+	uOffset[0] = 0x80;
+	uOffset[1] = 0x2F;
+#ifdef VENDER_EXTRA
+	result = _lpVGAWriteICI2C(0xCE, 0x0, (BYTE*)uOffset, 0, 1, 1, 2, 1);	//set address
+	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#else
+	result = nvi2cWriteBlock(0xCE, 0x0, uOffset, 2);
+	result != NVAPI_OK ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#endif
+
+
+	uOffset[0] = 0x01;
+#ifdef VENDER_EXTRA
+	result = _lpVGAWriteICI2C(0xCE, 0x01, (BYTE*)uOffset, 0, 1, 1, 1, 1);	//write data
+	result == false ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#else
+	result = nvi2cWriteBlock(0xCE, 0x01, uOffset, 1);
+	result != NVAPI_OK ? throw ErrorCodeEx(ERR_RUN_I2C_FAILURE, "Write I2C Failure, failed to switch lights") : (void)0;
+#endif
+
+
 }
 
 void I2CWrap::setSignleColor(int led, int color)

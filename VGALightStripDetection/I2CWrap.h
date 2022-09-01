@@ -38,6 +38,9 @@ public:
 
 	void resetColorIter(int begin, int end, int color);
 
+	void reset8051();
+
+
 	////设定随机灭灯状态, 设定手动关灯列表
 	//void setRandomLitOffState(int probability, std::string manualset);
 	//

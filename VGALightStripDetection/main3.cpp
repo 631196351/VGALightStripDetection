@@ -284,7 +284,7 @@ void findFrameContours()
 				////如果当前是最后一颗灯，就把led num 到 22 颗的检测结果设置为空
 				if (currentIndex == I2C.getLedCount() - 1) {
 					int index = currentIndex + 1;
-					for (int i = index; i < 22; i++) {
+					for (int i = index; i < 30; i++) {
 						AgingInstance.setSingleLedResultEmpty(i, currentColor, -1);
 					}	
 				}
@@ -824,6 +824,8 @@ int main(int argc, char* argv[])
 	AgingInstance.saveAgingLog(g_error.error());
 	VideoCardIns.savePPID();
 
+	I2C.reset8051();
+
 	showPassorFail();
 
 	tm.stop();
@@ -845,7 +847,7 @@ int main(int argc, char* argv[])
 	{
 		;
 	}
-	
+
 	return g_error.error();
 }
 #endif // LIGHTSTRIPV3
