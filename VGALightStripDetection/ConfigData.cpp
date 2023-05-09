@@ -123,6 +123,10 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 	{
 		_thermo_name = "KO";
 	}
+	else if (model.find("ATS") != std::string::npos)
+	{
+		_thermo_name = "ATS-" + std::to_string(led_count);
+	}
 	SPDLOG_SINKS_DEBUG("Thermo Name : {}", _thermo_name);
 
 	std::ifstream in("3c.json");
