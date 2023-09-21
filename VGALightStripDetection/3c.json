@@ -1,5 +1,5 @@
 {
-    "Version": "v3.0.3.0",
+    "Version": "v5.0.0.5",
     "AgingSetting": {
         "Width": 1280,
         "Hight": 720,
@@ -13,7 +13,7 @@
         "RecheckFaileLedTime": 1,
         "VideoCapName": [ "Top", "Rear", "Front" ],
         "KeepDebugImg": false,
-        "AutoCloseConsole": true
+        "AutoCloseConsole": false
     },
     "TUF-4": {
         "Camera": {
@@ -78,13 +78,97 @@
             }
         }
     },
+    "STRIX-WHITE-30": {
+        "Camera": {
+            "Exposure": [-6, -6, -6],
+            "Saturation": 65,
+            "Front": [ 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 100,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
+    },
+    "ATS-7": {
+        "Camera": {
+            "Exposure": [-6, -6, -6],
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7]
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 100,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
+    },
     "STRIX-30": {
         "Camera": {
             "Exposure": [-6, -6, -6],
             "Saturation": 65,
-            "Front": [ 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+            "Front": [ 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
             "Rear": [],
-            "Overhead": [ 1, 2, 3, 4, 5, 6, 7]
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 100,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
+    },
+    "STRIX-29": {
+        "Camera": {
+            "Exposure": [-6, -6, -6],
+            "Saturation": 65,
+            "Front": [ 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 100,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
+    },
+    "STRIX-21": {
+        "Camera": {
+            "Exposure": [-6, -6, -6],
+            "Saturation": 65,
+            "Front": [ 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         },
         "AlgorithmThreshold": {
             "MinContoursArea": 100,
