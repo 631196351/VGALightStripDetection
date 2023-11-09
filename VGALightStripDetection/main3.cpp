@@ -552,6 +552,145 @@ void autoCaptureROI2()
 	}
 }
 
+void filterImg(Mat& src)
+{
+	for (int row = 0; row < src.rows; row++)
+	{
+		for (int col = 0; col < src.cols; col++)
+		{
+			int b = src.at<Vec3b>(row, col)[0];
+			int g = src.at<Vec3b>(row, col)[1];
+			int r = src.at<Vec3b>(row, col)[2];
+
+			if (r < 250 && g < 250 && b < 250)
+			{
+				src.at<Vec3b>(row, col)[0] = 0;
+				src.at<Vec3b>(row, col)[1] = 0;
+				src.at<Vec3b>(row, col)[2] = 0;
+			}
+		}
+	}
+	for (int row = 0; row < src.rows; row++)
+	{
+		for (int col = 0; col < src.cols; col++)
+		{
+			int b = src.at<Vec3b>(row, col)[0];
+			int g = src.at<Vec3b>(row, col)[1];
+			int r = src.at<Vec3b>(row, col)[2];
+
+			if (r > 200 && g > 200)
+			{
+				src.at<Vec3b>(row, col)[0] = 0;
+				src.at<Vec3b>(row, col)[1] = 0;
+				src.at<Vec3b>(row, col)[2] = 0;
+			}
+		}
+	}
+}
+
+void autoCaptureROI2_MINI()
+{
+	std::vector<Mat> back(CaptureNum), fore(CaptureNum);
+
+	//Rect roi[BGR][CaptureNum];
+	ColorROI roi(BGR);
+
+	auto checkROI = [&](int color) mutable -> bool ///?????????mutable
+	{
+		FacadeROI& r = roi[color];
+		int notEmpty = 0;
+		for (int i = 0; i < CaptureNum; ++i)
+			if (!r[i].empty())
+				++notEmpty;
+		return notEmpty > 0;
+	};
+
+	for (int color = BLUE; color < WHITE; ++color) {
+		for (int i = 1; i < 30; i++) {
+			AgingInstance.setSingleLedResultEmpty(i, color, -1);
+		}
+	}
+	
+	while (true)
+	{
+		MainThreadIsExit;
+		try
+		{
+			Mat imgfilter;
+			{
+				Sleep(kConfig.intervalTime());
+				getFrame(fore);
+
+				for (int i = 0; i < CaptureNum; i++) {
+					if (fore[i].rows == 0 && fore[i].cols == 0)
+					{
+						continue;
+					}
+					imgfilter = fore[i].clone();
+					filterImg(imgfilter);
+					imshow("filter", imgfilter);
+					cv::waitKey(1);
+
+					vector<vector<Point> > contours;
+					vector<Rect> boundRect;
+					vector<Vec4i> hierarchy;
+					Mat imgGray;
+					cv::cvtColor(imgfilter, imgGray, COLOR_BGR2GRAY);
+					cv::findContours(imgGray, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//查找最顶层轮廓
+
+					Rect rect;
+					for (int i = 0; i < contours.size(); ++i)
+					{
+						// 生成最小包围矩形
+						vector<Point> contours_poly;
+						approxPolyDP(Mat(contours[i]), contours_poly, 3, true);
+						Rect r = boundingRect(contours_poly);
+
+						//SPDLOG_SINKS_DEBUG("{}th rect.area:{}", i, r.area());
+						// 轮廓面积校验
+						if (r.area() < kConfig.minContoursArea())
+							continue;
+
+						rect |= r;//多个小轮廓进行一个合并操作
+
+						//drawContours(fore[0], contours, i, Scalar(0, 255, 255), 1);
+					}
+
+					if (rect.area() > kConfig.ledContoursArea())
+					{
+						cv::rectangle(fore[i], rect, Scalar(0, 255, 255), 1);
+						imshow("fore", fore[i]);
+						cv::waitKey(1);
+						for (int color = BLUE; color < WHITE; ++color) {
+							AgingInstance.setSingleLedResult(0, color, Pass);
+							AgingInstance.setSingleLedRetestResult(0, color, Pass);
+						}
+
+						SPDLOG_SINKS_DEBUG("Contours x:{} y:{} width:{} height:{} area:{}, RecheckFaileLedTime:{} --> Pass", rect.x, rect.y, rect.width, rect.height, rect.area(), g_recheckFaileLedTime);
+					}
+					else
+					{
+						cv::putText(fore[i], "Fail", Point(0, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 255));
+						// 第一遍测试结果和复测结果分开
+						for (int color = BLUE; color < WHITE; ++color) {
+							AgingInstance.setSingleLedResult(0, color, Fail);
+							AgingInstance.setSingleLedRetestResult(0, color, Fail);
+						}
+
+						if (kConfig.keepDebugImg()) {
+							saveDebugROIImg(fore[i], i, i, "img");
+							saveDebugROIImg(imgfilter, i, i, "filter");
+						}
+
+						SPDLOG_SINKS_DEBUG("Contours x:{} y:{} width:{} height:{} area:{}, RecheckFaileLedTime:{} --> Fail", rect.x, rect.y, rect.width, rect.height, rect.area(), g_recheckFaileLedTime);
+					}
+				}
+			}
+			break;
+		}
+		EXCEPTION_OPERATOR_CATCH_1;
+	}
+}
 int showErrorCode(ErrorCode& e)
 {
 	SPDLOG_SINKS_ERROR("Catch Error : {}", e.what());
@@ -777,11 +916,15 @@ int main(int argc, char* argv[])
 		SPDLOG_SINKS_INFO("PPID:{}", VideoCardIns.PPID());
 		SPDLOG_SINKS_INFO("CaptureNum:{}", CaptureNum);
 
-		// 避免亮光影响相机初始化
-		I2C.resetColor(0, 0, 0);
-
 		// init config module
-		kConfig.readConfigFile(VideoCardIns.Name(), I2C.getLedCount());
+		if (VideoCardIns.Name().find("MINI") != std::string::npos || VideoCardIns.Name().find("DUAL") != std::string::npos) {
+			kConfig.readConfigFile(VideoCardIns.Name(), 1);
+		}
+		else {
+			// 避免亮光影响相机初始化
+			I2C.resetColor(0, 0, 0);
+			kConfig.readConfigFile(VideoCardIns.Name(), I2C.getLedCount());
+		}
 		// 随机灭灯模块初始化
 		litoff.setRandomLitOffState(kConfig.randomLitOffProbability(), parser.get<std::string>("lo"));
 		
@@ -794,15 +937,25 @@ int main(int argc, char* argv[])
 
 
 		// 下面开始正式工作
+		if (VideoCardIns.Name().find("MINI") != std::string::npos || VideoCardIns.Name().find("DUAL") != std::string::npos) {
 
-		// 1. 去抓ROI
-		autoCaptureROI2();
+			// 1. 去抓ROI
+			autoCaptureROI2_MINI();
+			
+		}
+		else {
 
-		// 2. 每颗灯进行侦测
-		mainLightingControl();
+			// 1. 去抓ROI
+			autoCaptureROI2();
 
-		// 3. 看看有没有fail， 有fail进行复测
-		checkTheFailLedAgain();
+			// 2. 每颗灯进行侦测
+			mainLightingControl();
+
+			// 3. 看看有没有fail， 有fail进行复测
+			checkTheFailLedAgain();
+
+		}
+
 	}
 	EXCEPTION_OPERATOR_CATCH_3;
 
@@ -824,7 +977,9 @@ int main(int argc, char* argv[])
 	AgingInstance.saveAgingLog(g_error.error());
 	VideoCardIns.savePPID();
 
-	I2C.reset8051();
+	if (VideoCardIns.Name().find("MINI") == std::string::npos && VideoCardIns.Name().find("DUAL") == std::string::npos) {
+		I2C.reset8051();
+	}
 
 	showPassorFail();
 
