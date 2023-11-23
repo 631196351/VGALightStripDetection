@@ -1,5 +1,5 @@
 {
-    "Version": "v5.0.0.5",
+    "Version": "v5.0.0.8",
     "AgingSetting": {
         "Width": 1280,
         "Hight": 720,
@@ -13,7 +13,7 @@
         "RecheckFaileLedTime": 1,
         "VideoCapName": [ "Top", "Rear", "Front" ],
         "KeepDebugImg": true,
-        "AutoCloseConsole": false
+        "AutoCloseConsole": true
     },
     "TUF-4": {
         "Camera": {
@@ -100,6 +100,27 @@
         }
     },
     "ATS-7": {
+        "Camera": {
+            "Exposure": [-6, -6, -6],
+            "Saturation": 65,
+            "Front": [],
+            "Rear": [],
+            "Overhead": [ 1, 2, 3, 4, 5, 6, 7]
+        },
+        "AlgorithmThreshold": {
+            "MinContoursArea": 100,
+            "LedContoursArea": 500,
+            "AdaptiveThresholdArgBlockSize": 101,
+            "AdaptiveThresholdArgC": -9,
+            "HSV": {
+                "b": [ 190, 270, 102, 40 ],
+                "g": [ 80, 170, 102, 40 ],
+                "r": [ 330, 360, 102, 40, 0, 30 ],
+                "roi": [ 102, 64 ]
+            }
+        }
+    },
+    "TX-7": {
         "Camera": {
             "Exposure": [-6, -6, -6],
             "Saturation": 65,

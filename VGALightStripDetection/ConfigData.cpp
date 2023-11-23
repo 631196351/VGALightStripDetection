@@ -103,14 +103,17 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 		}
 		else if (model.find("EVA") != std::string::npos)
 		{
-			//ROG-STRIX-RX6800-O16G-I3S
 			_thermo_name = "STRIX-" + std::to_string(led_count);
 		}
 		else if (model.find("RX") != std::string::npos)
 		{
 			//ROG-STRIX-RX6800-O16G-I3S  ROG-STRIX-RX6750-O12G-I3S  ROG-STRIX-RX6600-O12G-I3S  ROG-STRIX-RX6650-O12G-I3S
 			_thermo_name = "STRIX-" + std::to_string(led_count);
-		}		
+		}
+		else {
+			//ROG-STRIX-RTX4090-O24G-2I3S
+			_thermo_name = "STRIX-" + std::to_string(led_count);
+		}
 	}
 	else if (model.find("TUF") != std::string::npos)
 	{
