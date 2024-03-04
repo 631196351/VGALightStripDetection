@@ -570,22 +570,6 @@ void filterImg(Mat& src)
 			}
 		}
 	}
-	for (int row = 0; row < src.rows; row++)
-	{
-		for (int col = 0; col < src.cols; col++)
-		{
-			int b = src.at<Vec3b>(row, col)[0];
-			int g = src.at<Vec3b>(row, col)[1];
-			int r = src.at<Vec3b>(row, col)[2];
-
-			if (r > 200 && g > 200)
-			{
-				src.at<Vec3b>(row, col)[0] = 0;
-				src.at<Vec3b>(row, col)[1] = 0;
-				src.at<Vec3b>(row, col)[2] = 0;
-			}
-		}
-	}
 }
 
 void autoCaptureROI2_MINI()
