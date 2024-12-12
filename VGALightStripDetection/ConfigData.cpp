@@ -115,7 +115,7 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			//ROG-STRIX-RX6800-O16G-I3S  ROG-STRIX-RX6750-O12G-I3S  ROG-STRIX-RX6600-O12G-I3S  ROG-STRIX-RX6650-O12G-I3S
 			_thermo_name = "STRIX-" + std::to_string(led_count);
 		}
-		else {
+		else if(model.find("RTX") != std::string::npos) {
 			//ROG-STRIX-RTX4090-O24G-2I3S
 			_thermo_name = "STRIX-" + std::to_string(led_count);
 		}
@@ -137,8 +137,15 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 	}
 	else if (model.find("TX") != std::string::npos)
 	{
-		_thermo_name = "TX-" + std::to_string(led_count);
+		if (model.find("ASTRAL") != std::string::npos && model.find("RTX") != std::string::npos) {
+			//ROG-ASTRAL-RTX5090-O32G-GAMING-2I3S
+			_thermo_name = "ASTRAL-" + std::to_string(led_count);
+		}
+		else {
+			_thermo_name = "TX-" + std::to_string(led_count);
+		}
 	}
+	
 
 	SPDLOG_SINKS_DEBUG("Thermo Name : {}", _thermo_name);
 
