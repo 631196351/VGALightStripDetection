@@ -485,7 +485,7 @@ void frameDiff2ROI(const std::vector<Mat>& back, const std::vector<Mat>& fore, i
 }
 
 // Main Thread 抓取ROI
-void autoCaptureROI2()
+int autoCaptureROI2()
 {
 	// B-G-R三色来圈取灯带ROI
 	// 可能存在的问题是，若其中一个颜色(如 Green) 只抓到了一半的ROI， 进行合并后
@@ -505,9 +505,15 @@ void autoCaptureROI2()
 		return notEmpty > 0;
 	};
 
-	while (true)
+	double timeS = static_cast<double>(getTickCount());//开始时间
+	double timeE = 0;//结束时间
+	int ROIemptyFlag = 1;//是否抓取到ROI
+	while (timeE < 8 && ROIemptyFlag)
 	{
 		MainThreadIsExit;
+		if (!ROIemptyFlag) {
+			timeS = static_cast<double>(getTickCount());//如果r/g/b中，只要找到ROI，就重新计时
+		}
 		try
 		{
 			for (int color = BLUE; color < WHITE; ++color)
@@ -528,7 +534,11 @@ void autoCaptureROI2()
 				if (!checkROI(color))
 				{
 					SPDLOG_SINKS_ERROR("{}th color roi empty", color);
+					ROIemptyFlag = 1;
 					throw ErrorCodeEx(ERR_POSTRUE_CORRECTION_ERROR, "Please readjust the camera or graphics card posture");
+				}
+				else {
+					ROIemptyFlag = 0;
 				}
 
 				Mat frame;
@@ -549,6 +559,14 @@ void autoCaptureROI2()
 			break;
 		}
 		EXCEPTION_OPERATOR_CATCH_1;
+
+		timeE = ((double)getTickCount() - timeS) / getTickFrequency();
+	}
+	if (timeE > 10 && ROIemptyFlag) {
+		return 0;//10秒内没有抓到ROI
+	}
+	else {
+		return 1;//算法抓取到了ROI
 	}
 }
 
@@ -845,14 +863,34 @@ void showPassorFail()
 		}
 	};
 
+	std::fstream file("./log.txt", std::fstream::out);
 	if (g_error.error() == ERR_All_IS_WELL)
 	{
+		if (file.is_open())
+		{
+			file << "PASS";
+			file.flush();
+		}
+
 		pass_msg();
 	}
 	else
 	{
-		fail_msg();
+		std::string _msg;
+		_msg = "CCD";
+		if (g_error.error() < 10) {
+			_msg += "000";
+		}
+		_msg += std::to_string(g_error.error());
+		if (file.is_open())
+		{
+			file << _msg;
+			file.flush();
+		}
+
+		fail_msg();	
 	}
+	file.close();
 }
 
 int main(int argc, char* argv[])
@@ -930,14 +968,34 @@ int main(int argc, char* argv[])
 		else {
 
 			// 1. 去抓ROI
-			autoCaptureROI2();
+			if (autoCaptureROI2()) {
+				//抓取到ROI
+				
+				//2. 每颗灯进行侦测
+				mainLightingControl();
 
-			// 2. 每颗灯进行侦测
-			mainLightingControl();
+				// 3. 看看有没有fail， 有fail进行复测
+				checkTheFailLedAgain();
+			}
+			else {
+				//没抓取到ROI，直接fail
+				SPDLOG_SINKS_ERROR("/////////////////////////////////////////////////////");
+				SPDLOG_SINKS_ERROR("ALL COLOR ROI EMPTY");
+				SPDLOG_SINKS_ERROR("/////////////////////////////////////////////////////");
+				for (int color = BLUE; color < WHITE; ++color) {
+					for (int i = 1; i < 30; i++) {
+						AgingInstance.setSingleLedResultEmpty(i, color, -1);
+					}
+				}
+				for (int i = 0; i < I2C.getLedCount(); i++) {
 
-			// 3. 看看有没有fail， 有fail进行复测
-			checkTheFailLedAgain();
-
+					for (int color = BLUE; color < WHITE; ++color) {
+						AgingInstance.setSingleLedResult(i, color, Fail);
+						AgingInstance.setSingleLedRetestResult(i, color, Fail);
+					}
+				}
+				g_error = ErrorCodeEx(ERR_ROI_EMPTY, "ROI IS EMPTY");
+			}
 		}
 
 	}

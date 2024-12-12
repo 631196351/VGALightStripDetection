@@ -49,7 +49,10 @@ ErrorCode::~ErrorCode()
 
 void ErrorCode::formatErrorMsg()
 {
-	_msg = "Error code : ";
+	_msg = "Error code : CCD";
+	if(_code < 10){
+		_msg += "000";
+	}
 	_msg += std::to_string(_code);
 	_msg += ". ";
 	_msg += _error;

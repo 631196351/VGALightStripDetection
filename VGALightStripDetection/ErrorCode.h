@@ -6,6 +6,7 @@ enum eError
 {
 	ERR_All_IS_WELL,				// IT'S OK
 	ERR_SOME_LED_FAILURE,			// 部分LED灯无法找到轮廓
+	ERR_ROI_EMPTY,			        // 没有找到ROI
 	ERR_CRITICAL_LEVEL_0 = 1000,	// Terminate AP
 
 
