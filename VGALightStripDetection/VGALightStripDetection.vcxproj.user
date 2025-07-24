@@ -8,7 +8,7 @@
     <ShowAllFiles>false</ShowAllFiles>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>"210381723300448" "PPID-TUF-3060-O12G-I3S"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"210381723300448" "PPID-TX-RTX5060-O12G-I3S"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>
