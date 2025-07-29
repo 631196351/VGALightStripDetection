@@ -135,6 +135,10 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 	{
 		_thermo_name = "ATS-" + std::to_string(led_count);
 	}
+	else if (model.find("PROART") != std::string::npos) {
+		//PROART-RTX5080-O16G-IU2S
+		_thermo_name = "PROART-" + std::to_string(led_count);
+	}
 	else if (model.find("TX") != std::string::npos)
 	{
 		if (model.find("ASTRAL") != std::string::npos && model.find("RTX") != std::string::npos) {
