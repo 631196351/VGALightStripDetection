@@ -139,6 +139,10 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 		//PROART-RTX5080-O16G-IU2S
 		_thermo_name = "PROART-" + std::to_string(led_count);
 	}
+	else if (model.find("MATRIX") != std::string::npos) {
+		//ROG-MATRIX-RTX5090-P32G-30TH
+		_thermo_name = "MATRIX-" + std::to_string(led_count);
+	}
 	else if (model.find("TX") != std::string::npos)
 	{
 		if (model.find("ASTRAL") != std::string::npos && model.find("RTX") != std::string::npos) {
@@ -149,7 +153,6 @@ void ConfigData::readConfigFile(std::string model, unsigned led_count)
 			_thermo_name = "TX-" + std::to_string(led_count);
 		}
 	}
-	
 
 	SPDLOG_SINKS_DEBUG("Thermo Name : {}", _thermo_name);
 
